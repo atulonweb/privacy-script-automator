@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,6 +12,7 @@ import { CopyIcon, CheckIcon, Loader } from 'lucide-react';
 import { useWebsites, Website } from '@/hooks/useWebsites';
 import { useScripts } from '@/hooks/useScripts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { toast } from 'sonner';
 
 const ScriptGenerator: React.FC = () => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -38,6 +38,11 @@ const ScriptGenerator: React.FC = () => {
   };
 
   const handleSubmit = async () => {
+    if (!websiteId) {
+      toast.error("Please select a website first");
+      return;
+    }
+    
     const scriptId = generateScriptId();
     setLoading(true);
     
@@ -55,10 +60,14 @@ const ScriptGenerator: React.FC = () => {
         auto_hide_time: autoHideTime
       });
       
-      setGeneratedScriptId(scriptId);
-      setCurrentStep(4); // Move to final step
+      if (newScript) {
+        setGeneratedScriptId(scriptId);
+        setCurrentStep(4); // Move to final step
+        toast.success("Script successfully created!");
+      }
     } catch (error) {
       console.error('Error creating script:', error);
+      toast.error("Failed to create script. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -68,6 +77,7 @@ const ScriptGenerator: React.FC = () => {
     const scriptCode = `<script src="https://cdn.consentguard.com/cg.js?id=${generatedScriptId}" async></script>`;
     navigator.clipboard.writeText(scriptCode);
     setCopiedScript(true);
+    toast.success("Script code copied to clipboard");
     
     setTimeout(() => {
       setCopiedScript(false);

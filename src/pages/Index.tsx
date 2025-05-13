@@ -1,8 +1,11 @@
 
 import { Navigate } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
 
 const Index = () => {
-  return <Navigate to="/login" replace />;
+  const { user } = useAuth();
+
+  return <Navigate to={user ? "/dashboard" : "/login"} replace />;
 };
 
 export default Index;
