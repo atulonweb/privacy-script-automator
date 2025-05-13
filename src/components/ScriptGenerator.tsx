@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -48,6 +47,19 @@ const ScriptGenerator: React.FC = () => {
     setLoading(true);
     
     try {
+      console.log("Creating script with data:", {
+        website_id: websiteId,
+        script_id: scriptId,
+        banner_position: bannerPosition,
+        banner_color: bannerColor,
+        text_color: textColor,
+        button_color: buttonColor,
+        button_text_color: buttonTextColor,
+        show_powered_by: showPoweredBy,
+        auto_hide: autoHide,
+        auto_hide_time: autoHideTime
+      });
+      
       const newScript = await addScript({
         website_id: websiteId,
         script_id: scriptId,
@@ -65,10 +77,12 @@ const ScriptGenerator: React.FC = () => {
         setGeneratedScriptId(scriptId);
         setCurrentStep(4); // Move to final step
         toast.success("Script successfully created!");
+      } else {
+        throw new Error("Script could not be created - no data returned");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating script:', error);
-      toast.error("Failed to create script. Please try again.");
+      toast.error(error.message || "Failed to create script. Please try again.");
     } finally {
       setLoading(false);
     }

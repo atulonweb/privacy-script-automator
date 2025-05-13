@@ -21,13 +21,21 @@ import AnalyticsPage from "./pages/AnalyticsPage";
 import SettingsPage from "./pages/SettingsPage";
 import Index from "./pages/Index";
 
-// Create a new QueryClient instance
+// Create a new QueryClient instance with proper error handling
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       retry: 1,
       refetchOnWindowFocus: false,
+      onError: (error) => {
+        console.error('Query error:', error);
+      }
     },
+    mutations: {
+      onError: (error) => {
+        console.error('Mutation error:', error);
+      }
+    }
   },
 });
 
@@ -39,10 +47,13 @@ const App = () => (
           <Toaster />
           <Sonner />
           <Routes>
+            {/* Public routes */}
             <Route path="/" element={<Index />} />
             <Route path="/home" element={<Layout><HomePage /></Layout>} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            
+            {/* Protected routes */}
             <Route 
               path="/dashboard" 
               element={
@@ -68,6 +79,14 @@ const App = () => (
               } 
             />
             <Route 
+              path="/dashboard/scripts/create" 
+              element={
+                <ProtectedRoute>
+                  <ScriptGeneratorPage />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
               path="/dashboard/analytics" 
               element={
                 <ProtectedRoute>
@@ -83,14 +102,8 @@ const App = () => (
                 </ProtectedRoute>
               } 
             />
-            <Route 
-              path="/dashboard/scripts/create" 
-              element={
-                <ProtectedRoute>
-                  <ScriptGeneratorPage />
-                </ProtectedRoute>
-              } 
-            />
+            
+            {/* Admin routes */}
             <Route 
               path="/admin/dashboard" 
               element={
@@ -99,6 +112,8 @@ const App = () => (
                 </AdminRoute>
               } 
             />
+            
+            {/* Catch-all route */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>

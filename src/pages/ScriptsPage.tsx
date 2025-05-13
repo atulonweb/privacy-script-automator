@@ -19,15 +19,22 @@ import {
 
 const ScriptsPage: React.FC = () => {
   const { scripts, loading, error, fetchScripts, deleteScript } = useScripts();
-  const { websites } = useWebsites();
+  const { websites, fetchWebsites } = useWebsites();
   const navigate = useNavigate();
   const [selectedScript, setSelectedScript] = React.useState<ConsentScript | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [copying, setCopying] = React.useState<string | null>(null);
 
   useEffect(() => {
+    console.log("ScriptsPage mounted, fetching scripts and websites");
     fetchScripts();
-  }, [fetchScripts]);
+    fetchWebsites();
+  }, [fetchScripts, fetchWebsites]);
+
+  useEffect(() => {
+    console.log("Scripts loaded:", scripts);
+    console.log("Websites loaded:", websites);
+  }, [scripts, websites]);
 
   const handleCreateNew = () => {
     navigate('/dashboard/scripts/create');
@@ -72,6 +79,8 @@ const ScriptsPage: React.FC = () => {
       toast.error("Failed to delete script");
     }
   };
+
+  console.log("Rendering ScriptsPage with", scripts.length, "scripts");
 
   return (
     <DashboardLayout>

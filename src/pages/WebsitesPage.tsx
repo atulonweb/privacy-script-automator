@@ -1,20 +1,42 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Loader } from 'lucide-react';
 import { useWebsites } from '@/hooks/useWebsites';
+import { useNavigate } from 'react-router-dom';
+import { toast } from 'sonner';
 
 const WebsitesPage: React.FC = () => {
-  const { websites, loading, error } = useWebsites();
+  const { websites, loading, error, fetchWebsites } = useWebsites();
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    console.log("WebsitesPage mounted, fetching websites");
+    fetchWebsites();
+  }, [fetchWebsites]);
+
+  const handleAddWebsite = () => {
+    // This would open a modal or navigate to add website page
+    toast.info("Add website functionality coming soon");
+  };
+
+  const handleEditWebsite = (id: string) => {
+    // This would open a modal or navigate to edit website page
+    toast.info("Edit website functionality coming soon");
+  };
+
+  const handleViewScript = (websiteId: string) => {
+    navigate('/dashboard/scripts');
+  };
 
   return (
     <DashboardLayout>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <div className="flex items-center justify-between">
           <h2 className="text-3xl font-bold tracking-tight">Your Websites</h2>
-          <Button className="bg-brand-600 hover:bg-brand-700">
+          <Button className="bg-brand-600 hover:bg-brand-700" onClick={handleAddWebsite}>
             Add Website
           </Button>
         </div>
@@ -26,7 +48,7 @@ const WebsitesPage: React.FC = () => {
         ) : error ? (
           <div className="py-12 text-center">
             <p className="text-red-500">Error loading websites: {error}</p>
-            <Button variant="outline" className="mt-4">
+            <Button variant="outline" className="mt-4" onClick={fetchWebsites}>
               Try Again
             </Button>
           </div>
@@ -34,7 +56,7 @@ const WebsitesPage: React.FC = () => {
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground mb-4">You haven't added any websites yet.</p>
-              <Button className="bg-brand-600 hover:bg-brand-700">
+              <Button className="bg-brand-600 hover:bg-brand-700" onClick={handleAddWebsite}>
                 Add Your First Website
               </Button>
             </CardContent>
@@ -60,10 +82,19 @@ const WebsitesPage: React.FC = () => {
                       <span>{new Date(website.created_at).toLocaleDateString()}</span>
                     </div>
                     <div className="pt-4 flex gap-2">
-                      <Button variant="outline" className="flex-1 text-sm">
+                      <Button 
+                        variant="outline" 
+                        className="flex-1 text-sm"
+                        onClick={() => handleEditWebsite(website.id)}
+                      >
                         Edit
                       </Button>
-                      <Button variant="outline" className="flex-1 text-sm" disabled={!website.active}>
+                      <Button 
+                        variant="outline" 
+                        className="flex-1 text-sm" 
+                        disabled={!website.active}
+                        onClick={() => handleViewScript(website.id)}
+                      >
                         View Script
                       </Button>
                     </div>

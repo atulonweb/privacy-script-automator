@@ -17,6 +17,7 @@ export type ConsentScript = {
   auto_hide: boolean;
   auto_hide_time: number;
   created_at: string;
+  user_id: string;
 };
 
 export function useScripts() {
@@ -28,10 +29,17 @@ export function useScripts() {
   const fetchScripts = async () => {
     try {
       setLoading(true);
+      setError(null);
+      
+      if (!user) {
+        setScripts([]);
+        return;
+      }
       
       const { data, error } = await supabase
         .from('consent_scripts')
-        .select('*');
+        .select('*')
+        .eq('user_id', user.id);
       
       if (error) throw error;
       
@@ -45,17 +53,31 @@ export function useScripts() {
     }
   };
 
-  const addScript = async (scriptData: Omit<ConsentScript, 'id' | 'created_at'>) => {
+  const addScript = async (scriptData: Omit<ConsentScript, 'id' | 'created_at' | 'user_id'>) => {
     try {
+      if (!user) {
+        toast.error('You must be logged in to create a script');
+        throw new Error('User not authenticated');
+      }
+      
+      console.log('Adding script with data:', { ...scriptData, user_id: user.id });
+      
       const { data, error } = await supabase
         .from('consent_scripts')
         .insert({
           ...scriptData,
-          user_id: user?.id,
+          user_id: user.id,
         })
         .select();
       
-      if (error) throw error;
+      if (error) {
+        console.error('Supabase insert error:', error);
+        throw error;
+      }
+      
+      if (!data || data.length === 0) {
+        throw new Error('Failed to create script: No data returned');
+      }
       
       toast.success('Script created successfully');
       await fetchScripts();
@@ -69,10 +91,16 @@ export function useScripts() {
 
   const updateScript = async (id: string, scriptData: Partial<ConsentScript>) => {
     try {
+      if (!user) {
+        toast.error('You must be logged in to update a script');
+        throw new Error('User not authenticated');
+      }
+      
       const { error } = await supabase
         .from('consent_scripts')
         .update(scriptData)
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user.id);
       
       if (error) throw error;
       
@@ -87,10 +115,16 @@ export function useScripts() {
 
   const deleteScript = async (id: string) => {
     try {
+      if (!user) {
+        toast.error('You must be logged in to delete a script');
+        throw new Error('User not authenticated');
+      }
+      
       const { error } = await supabase
         .from('consent_scripts')
         .delete()
-        .eq('id', id);
+        .eq('id', id)
+        .eq('user_id', user.id);
       
       if (error) throw error;
       
@@ -106,6 +140,9 @@ export function useScripts() {
   useEffect(() => {
     if (user) {
       fetchScripts();
+    } else {
+      setScripts([]);
+      setLoading(false);
     }
   }, [user]);
 
