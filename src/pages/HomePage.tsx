@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -22,7 +21,7 @@ const HomePage: React.FC = () => {
                   Get Started
                 </Button>
               </Link>
-              <Link to="/features">
+              <Link to="#features">
                 <Button size="lg" variant="outline" className="border-white text-white hover:bg-white/10">
                   Learn More
                 </Button>
@@ -33,7 +32,7 @@ const HomePage: React.FC = () => {
       </section>
 
       {/* Features Section */}
-      <section className="py-16">
+      <section className="py-16" id="features">
         <div className="container mx-auto px-4">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold mb-4">How It Works</h2>

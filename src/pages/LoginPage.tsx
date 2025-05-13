@@ -7,13 +7,15 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/context/AuthContext';
 import { Loader } from 'lucide-react';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [showVerificationAlert, setShowVerificationAlert] = useState(false);
   const navigate = useNavigate();
-  const { signIn, user } = useAuth();
+  const { signIn, user, resendVerificationEmail } = useAuth();
 
   useEffect(() => {
     // Redirect if already logged in
@@ -25,14 +27,21 @@ const LoginPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+    setShowVerificationAlert(false);
 
     try {
       await signIn(email, password);
       // Navigation is handled in the auth context
-    } catch (error) {
-      // Error is handled in auth context
+    } catch (error: any) {
+      if (error.message === 'email_not_confirmed') {
+        setShowVerificationAlert(true);
+      }
       setIsLoading(false);
     }
+  };
+
+  const handleResendVerification = async () => {
+    await resendVerificationEmail(email);
   };
 
   return (
@@ -46,6 +55,19 @@ const LoginPage: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {showVerificationAlert && (
+              <Alert className="mb-4 bg-amber-50 border-amber-200">
+                <AlertDescription>
+                  Your email has not been verified. Please check your inbox or{" "}
+                  <button 
+                    className="text-brand-600 underline font-medium" 
+                    onClick={handleResendVerification}
+                  >
+                    click here to resend the verification email
+                  </button>.
+                </AlertDescription>
+              </Alert>
+            )}
             <form onSubmit={handleSubmit} className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>

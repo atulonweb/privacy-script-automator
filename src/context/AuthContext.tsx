@@ -13,6 +13,7 @@ type AuthContextType = {
   signIn: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
   isAdmin: boolean;
+  resendVerificationEmail: (email: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -80,6 +81,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  const resendVerificationEmail = async (email: string) => {
+    try {
+      const { error } = await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+      });
+      
+      if (error) throw error;
+      toast.success('Verification email has been sent. Please check your inbox.');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to send verification email');
+    }
+  };
+
   const signIn = async (email: string, password: string) => {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -87,7 +102,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         password,
       });
 
-      if (error) throw error;
+      if (error) {
+        // Handle email_not_confirmed error specially
+        if (error.message.includes('Email not confirmed')) {
+          toast.error('Email not verified. Please check your inbox or click resend verification email.');
+          throw new Error('email_not_confirmed');
+        }
+        throw error;
+      }
       
       // Redirect based on user role
       if (data.user?.app_metadata?.role === 'admin') {
@@ -98,7 +120,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         toast.success('Login successful!');
       }
     } catch (error: any) {
-      toast.error(error.message || 'Login failed');
+      if (error.message !== 'email_not_confirmed') {
+        toast.error(error.message || 'Login failed');
+      }
       throw error;
     }
   };
@@ -121,6 +145,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     signIn,
     signOut,
     isAdmin,
+    resendVerificationEmail,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
