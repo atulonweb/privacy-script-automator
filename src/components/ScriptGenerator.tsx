@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -60,8 +61,8 @@ const ScriptGenerator: React.FC = () => {
         auto_hide_time: autoHideTime
       });
       
-      // Directly call the addScript function with all required data
-      const newScript = await addScript({
+      // Prepare the data object
+      const scriptData = {
         website_id: websiteId,
         script_id: scriptId,
         banner_position: bannerPosition,
@@ -72,7 +73,10 @@ const ScriptGenerator: React.FC = () => {
         show_powered_by: showPoweredBy,
         auto_hide: autoHide,
         auto_hide_time: autoHideTime
-      });
+      };
+      
+      // Directly call the addScript function with all required data
+      const newScript = await addScript(scriptData);
       
       console.log("Script created successfully:", newScript);
       

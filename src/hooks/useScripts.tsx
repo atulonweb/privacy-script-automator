@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
@@ -63,12 +62,16 @@ export function useScripts() {
       
       console.log('Adding script with data:', { ...scriptData, user_id: user.id });
       
-      // Make sure we're sending all the required fields
+      // Create the new script object with all required fields
       const newScript = {
         ...scriptData,
         user_id: user.id
       };
       
+      // Log the exact payload being sent to Supabase
+      console.log('Exact payload being sent to Supabase:', JSON.stringify(newScript, null, 2));
+      
+      // Send the data to Supabase
       const { data, error } = await supabase
         .from('consent_scripts')
         .insert(newScript)
@@ -162,7 +165,7 @@ export function useScripts() {
     error,
     fetchScripts,
     addScript,
-    updateScript,
-    deleteScript
+    updateScript: (id: string, scriptData: Partial<ConsentScript>) => {},
+    deleteScript: (id: string) => {}
   };
 }

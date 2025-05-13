@@ -1,4 +1,3 @@
-
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -20,6 +19,7 @@ import ScriptsPage from "./pages/ScriptsPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import SettingsPage from "./pages/SettingsPage";
 import Index from "./pages/Index";
+import TestingPage from "./pages/TestingPage";
 
 // Create a new QueryClient instance with proper error handling for v5
 const queryClient = new QueryClient({
@@ -43,87 +43,97 @@ const queryClient = new QueryClient({
   },
 });
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <BrowserRouter>
-        <AuthProvider>
-          <Toaster />
-          <Sonner />
-          <Routes>
-            {/* Public routes */}
-            <Route path="/" element={<Index />} />
-            <Route path="/home" element={<Layout><HomePage /></Layout>} />
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
-            
-            {/* Protected routes */}
-            <Route 
-              path="/dashboard" 
-              element={
-                <ProtectedRoute>
-                  <DashboardPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/dashboard/websites" 
-              element={
-                <ProtectedRoute>
-                  <WebsitesPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/dashboard/scripts" 
-              element={
-                <ProtectedRoute>
-                  <ScriptsPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/dashboard/scripts/create" 
-              element={
-                <ProtectedRoute>
-                  <ScriptGeneratorPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/dashboard/analytics" 
-              element={
-                <ProtectedRoute>
-                  <AnalyticsPage />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/dashboard/settings" 
-              element={
-                <ProtectedRoute>
-                  <SettingsPage />
-                </ProtectedRoute>
-              } 
-            />
-            
-            {/* Admin routes */}
-            <Route 
-              path="/admin/dashboard" 
-              element={
-                <AdminRoute>
-                  <AdminDashboardPage />
-                </AdminRoute>
-              } 
-            />
-            
-            {/* Catch-all route */}
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AuthProvider>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <BrowserRouter>
+          <AuthProvider>
+            <Toaster />
+            <Sonner />
+            <Routes>
+              {/* Public routes */}
+              <Route path="/" element={<Index />} />
+              <Route path="/home" element={<Layout><HomePage /></Layout>} />
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              
+              {/* Protected routes */}
+              <Route 
+                path="/dashboard" 
+                element={
+                  <ProtectedRoute>
+                    <DashboardPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/dashboard/websites" 
+                element={
+                  <ProtectedRoute>
+                    <WebsitesPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/dashboard/scripts" 
+                element={
+                  <ProtectedRoute>
+                    <ScriptsPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/dashboard/scripts/create" 
+                element={
+                  <ProtectedRoute>
+                    <ScriptGeneratorPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/dashboard/analytics" 
+                element={
+                  <ProtectedRoute>
+                    <AnalyticsPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/dashboard/settings" 
+                element={
+                  <ProtectedRoute>
+                    <SettingsPage />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/dashboard/testing" 
+                element={
+                  <ProtectedRoute>
+                    <TestingPage />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* Admin routes */}
+              <Route 
+                path="/admin/dashboard" 
+                element={
+                  <AdminRoute>
+                    <AdminDashboardPage />
+                  </AdminRoute>
+                } 
+              />
+              
+              {/* Catch-all route */}
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AuthProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </QueryClientProvider>
+  );
+}
 
 export default App;
