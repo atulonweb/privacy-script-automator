@@ -29,7 +29,7 @@ const ScriptsPage: React.FC = () => {
     console.log("ScriptsPage mounted, fetching scripts and websites");
     fetchScripts();
     fetchWebsites();
-  }, [fetchScripts, fetchWebsites]);
+  }, []);
 
   useEffect(() => {
     console.log("Scripts loaded:", scripts);

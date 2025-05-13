@@ -43,6 +43,7 @@ export function useScripts() {
       
       if (error) throw error;
       
+      console.log("Fetched scripts:", data);
       setScripts(data || []);
     } catch (err: any) {
       console.error('Error fetching scripts:', err);
@@ -62,12 +63,15 @@ export function useScripts() {
       
       console.log('Adding script with data:', { ...scriptData, user_id: user.id });
       
+      // Make sure we're sending all the required fields
+      const newScript = {
+        ...scriptData,
+        user_id: user.id
+      };
+      
       const { data, error } = await supabase
         .from('consent_scripts')
-        .insert({
-          ...scriptData,
-          user_id: user.id,
-        })
+        .insert(newScript)
         .select();
       
       if (error) {
@@ -75,12 +79,16 @@ export function useScripts() {
         throw error;
       }
       
+      console.log('Supabase response after insert:', data);
+      
       if (!data || data.length === 0) {
         throw new Error('Failed to create script: No data returned');
       }
       
+      // Update local state with the new script
+      setScripts(prevScripts => [...prevScripts, data[0]]);
+      
       toast.success('Script created successfully');
-      await fetchScripts();
       return data[0];
     } catch (err: any) {
       console.error('Error creating script:', err);
@@ -128,8 +136,10 @@ export function useScripts() {
       
       if (error) throw error;
       
+      // Update local state by removing the deleted script
+      setScripts(prevScripts => prevScripts.filter(script => script.id !== id));
+      
       toast.success('Script deleted successfully');
-      await fetchScripts();
     } catch (err: any) {
       console.error('Error deleting script:', err);
       toast.error(err.message || 'Failed to delete script');

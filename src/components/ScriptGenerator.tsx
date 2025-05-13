@@ -60,6 +60,7 @@ const ScriptGenerator: React.FC = () => {
         auto_hide_time: autoHideTime
       });
       
+      // Directly call the addScript function with all required data
       const newScript = await addScript({
         website_id: websiteId,
         script_id: scriptId,
@@ -72,6 +73,8 @@ const ScriptGenerator: React.FC = () => {
         auto_hide: autoHide,
         auto_hide_time: autoHideTime
       });
+      
+      console.log("Script created successfully:", newScript);
       
       if (newScript) {
         setGeneratedScriptId(scriptId);
@@ -426,10 +429,10 @@ const ScriptGenerator: React.FC = () => {
               </div>
 
               <div>
-                {getSelectedWebsite() && (
+                {websites.find(site => site.id === websiteId) && (
                   <div className="mb-4 p-4 bg-gray-50 rounded-md">
-                    <p className="font-medium">{getSelectedWebsite()?.name}</p>
-                    <p className="text-sm text-muted-foreground">{getSelectedWebsite()?.domain}</p>
+                    <p className="font-medium">{websites.find(site => site.id === websiteId)?.name}</p>
+                    <p className="text-sm text-muted-foreground">{websites.find(site => site.id === websiteId)?.domain}</p>
                   </div>
                 )}
 
@@ -438,7 +441,16 @@ const ScriptGenerator: React.FC = () => {
                 </div>
 
                 <Button 
-                  onClick={handleCopyScript} 
+                  onClick={() => {
+                    const scriptCode = `<script src="https://cdn.consentguard.com/cg.js?id=${generatedScriptId}" async></script>`;
+                    navigator.clipboard.writeText(scriptCode);
+                    setCopiedScript(true);
+                    toast.success("Script code copied to clipboard");
+                    
+                    setTimeout(() => {
+                      setCopiedScript(false);
+                    }, 3000);
+                  }} 
                   variant="outline" 
                   className="mt-4 w-full"
                 >
@@ -459,7 +471,7 @@ const ScriptGenerator: React.FC = () => {
               <div className="pt-4">
                 <Button 
                   className="bg-brand-600 hover:bg-brand-700" 
-                  onClick={handleBackToDashboard}
+                  onClick={() => navigate('/dashboard', { replace: true })}
                 >
                   Back to Dashboard
                 </Button>
