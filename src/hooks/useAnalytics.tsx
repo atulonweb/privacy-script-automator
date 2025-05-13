@@ -42,7 +42,7 @@ export function useAnalytics() {
       // Get all scripts for the current user
       const { data: scripts, error: scriptsError } = await supabase
         .from('consent_scripts')
-        .select('script_id')
+        .select('id, script_id')
         .eq('user_id', user.id);
       
       if (scriptsError) throw scriptsError;
@@ -55,7 +55,9 @@ export function useAnalytics() {
       }
       
       // Get script IDs
-      const scriptIds = scripts.map(script => script.script_id);
+      const scriptIds = scripts.map(script => script.id); // Use the UUID id field instead of script_id
+      
+      console.log('Fetching analytics for script IDs:', scriptIds);
       
       // Get analytics data for these script IDs
       const { data: analytics, error: analyticsError } = await supabase
@@ -65,6 +67,8 @@ export function useAnalytics() {
         .order('date', { ascending: true });
       
       if (analyticsError) throw analyticsError;
+      
+      console.log('Retrieved analytics data:', analytics);
       
       setAnalyticsData(analytics || []);
       

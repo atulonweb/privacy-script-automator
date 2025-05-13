@@ -5,6 +5,8 @@ import { CopyIcon, CheckIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Website } from '@/hooks/useWebsites';
 import { toast } from 'sonner';
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { InfoIcon } from 'lucide-react';
 
 interface ScriptCodeProps {
   scriptId: string;
@@ -34,6 +36,15 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
           Add this script to your website's &lt;head&gt; tag.
         </p>
       </div>
+
+      <Alert>
+        <InfoIcon className="h-4 w-4" />
+        <AlertTitle>Implementation Information</AlertTitle>
+        <AlertDescription>
+          The script URL references a CDN-hosted consent management script. In a production environment, 
+          this script would load your customized consent banner based on the settings you've configured.
+        </AlertDescription>
+      </Alert>
 
       <div>
         {website && (
