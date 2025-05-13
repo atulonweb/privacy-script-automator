@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
@@ -165,7 +166,7 @@ export function useScripts() {
     error,
     fetchScripts,
     addScript,
-    updateScript: (id: string, scriptData: Partial<ConsentScript>) => {},
-    deleteScript: (id: string) => {}
+    updateScript,
+    deleteScript
   };
 }

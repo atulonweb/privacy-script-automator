@@ -29,6 +29,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     { name: 'Scripts', path: '/dashboard/scripts' },
     { name: 'Analytics', path: '/dashboard/analytics' },
     { name: 'Settings', path: '/dashboard/settings' },
+    { name: 'Testing', path: '/dashboard/testing' },
   ];
 
   return (
