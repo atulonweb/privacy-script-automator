@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -43,8 +42,7 @@ const DashboardPage: React.FC = () => {
   const { chartData, loading: analyticsLoading } = useAnalytics();
   
   const totalVisitors = websites.reduce((acc, site) => {
-    // For each website, try to find analytics data
-    // This is simplified - in a real app you'd need proper data
+    // For each website, add the visitor_count (or 0 if undefined)
     return acc + (site.visitor_count || 0);
   }, 0);
   

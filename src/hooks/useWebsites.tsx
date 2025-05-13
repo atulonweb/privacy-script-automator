@@ -11,6 +11,8 @@ export type Website = {
   active: boolean;
   created_at: string;
   updated_at: string;
+  visitor_count?: number;  // Added property
+  accept_rate?: number;    // Added property
 };
 
 export function useWebsites() {
