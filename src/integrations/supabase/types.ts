@@ -9,13 +9,172 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      analytics: {
+        Row: {
+          accept_count: number
+          created_at: string
+          date: string
+          id: string
+          partial_count: number
+          reject_count: number
+          script_id: string
+          updated_at: string
+          visitor_count: number
+        }
+        Insert: {
+          accept_count?: number
+          created_at?: string
+          date: string
+          id?: string
+          partial_count?: number
+          reject_count?: number
+          script_id: string
+          updated_at?: string
+          visitor_count?: number
+        }
+        Update: {
+          accept_count?: number
+          created_at?: string
+          date?: string
+          id?: string
+          partial_count?: number
+          reject_count?: number
+          script_id?: string
+          updated_at?: string
+          visitor_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analytics_script_id_fkey"
+            columns: ["script_id"]
+            isOneToOne: false
+            referencedRelation: "consent_scripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      consent_scripts: {
+        Row: {
+          auto_hide: boolean
+          auto_hide_time: number
+          banner_color: string
+          banner_position: string
+          button_color: string
+          button_text_color: string
+          created_at: string
+          id: string
+          script_id: string
+          show_powered_by: boolean
+          text_color: string
+          updated_at: string
+          user_id: string
+          website_id: string
+        }
+        Insert: {
+          auto_hide?: boolean
+          auto_hide_time?: number
+          banner_color: string
+          banner_position: string
+          button_color: string
+          button_text_color: string
+          created_at?: string
+          id?: string
+          script_id: string
+          show_powered_by?: boolean
+          text_color: string
+          updated_at?: string
+          user_id: string
+          website_id: string
+        }
+        Update: {
+          auto_hide?: boolean
+          auto_hide_time?: number
+          banner_color?: string
+          banner_position?: string
+          button_color?: string
+          button_text_color?: string
+          created_at?: string
+          id?: string
+          script_id?: string
+          show_powered_by?: boolean
+          text_color?: string
+          updated_at?: string
+          user_id?: string
+          website_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "consent_scripts_website_id_fkey"
+            columns: ["website_id"]
+            isOneToOne: false
+            referencedRelation: "websites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id: string
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      websites: {
+        Row: {
+          active: boolean
+          created_at: string
+          domain: string
+          id: string
+          name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          active?: boolean
+          created_at?: string
+          domain: string
+          id?: string
+          name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          active?: boolean
+          created_at?: string
+          domain?: string
+          id?: string
+          name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_admin: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
     }
     Enums: {
       [_ in never]: never

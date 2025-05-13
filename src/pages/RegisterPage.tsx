@@ -1,11 +1,12 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
+import { Loader } from 'lucide-react';
 
 const RegisterPage: React.FC = () => {
   const [fullName, setFullName] = useState('');
@@ -14,26 +15,29 @@ const RegisterPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { signUp, user } = useAuth();
+
+  useEffect(() => {
+    // Redirect if already logged in
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (password !== confirmPassword) {
-      toast.error('Passwords do not match');
+      // Error is handled in auth context
       return;
     }
     
     setIsLoading(true);
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      toast.success('Registration successful! You can now log in.');
+      await signUp(email, password, fullName);
       navigate('/login');
     } catch (error) {
-      toast.error('Registration failed. Please try again.');
-    } finally {
       setIsLoading(false);
     }
   };
@@ -58,6 +62,7 @@ const RegisterPage: React.FC = () => {
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
                   required
+                  disabled={isLoading}
                 />
               </div>
               <div className="space-y-2">
@@ -69,6 +74,7 @@ const RegisterPage: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  disabled={isLoading}
                 />
               </div>
               <div className="space-y-2">
@@ -79,6 +85,7 @@ const RegisterPage: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  disabled={isLoading}
                 />
               </div>
               <div className="space-y-2">
@@ -89,6 +96,7 @@ const RegisterPage: React.FC = () => {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   required
+                  disabled={isLoading}
                 />
               </div>
               <Button 
@@ -96,7 +104,12 @@ const RegisterPage: React.FC = () => {
                 className="w-full bg-brand-600 hover:bg-brand-700" 
                 disabled={isLoading}
               >
-                {isLoading ? 'Creating account...' : 'Sign up'}
+                {isLoading ? (
+                  <>
+                    <Loader className="mr-2 h-4 w-4 animate-spin" />
+                    Creating account...
+                  </>
+                ) : 'Sign up'}
               </Button>
             </form>
           </CardContent>

@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -16,34 +16,70 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer
+  ResponsiveContainer,
+  Legend
 } from 'recharts';
-import { CopyIcon, CheckIcon } from 'lucide-react';
+import { CopyIcon, CheckIcon, Loader, Plus, PlusCircle } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
-
-const mockData = {
-  consents: [
-    { date: 'Jan', accept: 65, reject: 35, partial: 20 },
-    { date: 'Feb', accept: 59, reject: 25, partial: 36 },
-    { date: 'Mar', accept: 80, reject: 10, partial: 40 },
-    { date: 'Apr', accept: 81, reject: 19, partial: 28 },
-    { date: 'May', accept: 56, reject: 44, partial: 22 },
-    { date: 'Jun', accept: 55, reject: 45, partial: 15 },
-    { date: 'Jul', accept: 70, reject: 30, partial: 25 },
-  ],
-  websites: [
-    { id: 1, name: 'My Company Website', domain: 'example.com', active: true, visitors: 12543, acceptRate: 78 },
-    { id: 2, name: 'Blog', domain: 'blog.example.com', active: true, visitors: 5433, acceptRate: 65 },
-  ]
-};
+import { useWebsites } from '@/hooks/useWebsites';
+import { useScripts } from '@/hooks/useScripts';
+import { useAnalytics } from '@/hooks/useAnalytics';
+import { useNavigate } from 'react-router-dom';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 
 const DashboardPage: React.FC = () => {
   const [copiedScript, setCopiedScript] = useState(false);
+  const [newWebsiteName, setNewWebsiteName] = useState('');
+  const [newWebsiteDomain, setNewWebsiteDomain] = useState('');
+  const [isAddingWebsite, setIsAddingWebsite] = useState(false);
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const navigate = useNavigate();
   
-  const sampleScript = `<script src="https://cdn.consentguard.com/cg.js?id=YOUR_SITE_ID" async></script>`;
+  const { websites, loading: websitesLoading, addWebsite, updateWebsiteStatus } = useWebsites();
+  const { scripts, loading: scriptsLoading } = useScripts();
+  const { chartData, loading: analyticsLoading } = useAnalytics();
+  
+  const totalVisitors = websites.reduce((acc, site) => {
+    // For each website, try to find analytics data
+    // This is simplified - in a real app you'd need proper data
+    return acc + (site.visitor_count || 0);
+  }, 0);
+  
+  const averageAcceptRate = websites.length > 0
+    ? Math.round(websites.reduce((acc, site) => acc + (site.accept_rate || 0), 0) / websites.length)
+    : 0;
+    
+  const handleAddWebsite = async () => {
+    if (!newWebsiteName || !newWebsiteDomain) return;
+    
+    setIsAddingWebsite(true);
+    try {
+      await addWebsite(newWebsiteName, newWebsiteDomain);
+      setNewWebsiteName('');
+      setNewWebsiteDomain('');
+      setIsAddDialogOpen(false);
+    } catch (error) {
+      console.error('Error adding website:', error);
+    } finally {
+      setIsAddingWebsite(false);
+    }
+  };
+  
+  const getRecentScript = () => {
+    if (scripts.length === 0) return null;
+    return scripts.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())[0];
+  };
+  
+  const recentScript = getRecentScript();
   
   const handleCopyScript = () => {
-    navigator.clipboard.writeText(sampleScript);
+    if (!recentScript) return;
+    
+    const scriptCode = `<script src="https://cdn.consentguard.com/cg.js?id=${recentScript.script_id}" async></script>`;
+    navigator.clipboard.writeText(scriptCode);
     setCopiedScript(true);
     
     setTimeout(() => {
@@ -56,9 +92,62 @@ const DashboardPage: React.FC = () => {
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <div className="flex items-center justify-between">
           <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
-          <Button className="bg-brand-600 hover:bg-brand-700">
-            Create New Site
-          </Button>
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-brand-600 hover:bg-brand-700">
+                <PlusCircle className="mr-2 h-4 w-4" />
+                Add New Website
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Website</DialogTitle>
+                <DialogDescription>
+                  Add details about your website to create a consent script.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="name">Website Name</Label>
+                  <Input
+                    id="name"
+                    placeholder="My Company Website"
+                    value={newWebsiteName}
+                    onChange={(e) => setNewWebsiteName(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="domain">Domain</Label>
+                  <Input
+                    id="domain"
+                    placeholder="example.com"
+                    value={newWebsiteDomain}
+                    onChange={(e) => setNewWebsiteDomain(e.target.value)}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsAddDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleAddWebsite}
+                  disabled={isAddingWebsite}
+                  className="bg-brand-600 hover:bg-brand-700"
+                >
+                  {isAddingWebsite ? (
+                    <>
+                      <Loader className="mr-2 h-4 w-4 animate-spin" />
+                      Adding...
+                    </>
+                  ) : 'Add Website'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
         
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -69,10 +158,16 @@ const DashboardPage: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{mockData.websites.length}</div>
-              <p className="text-xs text-muted-foreground">
-                Active websites using ConsentGuard
-              </p>
+              {websitesLoading ? (
+                <Loader className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <div className="text-2xl font-bold">{websites.length}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Active websites using ConsentGuard
+                  </p>
+                </>
+              )}
             </CardContent>
           </Card>
           <Card>
@@ -82,12 +177,18 @@ const DashboardPage: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {mockData.websites.reduce((acc, site) => acc + site.visitors, 0).toLocaleString()}
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Visitors across all your websites
-              </p>
+              {websitesLoading ? (
+                <Loader className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <div className="text-2xl font-bold">
+                    {totalVisitors.toLocaleString()}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Visitors across all your websites
+                  </p>
+                </>
+              )}
             </CardContent>
           </Card>
           <Card>
@@ -97,15 +198,18 @@ const DashboardPage: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {Math.round(
-                  mockData.websites.reduce((acc, site) => acc + site.acceptRate, 0) / 
-                  mockData.websites.length
-                )}%
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Users who accepted cookies
-              </p>
+              {websitesLoading ? (
+                <Loader className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <div className="text-2xl font-bold">
+                    {averageAcceptRate}%
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Users who accepted cookies
+                  </p>
+                </>
+              )}
             </CardContent>
           </Card>
           <Card>
@@ -115,10 +219,16 @@ const DashboardPage: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{mockData.websites.length}</div>
-              <p className="text-xs text-muted-foreground">
-                Active consent scripts
-              </p>
+              {scriptsLoading ? (
+                <Loader className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <div className="text-2xl font-bold">{scripts.length}</div>
+                  <p className="text-xs text-muted-foreground">
+                    Active consent scripts
+                  </p>
+                </>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -129,55 +239,92 @@ const DashboardPage: React.FC = () => {
               <CardTitle>Consent Analytics</CardTitle>
             </CardHeader>
             <CardContent className="pl-2">
-              <ResponsiveContainer width="100%" height={350}>
-                <AreaChart
-                  data={mockData.consents}
-                  margin={{
-                    top: 10,
-                    right: 30,
-                    left: 0,
-                    bottom: 0,
-                  }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="date" />
-                  <YAxis />
-                  <Tooltip />
-                  <Area type="monotone" dataKey="accept" stackId="1" stroke="#2563eb" fill="#2563eb" />
-                  <Area type="monotone" dataKey="partial" stackId="1" stroke="#f59e0b" fill="#f59e0b" />
-                  <Area type="monotone" dataKey="reject" stackId="1" stroke="#dc2626" fill="#dc2626" />
-                </AreaChart>
-              </ResponsiveContainer>
+              {analyticsLoading ? (
+                <div className="flex items-center justify-center py-24">
+                  <Loader className="h-8 w-8 animate-spin text-brand-600" />
+                </div>
+              ) : chartData.length > 0 ? (
+                <ResponsiveContainer width="100%" height={350}>
+                  <AreaChart
+                    data={chartData}
+                    margin={{
+                      top: 10,
+                      right: 30,
+                      left: 0,
+                      bottom: 0,
+                    }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Area type="monotone" dataKey="accept" stackId="1" stroke="#2563eb" fill="#2563eb" name="Accept" />
+                    <Area type="monotone" dataKey="partial" stackId="1" stroke="#f59e0b" fill="#f59e0b" name="Partial" />
+                    <Area type="monotone" dataKey="reject" stackId="1" stroke="#dc2626" fill="#dc2626" name="Reject" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-24 text-center">
+                  <p className="text-muted-foreground">No analytics data available yet.</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Data will appear once visitors interact with your consent banner.
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
           <Card className="col-span-3">
             <CardHeader>
               <CardTitle>Your Consent Script</CardTitle>
               <CardDescription>
-                Add this script to your website's &lt;head&gt; tag
+                {recentScript 
+                  ? "Add this script to your website's <head> tag"
+                  : "Create a script to get started"}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="bg-gray-50 p-4 rounded-md font-mono text-sm overflow-x-auto">
-                {sampleScript}
-              </div>
-              <Button 
-                onClick={handleCopyScript} 
-                variant="outline" 
-                className="mt-4 w-full"
-              >
-                {copiedScript ? (
-                  <>
-                    <CheckIcon className="mr-2 h-4 w-4" />
-                    Copied!
-                  </>
-                ) : (
-                  <>
-                    <CopyIcon className="mr-2 h-4 w-4" />
-                    Copy Script
-                  </>
-                )}
-              </Button>
+              {scriptsLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader className="h-8 w-8 animate-spin text-brand-600" />
+                </div>
+              ) : recentScript ? (
+                <>
+                  <div className="bg-gray-50 p-4 rounded-md font-mono text-sm overflow-x-auto">
+                    {`<script src="https://cdn.consentguard.com/cg.js?id=${recentScript.script_id}" async></script>`}
+                  </div>
+                  <Button 
+                    onClick={handleCopyScript} 
+                    variant="outline" 
+                    className="mt-4 w-full"
+                  >
+                    {copiedScript ? (
+                      <>
+                        <CheckIcon className="mr-2 h-4 w-4" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <CopyIcon className="mr-2 h-4 w-4" />
+                        Copy Script
+                      </>
+                    )}
+                  </Button>
+                </>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <p className="text-muted-foreground mb-4">
+                    No consent scripts created yet.
+                  </p>
+                  <Button 
+                    className="bg-brand-600 hover:bg-brand-700"
+                    onClick={() => navigate('/dashboard/scripts/create')}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Create Script
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -190,38 +337,68 @@ const DashboardPage: React.FC = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium">Name</th>
-                    <th className="text-left py-3 px-4 font-medium">Domain</th>
-                    <th className="text-left py-3 px-4 font-medium">Status</th>
-                    <th className="text-left py-3 px-4 font-medium">Visitors</th>
-                    <th className="text-left py-3 px-4 font-medium">Acceptance Rate</th>
-                    <th className="text-left py-3 px-4 font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mockData.websites.map((site) => (
-                    <tr key={site.id} className="border-b">
-                      <td className="py-3 px-4">{site.name}</td>
-                      <td className="py-3 px-4">{site.domain}</td>
-                      <td className="py-3 px-4">
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                          Active
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">{site.visitors.toLocaleString()}</td>
-                      <td className="py-3 px-4">{site.acceptRate}%</td>
-                      <td className="py-3 px-4">
-                        <Button variant="outline" size="sm">Manage</Button>
-                      </td>
+            {websitesLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader className="h-8 w-8 animate-spin text-brand-600" />
+              </div>
+            ) : websites.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left py-3 px-4 font-medium">Name</th>
+                      <th className="text-left py-3 px-4 font-medium">Domain</th>
+                      <th className="text-left py-3 px-4 font-medium">Status</th>
+                      <th className="text-left py-3 px-4 font-medium">Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {websites.map((site) => (
+                      <tr key={site.id} className="border-b">
+                        <td className="py-3 px-4">{site.name}</td>
+                        <td className="py-3 px-4">{site.domain}</td>
+                        <td className="py-3 px-4">
+                          <Badge className={site.active ? "bg-green-500" : "bg-gray-500"}>
+                            {site.active ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex space-x-2">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => navigate('/dashboard/scripts/create')}
+                            >
+                              Create Script
+                            </Button>
+                            <Button 
+                              variant={site.active ? "destructive" : "secondary"} 
+                              size="sm"
+                              onClick={() => updateWebsiteStatus(site.id, !site.active)}
+                            >
+                              {site.active ? 'Deactivate' : 'Activate'}
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <p className="text-muted-foreground mb-4">
+                  You haven't added any websites yet.
+                </p>
+                <Button 
+                  className="bg-brand-600 hover:bg-brand-700"
+                  onClick={() => setIsAddDialogOpen(true)}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Add Website
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

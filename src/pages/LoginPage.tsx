@@ -1,39 +1,36 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { toast } from 'sonner';
+import { useAuth } from '@/context/AuthContext';
+import { Loader } from 'lucide-react';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const { signIn, user } = useAuth();
+
+  useEffect(() => {
+    // Redirect if already logged in
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
 
     try {
-      // Simulate login API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      // Check for demo credentials
-      if (email === 'demo@example.com' && password === 'password') {
-        toast.success('Login successful!');
-        navigate('/dashboard');
-      } else if (email === 'admin@example.com' && password === 'admin') {
-        toast.success('Admin login successful!');
-        navigate('/admin/dashboard');
-      } else {
-        toast.error('Invalid credentials. Try demo@example.com / password');
-      }
+      await signIn(email, password);
+      // Navigation is handled in the auth context
     } catch (error) {
-      toast.error('Login failed. Please try again.');
-    } finally {
+      // Error is handled in auth context
       setIsLoading(false);
     }
   };
@@ -59,6 +56,7 @@ const LoginPage: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
+                  disabled={isLoading}
                 />
               </div>
               <div className="space-y-2">
@@ -74,6 +72,7 @@ const LoginPage: React.FC = () => {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
+                  disabled={isLoading}
                 />
               </div>
               <Button 
@@ -81,7 +80,12 @@ const LoginPage: React.FC = () => {
                 className="w-full bg-brand-600 hover:bg-brand-700" 
                 disabled={isLoading}
               >
-                {isLoading ? 'Logging in...' : 'Log in'}
+                {isLoading ? (
+                  <>
+                    <Loader className="mr-2 h-4 w-4 animate-spin" />
+                    Logging in...
+                  </>
+                ) : 'Log in'}
               </Button>
             </form>
           </CardContent>
