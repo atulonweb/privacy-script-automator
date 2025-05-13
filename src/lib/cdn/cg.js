@@ -24,7 +24,7 @@
     autoHideTime: 30
   };
   
-  // API endpoint (replace with your actual API endpoint)
+  // API endpoint using the Supabase Edge Function
   const API_ENDPOINT = 'https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/consent-config';
   
   /**
