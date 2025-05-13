@@ -4,7 +4,8 @@ import { useAuth } from '@/context/AuthContext';
 
 const Index = () => {
   const { user } = useAuth();
-
+  
+  // Redirect to dashboard if logged in, otherwise to login page
   return <Navigate to={user ? "/dashboard" : "/login"} replace />;
 };
 

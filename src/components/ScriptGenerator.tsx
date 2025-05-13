@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -88,6 +89,11 @@ const ScriptGenerator: React.FC = () => {
     return websites.find(site => site.id === websiteId);
   };
 
+  const handleBackToDashboard = () => {
+    // Use navigate with {replace: true} to avoid history stacking issues
+    navigate('/dashboard', { replace: true });
+  };
+
   return (
     <Card>
       <CardContent className="p-6">
@@ -168,7 +174,7 @@ const ScriptGenerator: React.FC = () => {
                         <Button
                           variant="outline"
                           className="mt-4"
-                          onClick={() => navigate('/dashboard')}
+                          onClick={() => navigate('/dashboard', { replace: true })}
                         >
                           Go to Dashboard
                         </Button>
@@ -439,7 +445,7 @@ const ScriptGenerator: React.FC = () => {
               <div className="pt-4">
                 <Button 
                   className="bg-brand-600 hover:bg-brand-700" 
-                  onClick={() => navigate('/dashboard')}
+                  onClick={handleBackToDashboard}
                 >
                   Back to Dashboard
                 </Button>

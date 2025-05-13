@@ -1,9 +1,9 @@
 
 import React from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAnalytics } from '@/hooks/useAnalytics';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader } from 'lucide-react';
+import { useAnalytics } from '@/hooks/useAnalytics';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
@@ -47,9 +47,11 @@ const AnalyticsPage: React.FC = () => {
         </div>
 
         {loading ? (
-          <div className="flex justify-center py-12">
-            <Loader className="h-8 w-8 animate-spin text-brand-600" />
-          </div>
+          <Card>
+            <CardContent className="py-12 flex justify-center">
+              <Loader className="h-8 w-8 animate-spin text-brand-600" />
+            </CardContent>
+          </Card>
         ) : error ? (
           <Card>
             <CardContent className="py-12 text-center">
@@ -60,16 +62,13 @@ const AnalyticsPage: React.FC = () => {
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground">No analytics data available yet.</p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Data will appear here once your consent scripts start collecting information.
-              </p>
             </CardContent>
           </Card>
         ) : (
           <>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardHeader className="pb-2">
                   <CardTitle className="text-sm font-medium">Total Visitors</CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -82,8 +81,8 @@ const AnalyticsPage: React.FC = () => {
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Accepts</CardTitle>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Total Accepts</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
@@ -95,8 +94,8 @@ const AnalyticsPage: React.FC = () => {
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Rejects</CardTitle>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Total Rejects</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
@@ -108,8 +107,8 @@ const AnalyticsPage: React.FC = () => {
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Average Acceptance Rate</CardTitle>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm font-medium">Average Accept Rate</CardTitle>
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
@@ -122,10 +121,9 @@ const AnalyticsPage: React.FC = () => {
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
-              <Card>
+              <Card className="col-span-1">
                 <CardHeader>
-                  <CardTitle>Visitor Trends</CardTitle>
-                  <CardDescription>Number of visitors over time</CardDescription>
+                  <CardTitle>Visitors Over Time</CardTitle>
                 </CardHeader>
                 <CardContent className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
@@ -136,15 +134,15 @@ const AnalyticsPage: React.FC = () => {
                       <Tooltip />
                       <Legend />
                       <Line type="monotone" dataKey="visitors" stroke="#2563eb" activeDot={{ r: 8 }} />
+                      <Line type="monotone" dataKey="accepts" stroke="#16a34a" />
+                      <Line type="monotone" dataKey="rejects" stroke="#dc2626" />
                     </LineChart>
                   </ResponsiveContainer>
                 </CardContent>
               </Card>
-
-              <Card>
+              <Card className="col-span-1">
                 <CardHeader>
-                  <CardTitle>Response Distribution</CardTitle>
-                  <CardDescription>How users responded to consent prompts</CardDescription>
+                  <CardTitle>Consent Actions</CardTitle>
                 </CardHeader>
                 <CardContent className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
@@ -154,9 +152,9 @@ const AnalyticsPage: React.FC = () => {
                       <YAxis />
                       <Tooltip />
                       <Legend />
-                      <Bar dataKey="accepts" name="Accepts" fill="#16a34a" />
-                      <Bar dataKey="rejects" name="Rejects" fill="#dc2626" />
-                      <Bar dataKey="partials" name="Partial" fill="#ca8a04" />
+                      <Bar dataKey="accepts" stackId="a" fill="#16a34a" />
+                      <Bar dataKey="rejects" stackId="a" fill="#dc2626" />
+                      <Bar dataKey="partials" stackId="a" fill="#f59e0b" />
                     </BarChart>
                   </ResponsiveContainer>
                 </CardContent>

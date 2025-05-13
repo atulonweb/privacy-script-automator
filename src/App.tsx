@@ -19,8 +19,17 @@ import WebsitesPage from "./pages/WebsitesPage";
 import ScriptsPage from "./pages/ScriptsPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import SettingsPage from "./pages/SettingsPage";
+import Index from "./pages/Index";
 
-const queryClient = new QueryClient();
+// Create a new QueryClient instance
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -30,7 +39,8 @@ const App = () => (
           <Toaster />
           <Sonner />
           <Routes>
-            <Route path="/" element={<Layout><HomePage /></Layout>} />
+            <Route path="/" element={<Index />} />
+            <Route path="/home" element={<Layout><HomePage /></Layout>} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route 
