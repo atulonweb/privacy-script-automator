@@ -8,14 +8,14 @@ import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tool
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const AnalyticsPage: React.FC = () => {
-  const { analytics, loading, error } = useAnalytics();
+  const { analyticsData, chartData, loading, error } = useAnalytics();
   const [timeRange, setTimeRange] = React.useState('7');
   
   // Format data for charts
-  const chartData = React.useMemo(() => {
-    if (!analytics) return [];
+  const formattedChartData = React.useMemo(() => {
+    if (!analyticsData) return [];
     
-    const filteredData = analytics.slice(-parseInt(timeRange));
+    const filteredData = analyticsData.slice(-parseInt(timeRange));
     
     return filteredData.map(item => ({
       date: new Date(item.date).toLocaleDateString(),
@@ -25,7 +25,7 @@ const AnalyticsPage: React.FC = () => {
       partials: item.partial_count || 0,
       acceptRate: Math.round(((item.accept_count || 0) / (item.visitor_count || 1)) * 100),
     }));
-  }, [analytics, timeRange]);
+  }, [analyticsData, timeRange]);
   
   return (
     <DashboardLayout>
@@ -56,7 +56,7 @@ const AnalyticsPage: React.FC = () => {
               <p className="text-red-500">Error loading analytics data: {error}</p>
             </CardContent>
           </Card>
-        ) : analytics.length === 0 ? (
+        ) : analyticsData.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground">No analytics data available yet.</p>
@@ -74,7 +74,7 @@ const AnalyticsPage: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {chartData.reduce((sum, item) => sum + item.visitors, 0)}
+                    {formattedChartData.reduce((sum, item) => sum + item.visitors, 0)}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     In the last {timeRange} days
@@ -87,7 +87,7 @@ const AnalyticsPage: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {chartData.reduce((sum, item) => sum + item.accepts, 0)}
+                    {formattedChartData.reduce((sum, item) => sum + item.accepts, 0)}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     In the last {timeRange} days
@@ -100,7 +100,7 @@ const AnalyticsPage: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {chartData.reduce((sum, item) => sum + item.rejects, 0)}
+                    {formattedChartData.reduce((sum, item) => sum + item.rejects, 0)}
                   </div>
                   <p className="text-xs text-muted-foreground">
                     In the last {timeRange} days
@@ -113,8 +113,8 @@ const AnalyticsPage: React.FC = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="text-2xl font-bold">
-                    {chartData.length > 0 
-                      ? Math.round(chartData.reduce((sum, item) => sum + item.acceptRate, 0) / chartData.length)
+                    {formattedChartData.length > 0 
+                      ? Math.round(formattedChartData.reduce((sum, item) => sum + item.acceptRate, 0) / formattedChartData.length)
                       : 0}%
                   </div>
                 </CardContent>
@@ -129,7 +129,7 @@ const AnalyticsPage: React.FC = () => {
                 </CardHeader>
                 <CardContent className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    <LineChart data={formattedChartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="date" />
                       <YAxis />
@@ -148,7 +148,7 @@ const AnalyticsPage: React.FC = () => {
                 </CardHeader>
                 <CardContent className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                    <BarChart data={formattedChartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="date" />
                       <YAxis />
