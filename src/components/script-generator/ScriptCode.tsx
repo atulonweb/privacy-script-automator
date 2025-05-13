@@ -7,6 +7,7 @@ import { Website } from '@/hooks/useWebsites';
 import { toast } from 'sonner';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { InfoIcon } from 'lucide-react';
+import { generateCdnUrl } from '@/lib/utils';
 
 interface ScriptCodeProps {
   scriptId: string;
@@ -18,7 +19,7 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
   const navigate = useNavigate();
 
   const handleCopyScript = () => {
-    const scriptCode = `<script src="https://cdn.consentguard.com/cg.js?id=${scriptId}" async></script>`;
+    const scriptCode = `<script src="${generateCdnUrl(scriptId)}" async></script>`;
     navigator.clipboard.writeText(scriptCode);
     setCopiedScript(true);
     toast.success("Script code copied to clipboard");
@@ -55,7 +56,7 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
         )}
 
         <div className="bg-gray-50 p-4 rounded-md font-mono text-sm overflow-x-auto">
-          {`<script src="https://cdn.consentguard.com/cg.js?id=${scriptId}" async></script>`}
+          {`<script src="${generateCdnUrl(scriptId)}" async></script>`}
         </div>
 
         <Button 
