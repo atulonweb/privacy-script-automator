@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useScripts } from '@/hooks/useScripts';
 import { useAuth } from '@/context/AuthContext';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 
 // This is a test component to isolate and debug script saving issues
 const ScriptSavingTest: React.FC = () => {
@@ -11,10 +11,15 @@ const ScriptSavingTest: React.FC = () => {
   const { user } = useAuth();
   const [testResult, setTestResult] = useState<string>('Not started');
   const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
 
   const runSaveTest = async () => {
     if (!user) {
-      toast.error("You must be logged in to run this test");
+      toast({
+        title: "Error",
+        description: "You must be logged in to run this test",
+        variant: "destructive"
+      });
       setTestResult('Failed: Not logged in');
       return;
     }
@@ -31,7 +36,11 @@ const ScriptSavingTest: React.FC = () => {
       
       if (!testWebsiteId) {
         setTestResult('Failed: No website ID found in localStorage. Please set one first.');
-        toast.error("Please set a test website ID first");
+        toast({
+          title: "Error",
+          description: "Please set a test website ID first",
+          variant: "destructive"
+        });
         setIsLoading(false);
         return;
       }
@@ -59,15 +68,26 @@ const ScriptSavingTest: React.FC = () => {
       
       if (result && result.id) {
         setTestResult(`Success: Script created with ID ${result.id}`);
-        toast.success("Test passed! Script was created successfully");
+        toast({
+          title: "Success",
+          description: "Test passed! Script was created successfully"
+        });
       } else {
         setTestResult('Failed: Script was created but no ID was returned');
-        toast.error("Test failed - no ID returned");
+        toast({
+          title: "Error", 
+          description: "Test failed - no ID returned",
+          variant: "destructive"
+        });
       }
     } catch (error: any) {
       console.error('Test error:', error);
       setTestResult(`Failed: ${error.message || 'Unknown error'}`);
-      toast.error(`Test failed: ${error.message}`);
+      toast({
+        title: "Error",
+        description: `Test failed: ${error.message}`,
+        variant: "destructive"
+      });
     } finally {
       setIsLoading(false);
     }
@@ -77,7 +97,10 @@ const ScriptSavingTest: React.FC = () => {
     const websiteId = prompt('Enter a valid website ID to use for testing:');
     if (websiteId) {
       localStorage.setItem('testWebsiteId', websiteId);
-      toast.success('Test website ID saved');
+      toast({
+        title: "Success",
+        description: "Test website ID saved"
+      });
     }
   };
 

@@ -78,13 +78,24 @@
   /**
    * Manage cookies based on consent choice
    * @param {string} choice - User's consent choice (accept, reject, partial)
+   * @param {object} preferences - Optional preferences for partial consent
    */
-  function manageCookies(choice) {
+  function manageCookies(choice, preferences = null) {
+    // Clear any existing consent cookies first
+    document.cookie = "consentguard_consent=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    document.cookie = "consentguard_preferences=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    
     // Set a consent cookie to remember user's choice
     const expiryDate = new Date();
     expiryDate.setMonth(expiryDate.getMonth() + 6); // Cookie valid for 6 months
     
     document.cookie = `consentguard_consent=${choice}; expires=${expiryDate.toUTCString()}; path=/; SameSite=Lax`;
+    
+    // If we have specific preferences, store them too
+    if (preferences) {
+      const preferencesJson = JSON.stringify(preferences);
+      document.cookie = `consentguard_preferences=${encodeURIComponent(preferencesJson)}; expires=${expiryDate.toUTCString()}; path=/; SameSite=Lax`;
+    }
     
     if (choice === 'reject') {
       // If rejected, you might want to disable certain cookies or tracking
@@ -197,17 +208,19 @@
       manageCookies('accept');
       recordAnalytics('accept');
       hideBanner();
+      addSettingsButton(); // Add the settings button after accepting
     });
     
     rejectButton.addEventListener('click', function() {
       manageCookies('reject');
       recordAnalytics('reject');
       hideBanner();
+      addSettingsButton(); // Add the settings button after rejecting
     });
     
     customizeButton.addEventListener('click', function() {
       showCustomizePanel();
-      recordAnalytics('partial');
+      recordAnalytics('customize');
     });
     
     // Append elements to DOM
@@ -228,6 +241,7 @@
     if (config.autoHide && config.autoHideTime > 0) {
       setTimeout(function() {
         hideBanner();
+        addSettingsButton(); // Add settings button when auto-hiding
       }, config.autoHideTime * 1000);
     }
   }
@@ -503,12 +517,14 @@
       manageCookies('accept');
       recordAnalytics('accept');
       panel.remove();
+      addSettingsButton(); // Add the settings button after accepting
     });
     
     rejectAllBtn.addEventListener('click', function() {
       manageCookies('reject');
       recordAnalytics('reject');
       panel.remove();
+      addSettingsButton(); // Add the settings button after rejecting
     });
     
     saveBtn.addEventListener('click', function() {
@@ -525,16 +541,12 @@
         marketing
       };
       
-      // Store preferences in a cookie
-      const preferencesJson = JSON.stringify(preferences);
-      const expiryDate = new Date();
-      expiryDate.setMonth(expiryDate.getMonth() + 6);
-      
-      document.cookie = `consentguard_preferences=${encodeURIComponent(preferencesJson)}; expires=${expiryDate.toUTCString()}; path=/; SameSite=Lax`;
-      document.cookie = `consentguard_consent=partial; expires=${expiryDate.toUTCString()}; path=/; SameSite=Lax`;
+      // Store preferences in a cookie and manage cookies
+      manageCookies('partial', preferences);
       
       recordAnalytics('partial');
       panel.remove();
+      addSettingsButton(); // Add the settings button after saving preferences
     });
     
     // Append buttons to container
@@ -556,47 +568,50 @@
    * Add a small button to re-open cookie settings after dismissal
    */
   function addSettingsButton() {
-    // Only add if user has already made a choice (cookie exists)
-    if (document.cookie.includes('consentguard_consent=')) {
-      // Create the button
-      const settingsButton = document.createElement('button');
-      settingsButton.id = 'consentguard-settings-button';
-      settingsButton.textContent = 'Cookie Settings';
-      settingsButton.style.cssText = `
-        position: fixed;
-        bottom: 20px;
-        right: 20px;
-        background-color: ${config.bannerColor};
-        color: ${config.textColor};
-        border: none;
-        border-radius: 4px;
-        padding: 6px 12px;
-        font-family: Arial, sans-serif;
-        font-size: 12px;
-        cursor: pointer;
-        z-index: 99998;
-        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-        opacity: 0.7;
-        transition: opacity 0.3s;
-      `;
-      
-      // Add hover effect
-      settingsButton.addEventListener('mouseover', function() {
-        this.style.opacity = '1';
-      });
-      
-      settingsButton.addEventListener('mouseout', function() {
-        this.style.opacity = '0.7';
-      });
-      
-      // Open customize panel on click
-      settingsButton.addEventListener('click', function() {
-        showCustomizePanel();
-      });
-      
-      // Add to page
-      document.body.appendChild(settingsButton);
+    // Remove any existing settings button first
+    const existingButton = document.getElementById('consentguard-settings-button');
+    if (existingButton) {
+      existingButton.remove();
     }
+    
+    // Create the button
+    const settingsButton = document.createElement('button');
+    settingsButton.id = 'consentguard-settings-button';
+    settingsButton.textContent = 'Cookie Settings';
+    settingsButton.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: ${config.bannerColor};
+      color: ${config.textColor};
+      border: none;
+      border-radius: 4px;
+      padding: 6px 12px;
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      cursor: pointer;
+      z-index: 99998;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      opacity: 0.7;
+      transition: opacity 0.3s;
+    `;
+    
+    // Add hover effect
+    settingsButton.addEventListener('mouseover', function() {
+      this.style.opacity = '1';
+    });
+    
+    settingsButton.addEventListener('mouseout', function() {
+      this.style.opacity = '0.7';
+    });
+    
+    // Open customize panel on click
+    settingsButton.addEventListener('click', function() {
+      showCustomizePanel();
+    });
+    
+    // Add to page
+    document.body.appendChild(settingsButton);
   }
   
   /**
@@ -607,17 +622,23 @@
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', async function() {
         await fetchConfig();
-        if (!document.cookie.includes('consentguard_consent=')) {
+        const hasConsent = document.cookie.includes('consentguard_consent=');
+        
+        if (!hasConsent) {
           createBanner();
+        } else {
+          addSettingsButton();
         }
-        addSettingsButton();
       });
     } else {
       await fetchConfig();
-      if (!document.cookie.includes('consentguard_consent=')) {
+      const hasConsent = document.cookie.includes('consentguard_consent=');
+      
+      if (!hasConsent) {
         createBanner();
+      } else {
+        addSettingsButton();
       }
-      addSettingsButton();
     }
   }
   

@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { CopyIcon, CheckIcon, PlayIcon, EyeIcon, ListIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Website } from '@/hooks/useWebsites';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { InfoIcon } from 'lucide-react';
 import { generateCdnUrl } from '@/lib/utils';
@@ -18,12 +18,17 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
   const [copiedScript, setCopiedScript] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const handleCopyScript = () => {
     const scriptCode = `<script src="${generateCdnUrl(scriptId)}" async></script>`;
     navigator.clipboard.writeText(scriptCode);
     setCopiedScript(true);
-    toast.success("Script code copied to clipboard");
+    toast({
+      title: "Success",
+      description: "Script code copied to clipboard",
+      duration: 2000,
+    });
     
     setTimeout(() => {
       setCopiedScript(false);
@@ -34,47 +39,57 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
     setShowPreview(!showPreview);
     
     if (!showPreview) {
-      toast.info("Loading preview banner from CDN...");
+      toast({
+        title: "Loading Preview",
+        description: "Loading preview banner from CDN...",
+        duration: 2000,
+      });
     }
   };
 
   // Clean up the preview when component unmounts
   useEffect(() => {
     return () => {
-      // Remove any banner that might have been created
-      const existingBanner = document.getElementById('consentguard-banner');
-      if (existingBanner) {
-        existingBanner.remove();
-      }
-      
-      // Remove any customize panel that might have been created
-      const customizePanel = document.getElementById('consentguard-customize-panel');
-      if (customizePanel) {
-        customizePanel.remove();
-      }
-      
-      // Remove settings button if it exists
-      const settingsButton = document.getElementById('consentguard-settings-button');
-      if (settingsButton) {
-        settingsButton.remove();
-      }
-      
-      // Remove any script tag that might have been added
-      const existingScript = document.getElementById('preview-consent-script');
-      if (existingScript) {
-        existingScript.remove();
-      }
+      cleanupConsentElements();
     };
   }, []);
+
+  // Function to clean up all consent-related elements
+  const cleanupConsentElements = () => {
+    // Remove any banner that might have been created
+    const existingBanner = document.getElementById('consentguard-banner');
+    if (existingBanner) {
+      existingBanner.remove();
+    }
+    
+    // Remove any customize panel that might have been created
+    const customizePanel = document.getElementById('consentguard-customize-panel');
+    if (customizePanel) {
+      customizePanel.remove();
+    }
+    
+    // Remove settings button if it exists
+    const settingsButton = document.getElementById('consentguard-settings-button');
+    if (settingsButton) {
+      settingsButton.remove();
+    }
+    
+    // Remove any script tag that might have been added
+    const existingScript = document.getElementById('preview-consent-script');
+    if (existingScript) {
+      existingScript.remove();
+    }
+
+    // Remove any consent cookies to ensure the banner appears again
+    document.cookie = "consentguard_consent=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+    document.cookie = "consentguard_preferences=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+  };
 
   // Handle the preview logic
   useEffect(() => {
     if (showPreview) {
-      // Remove any existing preview before adding a new one
-      const existingScript = document.getElementById('preview-consent-script');
-      if (existingScript) {
-        existingScript.remove();
-      }
+      // Make sure to clean up any existing elements first
+      cleanupConsentElements();
 
       // Create and inject the script
       const script = document.createElement('script');
@@ -84,38 +99,28 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
       
       // Add event listeners for success/failure
       script.onload = () => {
-        toast.success("Preview script loaded successfully!");
+        toast({
+          title: "Success",
+          description: "Preview script loaded successfully!",
+          duration: 2000,
+        });
       };
       
       script.onerror = () => {
-        toast.error("Failed to load script. Please check your setup.");
+        toast({
+          title: "Error",
+          description: "Failed to load script. Please check your setup.",
+          variant: "destructive",
+          duration: 3000,
+        });
         setShowPreview(false);
       };
       
       document.head.appendChild(script);
     } else {
-      // Remove the script and any banner when preview is disabled
-      const script = document.getElementById('preview-consent-script');
-      if (script) {
-        script.remove();
-      }
-      
-      const banner = document.getElementById('consentguard-banner');
-      if (banner) {
-        banner.remove();
-      }
-      
-      const customizePanel = document.getElementById('consentguard-customize-panel');
-      if (customizePanel) {
-        customizePanel.remove();
-      }
-      
-      const settingsButton = document.getElementById('consentguard-settings-button');
-      if (settingsButton) {
-        settingsButton.remove();
-      }
+      cleanupConsentElements();
     }
-  }, [showPreview, scriptId]);
+  }, [showPreview, scriptId, toast]);
 
   return (
     <div className="space-y-6">
@@ -196,8 +201,9 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
         {showPreview && (
           <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
             <p className="text-sm text-yellow-800">
-              A consent banner should appear at the bottom of this page. You can try clicking the "Customize" button to view the options panel.
-              After dismissing the banner, a small "Cookie Settings" button will appear in the bottom right corner to reopen it.
+              A consent banner should appear at the bottom of this page. You can click the "Customize" button to open 
+              the settings panel with cookie categories you can enable/disable. The panel includes options to save preferences, 
+              accept all, or reject all cookies.
             </p>
           </div>
         )}
