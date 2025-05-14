@@ -153,6 +153,19 @@ function toast({ ...props }: Toast) {
   }
 }
 
+// Add convenience methods for different toast variants
+toast.success = (props: Omit<Toast, "variant">) => 
+  toast({ ...props, variant: "success" });
+
+toast.error = (props: Omit<Toast, "variant">) => 
+  toast({ ...props, variant: "destructive" });
+
+toast.warning = (props: Omit<Toast, "variant">) => 
+  toast({ ...props, variant: "default" });
+
+toast.info = (props: Omit<Toast, "variant">) => 
+  toast({ ...props, variant: "default" });
+
 function useToast() {
   const [state, setState] = React.useState<State>(memoryState)
 
