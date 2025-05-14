@@ -1,13 +1,13 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader, PlusCircle, Copy, Trash2 } from 'lucide-react';
+import { Loader, PlusCircle, Copy, Trash2, Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useScripts, ConsentScript } from '@/hooks/useScripts';
 import { useWebsites } from '@/hooks/useWebsites';
-import { toast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 import { generateCdnUrl } from '@/lib/utils';
 import {
   Dialog,
@@ -22,9 +22,9 @@ const ScriptsPage: React.FC = () => {
   const { scripts, loading, error, fetchScripts, deleteScript } = useScripts();
   const { websites, fetchWebsites } = useWebsites();
   const navigate = useNavigate();
-  const [selectedScript, setSelectedScript] = React.useState<ConsentScript | null>(null);
-  const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
-  const [copying, setCopying] = React.useState<string | null>(null);
+  const [selectedScript, setSelectedScript] = useState<ConsentScript | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [copying, setCopying] = useState<string | null>(null);
 
   useEffect(() => {
     console.log("ScriptsPage mounted, fetching scripts and websites");
@@ -41,6 +41,13 @@ const ScriptsPage: React.FC = () => {
     navigate('/dashboard/scripts/create');
   };
 
+  const handleEditScript = (script: ConsentScript) => {
+    // Navigate to edit page with the script data
+    navigate(`/dashboard/scripts/edit/${script.id}`, { 
+      state: { scriptData: script } 
+    });
+  };
+
   const getWebsiteName = (websiteId: string) => {
     const website = websites.find(w => w.id === websiteId);
     return website ? website.name : 'Unknown Website';
@@ -55,7 +62,10 @@ const ScriptsPage: React.FC = () => {
     const scriptCode = `<script src="${generateCdnUrl(scriptId)}" async></script>`;
     navigator.clipboard.writeText(scriptCode);
     setCopying(scriptId);
-    toast.success("Script code copied to clipboard");
+    toast({ 
+      title: "Success", 
+      description: "Script code copied to clipboard"
+    });
     
     setTimeout(() => {
       setCopying(null);
@@ -74,10 +84,17 @@ const ScriptsPage: React.FC = () => {
       await deleteScript(selectedScript.id);
       setDeleteDialogOpen(false);
       setSelectedScript(null);
-      toast.success("Script deleted successfully");
+      toast({
+        title: "Success",
+        description: "Script deleted successfully"
+      });
     } catch (error) {
       console.error('Error deleting script:', error);
-      toast.error("Failed to delete script");
+      toast({
+        title: "Error", 
+        description: "Failed to delete script",
+        variant: "destructive"
+      });
     }
   };
 
@@ -128,14 +145,24 @@ const ScriptsPage: React.FC = () => {
                         {getWebsiteDomain(script.website_id)}
                       </div>
                     </div>
-                    <Button 
-                      variant="ghost" 
-                      size="icon"
-                      className="text-red-500 hover:text-red-600 hover:bg-red-50"
-                      onClick={() => handleDelete(script)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <div className="flex space-x-1">
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        className="text-blue-500 hover:text-blue-600 hover:bg-blue-50"
+                        onClick={() => handleEditScript(script)}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="icon"
+                        className="text-red-500 hover:text-red-600 hover:bg-red-50"
+                        onClick={() => handleDelete(script)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
@@ -168,7 +195,7 @@ const ScriptsPage: React.FC = () => {
                     </div>
                   </div>
                 </CardContent>
-                <CardFooter>
+                <CardFooter className="flex flex-col gap-2">
                   <Button 
                     variant="outline" 
                     className="w-full"
@@ -182,6 +209,15 @@ const ScriptsPage: React.FC = () => {
                         Copy Code
                       </>
                     )}
+                  </Button>
+                  <Button 
+                    variant="secondary"
+                    className="w-full"
+                    onClick={() => navigate(`/dashboard/scripts/test/${script.id}`, { 
+                      state: { scriptData: script, websiteName: getWebsiteName(script.website_id) }
+                    })}
+                  >
+                    Test Script
                   </Button>
                 </CardFooter>
               </Card>

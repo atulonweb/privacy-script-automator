@@ -37,14 +37,6 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
 
   const togglePreview = () => {
     setShowPreview(!showPreview);
-    
-    if (!showPreview) {
-      toast({
-        title: "Loading Preview",
-        description: "Loading preview banner from CDN...",
-        duration: 2000,
-      });
-    }
   };
 
   // Clean up the preview when component unmounts
@@ -93,34 +85,15 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
 
       // Create and inject the script
       const script = document.createElement('script');
-      script.src = generateCdnUrl(scriptId);
+      script.src = generateCdnUrl(scriptId) + "&testMode=true"; // Add testMode parameter
       script.id = 'preview-consent-script';
       script.async = true;
-      
-      // Add event listeners for success/failure
-      script.onload = () => {
-        toast({
-          title: "Success",
-          description: "Preview script loaded successfully!",
-          duration: 2000,
-        });
-      };
-      
-      script.onerror = () => {
-        toast({
-          title: "Error",
-          description: "Failed to load script. Please check your setup.",
-          variant: "destructive",
-          duration: 3000,
-        });
-        setShowPreview(false);
-      };
       
       document.head.appendChild(script);
     } else {
       cleanupConsentElements();
     }
-  }, [showPreview, scriptId, toast]);
+  }, [showPreview, scriptId]);
 
   return (
     <div className="space-y-6">
@@ -199,12 +172,19 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
         </div>
         
         {showPreview && (
-          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-            <p className="text-sm text-yellow-800">
-              A consent banner should appear at the bottom of this page. You can click the "Customize" button to open 
-              the settings panel with cookie categories you can enable/disable. The panel includes options to save preferences, 
-              accept all, or reject all cookies.
+          <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-md">
+            <p className="text-sm text-green-800 font-medium mb-2">
+              Preview Active
             </p>
+            <p className="text-sm text-green-700">
+              A consent banner should appear at the bottom of this page. Features:
+            </p>
+            <ul className="list-disc list-inside text-sm text-green-700 mt-2">
+              <li>Click "Customize" to open the settings panel with cookie categories</li>
+              <li>Toggle cookie categories on/off in the customize panel</li>
+              <li>Use "Save Preferences", "Accept All", or "Reject All" buttons</li>
+              <li>After closing the banner, use the "Cookie Settings" button in the corner to reopen</li>
+            </ul>
           </div>
         )}
       </div>

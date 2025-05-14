@@ -12,6 +12,9 @@
   const url = new URL(scriptSrc);
   const scriptId = url.searchParams.get('id');
   
+  // Check if we're in test mode
+  const testMode = url.searchParams.get('testMode') === 'true';
+  
   // Config object to store banner settings
   let config = {
     bannerPosition: 'bottom',
@@ -59,6 +62,12 @@
    * @param {string} action - The user action (view, accept, reject, partial)
    */
   async function recordAnalytics(action) {
+    // Skip analytics recording if in test mode
+    if (testMode) {
+      console.log('ConsentGuard: Test mode - analytics not recorded for action:', action);
+      return;
+    }
+    
     try {
       await fetch(`${API_ENDPOINT}/analytics`, {
         method: 'POST',
