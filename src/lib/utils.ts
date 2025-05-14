@@ -8,14 +8,18 @@ export function cn(...inputs: ClassValue[]) {
 
 /**
  * Generates a CDN URL for the consent script
- * In a production environment, this would point to an actual CDN
- * For development/demo purposes, we're using a local path
+ * Points to the Azure CDN hosting the script
  */
 export function generateCdnUrl(scriptId: string): string {
-  // In production, you'd use your actual CDN domain
-  // Example: return `https://cdn.consentguard.com/cg.js?id=${scriptId}`;
+  // For production with Azure CDN
+  // Replace this URL with your actual Azure CDN endpoint
+  const cdnBaseUrl = 'https://consentguard.azureedge.net/cdn/cg.js';
+  // Or if you set up a custom domain:
+  // const cdnBaseUrl = 'https://cdn.consentguard.com/cdn/cg.js';
   
-  // For development/demo purposes, point to the local path
-  // This is assuming we're serving the cg.js file from /cdn/cg.js
-  return `${window.location.origin}/cdn/cg.js?id=${scriptId}`;
+  // For local development/testing, uncomment this:
+  // return `${window.location.origin}/cdn/cg.js?id=${scriptId}`;
+  
+  // Use the Azure CDN URL
+  return `${cdnBaseUrl}?id=${scriptId}`;
 }
