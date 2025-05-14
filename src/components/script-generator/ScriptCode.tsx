@@ -1,7 +1,7 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { CopyIcon, CheckIcon } from 'lucide-react';
+import { CopyIcon, CheckIcon, PlayIcon, EyeIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Website } from '@/hooks/useWebsites';
 import { toast } from 'sonner';
@@ -16,6 +16,7 @@ interface ScriptCodeProps {
 
 const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
   const [copiedScript, setCopiedScript] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const navigate = useNavigate();
 
   const handleCopyScript = () => {
@@ -28,6 +29,71 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
       setCopiedScript(false);
     }, 3000);
   };
+
+  const togglePreview = () => {
+    setShowPreview(!showPreview);
+    
+    if (!showPreview) {
+      toast.info("Loading preview banner from CDN...");
+    }
+  };
+
+  // Clean up the preview when component unmounts
+  useEffect(() => {
+    return () => {
+      // Remove any banner that might have been created
+      const existingBanner = document.getElementById('consentguard-banner');
+      if (existingBanner) {
+        existingBanner.remove();
+      }
+      
+      // Remove any script tag that might have been added
+      const existingScript = document.getElementById('preview-consent-script');
+      if (existingScript) {
+        existingScript.remove();
+      }
+    };
+  }, []);
+
+  // Handle the preview logic
+  useEffect(() => {
+    if (showPreview) {
+      // Remove any existing preview before adding a new one
+      const existingScript = document.getElementById('preview-consent-script');
+      if (existingScript) {
+        existingScript.remove();
+      }
+
+      // Create and inject the script
+      const script = document.createElement('script');
+      script.src = generateCdnUrl(scriptId);
+      script.id = 'preview-consent-script';
+      script.async = true;
+      
+      // Add event listeners for success/failure
+      script.onload = () => {
+        toast.success("Preview script loaded successfully from CDN!");
+      };
+      
+      script.onerror = () => {
+        toast.error("Failed to load script from CDN. Please check your CDN setup.");
+        setShowPreview(false);
+      };
+      
+      document.head.appendChild(script);
+    } else {
+      // Remove the script and any banner when preview is disabled
+      const script = document.getElementById('preview-consent-script');
+      if (script) {
+        script.remove();
+      }
+      
+      const banner = document.getElementById('consentguard-banner');
+      if (banner) {
+        banner.remove();
+      }
+    }
+  }, [showPreview, scriptId]);
 
   return (
     <div className="space-y-6">
@@ -59,23 +125,51 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
           {`<script src="${generateCdnUrl(scriptId)}" async></script>`}
         </div>
 
-        <Button 
-          onClick={handleCopyScript} 
-          variant="outline" 
-          className="mt-4 w-full"
-        >
-          {copiedScript ? (
-            <>
-              <CheckIcon className="mr-2 h-4 w-4" />
-              Copied!
-            </>
-          ) : (
-            <>
-              <CopyIcon className="mr-2 h-4 w-4" />
-              Copy Script
-            </>
-          )}
-        </Button>
+        <div className="flex gap-2 mt-4">
+          <Button 
+            onClick={handleCopyScript} 
+            variant="outline" 
+            className="flex-1"
+          >
+            {copiedScript ? (
+              <>
+                <CheckIcon className="mr-2 h-4 w-4" />
+                Copied!
+              </>
+            ) : (
+              <>
+                <CopyIcon className="mr-2 h-4 w-4" />
+                Copy Script
+              </>
+            )}
+          </Button>
+          
+          <Button
+            onClick={togglePreview}
+            variant={showPreview ? "secondary" : "outline"}
+            className="flex-1"
+          >
+            {showPreview ? (
+              <>
+                <EyeIcon className="mr-2 h-4 w-4" />
+                Hide Preview
+              </>
+            ) : (
+              <>
+                <PlayIcon className="mr-2 h-4 w-4" />
+                Test CDN Script
+              </>
+            )}
+          </Button>
+        </div>
+        
+        {showPreview && (
+          <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+            <p className="text-sm text-yellow-800">
+              A consent banner should appear at the bottom of this page. If you don't see it, check your browser console for errors.
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="pt-4">
