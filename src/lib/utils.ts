@@ -12,7 +12,7 @@ export function cn(...inputs: ClassValue[]) {
  */
 export function generateCdnUrl(scriptId: string): string {
   // Azure Front Door endpoint
-  const cdnBaseUrl = 'https://consentguard-aea4bfcrf8aagkc5.z01.azurefd.net/cdn/cg.js';
+  const cdnBaseUrl = 'https://consentguard-aea4bfcrf8aagkc5.z01.azurefd.net/cg.js';
   
   // For local development/testing, uncomment this:
   // return `${window.location.origin}/cdn/cg.js?id=${scriptId}`;
