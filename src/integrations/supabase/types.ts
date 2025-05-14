@@ -136,6 +136,97 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_logs: {
+        Row: {
+          attempt: number
+          created_at: string
+          error_message: string | null
+          id: string
+          is_test: boolean
+          request_payload: Json | null
+          response_body: string | null
+          status: string
+          status_code: number | null
+          webhook_id: string
+        }
+        Insert: {
+          attempt?: number
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          is_test?: boolean
+          request_payload?: Json | null
+          response_body?: string | null
+          status: string
+          status_code?: number | null
+          webhook_id: string
+        }
+        Update: {
+          attempt?: number
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          is_test?: boolean
+          request_payload?: Json | null
+          response_body?: string | null
+          status?: string
+          status_code?: number | null
+          webhook_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_logs_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "webhooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      webhooks: {
+        Row: {
+          created_at: string
+          enabled: boolean
+          id: string
+          retry_count: number
+          secret: string | null
+          updated_at: string
+          url: string
+          user_id: string
+          website_id: string
+        }
+        Insert: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          retry_count?: number
+          secret?: string | null
+          updated_at?: string
+          url: string
+          user_id: string
+          website_id: string
+        }
+        Update: {
+          created_at?: string
+          enabled?: boolean
+          id?: string
+          retry_count?: number
+          secret?: string | null
+          updated_at?: string
+          url?: string
+          user_id?: string
+          website_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhooks_website_id_fkey"
+            columns: ["website_id"]
+            isOneToOne: false
+            referencedRelation: "websites"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       websites: {
         Row: {
           active: boolean

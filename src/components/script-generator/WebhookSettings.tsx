@@ -225,7 +225,7 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ website }) => {
               <Switch 
                 id="webhookEnabled" 
                 checked={enabled}
-                onCheckedChange={setEnabled}
+                onCheckedChange={(value) => setEnabled(value)}
               />
               <Label htmlFor="webhookEnabled">Enable webhook</Label>
             </div>
