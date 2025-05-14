@@ -44,53 +44,51 @@ const useToast = () => {
 export { useToast };
 
 // For direct usage without the hook
-export const toast = {
-  // Default toast function
-  (props: ToasterToast) {
-    return sonnerToast(props.title as string, {
-      description: props.description,
-      action: props.action,
-      ...props,
-    });
-  },
-
-  // Helper methods
-  success(props: Omit<ToasterToast, "variant">) {
-    return sonnerToast(props.title as string, {
-      description: props.description,
-      action: props.action,
-      ...props,
-      variant: "default",
-    });
-  },
-
-  error(props: Omit<ToasterToast, "variant">) {
-    return sonnerToast(props.title as string, {
-      description: props.description,
-      action: props.action,
-      ...props,
-      variant: "destructive",
-    });
-  },
-
-  warning(props: Omit<ToasterToast, "variant">) {
-    return sonnerToast(props.title as string, {
-      description: props.description,
-      action: props.action,
-      ...props,
-      variant: "warning",
-    });
-  },
-
-  info(props: Omit<ToasterToast, "variant">) {
-    return sonnerToast(props.title as string, {
-      description: props.description,
-      action: props.action,
-      ...props,
-      variant: "default",
-    });
-  },
+const directToast = (props: ToasterToast) => {
+  return sonnerToast(props.title as string, {
+    description: props.description,
+    action: props.action,
+    ...props,
+  });
 };
+
+directToast.success = (props: Omit<ToasterToast, "variant">) => {
+  return sonnerToast(props.title as string, {
+    description: props.description,
+    action: props.action,
+    ...props,
+    variant: "default",
+  });
+};
+
+directToast.error = (props: Omit<ToasterToast, "variant">) => {
+  return sonnerToast(props.title as string, {
+    description: props.description,
+    action: props.action,
+    ...props,
+    variant: "destructive",
+  });
+};
+
+directToast.warning = (props: Omit<ToasterToast, "variant">) => {
+  return sonnerToast(props.title as string, {
+    description: props.description,
+    action: props.action,
+    ...props,
+    variant: "warning",
+  });
+};
+
+directToast.info = (props: Omit<ToasterToast, "variant">) => {
+  return sonnerToast(props.title as string, {
+    description: props.description,
+    action: props.action,
+    ...props,
+    variant: "default",
+  });
+};
+
+export const toast = directToast;
 
 export type Toast = typeof toast;
 export type ToastActionElement = React.ReactElement;
