@@ -67,18 +67,15 @@ const ScriptEditor: React.FC<ScriptEditorProps> = ({ scriptData }) => {
       // Move to final step
       setCurrentStep(3);
       
-      toast({
+      toast.success({
         title: "Success",
-        description: "Script successfully updated!",
-        duration: 2000,
+        description: "Script successfully updated!"
       });
     } catch (error: any) {
       console.error('Error updating script:', error);
-      toast({
+      toast.error({
         title: "Error",
-        description: error.message || "Failed to update script. Please try again.",
-        variant: "destructive",
-        duration: 3000,
+        description: error.message || "Failed to update script. Please try again."
       });
     } finally {
       setLoading(false);

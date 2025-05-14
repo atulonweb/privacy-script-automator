@@ -7,8 +7,10 @@ export interface ToastProps {
   title?: React.ReactNode
   description?: React.ReactNode
   action?: React.ReactNode
-  variant?: "default" | "destructive"
+  variant?: "default" | "destructive" | "success"
   duration?: number
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
 }
 
 export type ToastActionElement = React.ReactElement<{
@@ -140,9 +142,25 @@ function dispatch(action: Action) {
   })
 }
 
-export function toast({
-  ...props
-}: Omit<ToasterToast, "id">) {
+interface ToastFunction {
+  (props: Omit<ToasterToast, "id">): {
+    id: string
+    dismiss: () => void
+    update: (props: ToasterToast) => void
+  }
+  error: (props: Omit<ToasterToast, "id" | "variant">) => {
+    id: string
+    dismiss: () => void
+    update: (props: ToasterToast) => void
+  }
+  success: (props: Omit<ToasterToast, "id" | "variant">) => {
+    id: string
+    dismiss: () => void
+    update: (props: ToasterToast) => void
+  }
+}
+
+const createToast = (props: Omit<ToasterToast, "id">) => {
   const id = generateId()
 
   const update = (props: ToasterToast) =>
@@ -166,11 +184,19 @@ export function toast({
   })
 
   return {
-    id: id,
+    id,
     dismiss,
     update,
   }
 }
+
+export const toast = Object.assign(
+  createToast,
+  {
+    error: (props: Omit<ToasterToast, "id" | "variant">) => createToast({ ...props, variant: "destructive" }),
+    success: (props: Omit<ToasterToast, "id" | "variant">) => createToast({ ...props, variant: "success" })
+  }
+) as ToastFunction
 
 export function useToast() {
   const [state, setState] = React.useState<State>(memoryState)

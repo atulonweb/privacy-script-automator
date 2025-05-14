@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -63,7 +64,11 @@ const ScriptGenerator: React.FC = () => {
 
   const handleSubmit = async () => {
     if (!websiteId) {
-      toast.error("Please select a website first");
+      toast({
+        title: "Error",
+        description: "Please select a website first",
+        variant: "destructive",
+      });
       return;
     }
     
@@ -106,13 +111,19 @@ const ScriptGenerator: React.FC = () => {
       if (newScript) {
         setGeneratedScriptId(scriptId);
         setCurrentStep(4); // Move to final step
-        toast.success("Script successfully created! You can find all your scripts in the Scripts page.");
+        toast.success({
+          title: "Success",
+          description: "Script successfully created! You can find all your scripts in the Scripts page."
+        });
       } else {
         throw new Error("Script could not be created - no data returned");
       }
     } catch (error: any) {
       console.error('Error creating script:', error);
-      toast.error(error.message || "Failed to create script. Please try again.");
+      toast.error({
+        title: "Error",
+        description: error.message || "Failed to create script. Please try again."
+      });
     } finally {
       setLoading(false);
     }
