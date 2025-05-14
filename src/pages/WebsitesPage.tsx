@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -11,13 +11,24 @@ import { useScripts } from '@/hooks/useScripts';
 
 const WebsitesPage: React.FC = () => {
   const { websites, loading, error, fetchWebsites } = useWebsites();
-  const { scripts, fetchScripts } = useScripts();
+  const { scripts, fetchScripts, loading: scriptsLoading } = useScripts();
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
   const navigate = useNavigate();
 
   useEffect(() => {
     console.log("WebsitesPage mounted, fetching websites");
-    fetchWebsites();
-    fetchScripts();
+    const loadData = async () => {
+      try {
+        await Promise.all([fetchWebsites(), fetchScripts()]);
+      } catch (error) {
+        console.error("Error loading websites or scripts:", error);
+      } finally {
+        // Mark initial load as complete regardless of success/failure
+        setIsInitialLoad(false);
+      }
+    };
+    
+    loadData();
   }, [fetchWebsites, fetchScripts]);
 
   const handleAddWebsite = () => {
@@ -45,6 +56,9 @@ const WebsitesPage: React.FC = () => {
     }
   };
 
+  // Show loading only during initial load
+  const showLoading = isInitialLoad && (loading || scriptsLoading);
+
   return (
     <DashboardLayout>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -55,7 +69,7 @@ const WebsitesPage: React.FC = () => {
           </Button>
         </div>
 
-        {loading ? (
+        {showLoading ? (
           <div className="flex justify-center py-12">
             <Loader className="h-8 w-8 animate-spin text-brand-600" />
           </div>

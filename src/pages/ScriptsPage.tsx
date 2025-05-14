@@ -26,12 +26,23 @@ const ScriptsPage: React.FC = () => {
   const [selectedScript, setSelectedScript] = useState<ConsentScript | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [copying, setCopying] = useState<string | null>(null);
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   useEffect(() => {
     console.log("ScriptsPage mounted, fetching scripts and websites");
-    fetchScripts();
-    fetchWebsites();
-  }, []);
+    const loadData = async () => {
+      try {
+        await Promise.all([fetchScripts(), fetchWebsites()]);
+      } catch (error) {
+        console.error("Error loading scripts or websites:", error);
+      } finally {
+        // Mark initial load as complete regardless of success/failure
+        setIsInitialLoad(false);
+      }
+    };
+    
+    loadData();
+  }, [fetchScripts, fetchWebsites]);
 
   useEffect(() => {
     console.log("Scripts loaded:", scripts);
@@ -99,7 +110,8 @@ const ScriptsPage: React.FC = () => {
     }
   };
 
-  console.log("Rendering ScriptsPage with", scripts.length, "scripts");
+  // Show loading only during initial load
+  const showLoading = isInitialLoad && (loading || !websites.length);
 
   return (
     <DashboardLayout>
@@ -113,7 +125,7 @@ const ScriptsPage: React.FC = () => {
           </Button>
         </div>
 
-        {loading ? (
+        {showLoading ? (
           <div className="flex justify-center py-12">
             <Loader className="h-8 w-8 animate-spin text-brand-600" />
           </div>
