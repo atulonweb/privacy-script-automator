@@ -30,17 +30,17 @@ export default function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
         
-        <Route path="/dashboard" element={<ProtectedRoute component={DashboardPage} />} />
-        <Route path="/dashboard/websites" element={<ProtectedRoute component={WebsitesPage} />} />
-        <Route path="/dashboard/scripts" element={<ProtectedRoute component={ScriptsPage} />} />
-        <Route path="/dashboard/scripts/create" element={<ProtectedRoute component={ScriptGeneratorPage} />} />
-        <Route path="/dashboard/scripts/edit/:id" element={<ProtectedRoute component={EditScriptPage} />} />
-        <Route path="/dashboard/scripts/test/:id" element={<ProtectedRoute component={TestScriptPage} />} />
-        <Route path="/dashboard/analytics" element={<ProtectedRoute component={AnalyticsPage} />} />
-        <Route path="/dashboard/settings" element={<ProtectedRoute component={SettingsPage} />} />
-        <Route path="/dashboard/testing" element={<ProtectedRoute component={TestingPage} />} />
+        <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+        <Route path="/dashboard/websites" element={<ProtectedRoute><WebsitesPage /></ProtectedRoute>} />
+        <Route path="/dashboard/scripts" element={<ProtectedRoute><ScriptsPage /></ProtectedRoute>} />
+        <Route path="/dashboard/scripts/create" element={<ProtectedRoute><ScriptGeneratorPage /></ProtectedRoute>} />
+        <Route path="/dashboard/scripts/edit/:id" element={<ProtectedRoute><EditScriptPage /></ProtectedRoute>} />
+        <Route path="/dashboard/scripts/test/:id" element={<ProtectedRoute><TestScriptPage /></ProtectedRoute>} />
+        <Route path="/dashboard/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
+        <Route path="/dashboard/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+        <Route path="/dashboard/testing" element={<ProtectedRoute><TestingPage /></ProtectedRoute>} />
         
-        <Route path="/admin" element={<AdminRoute component={AdminDashboardPage} />} />
+        <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
       <Toaster />
