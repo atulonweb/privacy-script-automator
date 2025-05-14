@@ -8,8 +8,6 @@ import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { InfoIcon } from 'lucide-react';
 import { generateCdnUrl } from '@/lib/utils';
-import { CustomizeDialog } from '@/components/ui/customize-dialog';
-import { CookieConsentSheet } from '@/components/ui/cookie-consent-sheet';
 
 interface ScriptCodeProps {
   scriptId: string;
@@ -39,14 +37,6 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
 
   const togglePreview = () => {
     setShowPreview(!showPreview);
-  };
-  
-  const handleSavePreferences = (preferences: Record<string, boolean>) => {
-    console.log('Saved preferences:', preferences);
-    toast.success({
-      title: "Success",
-      description: "Cookie preferences saved successfully"
-    });
   };
 
   // Clean up the preview when component unmounts
@@ -191,19 +181,11 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
                 A consent banner should appear at the bottom of this page. Features:
               </p>
               <ul className="list-disc list-inside text-sm text-green-700 mt-2">
-                <li>Click "Customize" to open the settings panel with cookie categories</li>
+                <li>Click "Customize" in the banner to open the settings panel with cookie categories</li>
                 <li>Toggle cookie categories on/off in the customize panel</li>
-                <li>Use "Save Preferences", "Accept All", or "Reject All" buttons</li>
+                <li>Use "Save Preferences", "Accept All", or "Reject All" buttons in the panel</li>
                 <li>After closing the banner, use the "Cookie Settings" button in the corner to reopen</li>
               </ul>
-            </div>
-            
-            <div className="mt-3 border rounded-md p-4 bg-gray-50">
-              <h4 className="font-medium mb-2">Try our cookie customization options:</h4>
-              <div className="flex flex-wrap gap-4">
-                <CustomizeDialog onSavePreferences={handleSavePreferences} />
-                <CookieConsentSheet onSavePreferences={handleSavePreferences} />
-              </div>
             </div>
           </div>
         )}
