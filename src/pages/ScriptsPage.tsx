@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { useScripts, ConsentScript } from '@/hooks/useScripts';
 import { useWebsites } from '@/hooks/useWebsites';
 import { toast } from 'sonner';
+import { generateCdnUrl } from '@/lib/utils';
 import {
   Dialog,
   DialogContent,
@@ -51,7 +52,7 @@ const ScriptsPage: React.FC = () => {
   };
 
   const handleCopyScript = (scriptId: string) => {
-    const scriptCode = `<script src="https://cdn.consentguard.com/cg.js?id=${scriptId}" async></script>`;
+    const scriptCode = `<script src="${generateCdnUrl(scriptId)}" async></script>`;
     navigator.clipboard.writeText(scriptCode);
     setCopying(scriptId);
     toast.success("Script code copied to clipboard");

@@ -11,12 +11,11 @@ export function cn(...inputs: ClassValue[]) {
  * Points to a valid CDN hosting the script
  */
 export function generateCdnUrl(scriptId: string): string {
-  // For production, use a reliable CDN URL
-  // Currently using a placeholder that works for development/testing
+  // For development, use the local environment
+  if (window.location.hostname === 'localhost' || window.location.hostname.includes('.lovableproject.com')) {
+    return `${window.location.origin}/lib/cdn/cg.js?id=${scriptId}`;
+  }
   
-  // Use the local environment for testing
-  return `${window.location.origin}/lib/cdn/cg.js?id=${scriptId}`;
-  
-  // When deploying to production, uncomment and use your actual CDN:
-  // return `https://cdn.consentguard.com/cg.js?id=${scriptId}`;
+  // For production, use the Azure Front Door endpoint
+  return `https://consentguard-aea4bfcrf8aagkc5.z01.azurefd.net/cg.js?id=${scriptId}`;
 }
