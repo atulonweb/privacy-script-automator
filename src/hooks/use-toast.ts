@@ -9,6 +9,7 @@ export type ToastProps = ExternalToast & {
   title?: React.ReactNode;
   description?: React.ReactNode;
   action?: React.ReactNode;
+  variant?: "default" | "destructive" | "success";
 };
 
 export type ToasterToast = ToastProps & {
@@ -21,15 +22,24 @@ const useToast = () => {
   const toast = React.useMemo(() => {
     // Base toast function
     const toastFn = (props: ToastProps) => {
+      // Map our variant to sonner's style
+      let style: Record<string, unknown> = {};
+      if (props.variant === "destructive") {
+        style = { backgroundColor: "hsl(var(--destructive))", color: "hsl(var(--destructive-foreground))" };
+      } else if (props.variant === "success") {
+        style = { backgroundColor: "hsl(var(--success))", color: "hsl(var(--success-foreground))" };
+      }
+
       return sonnerToast(props.title as string, {
         description: props.description,
         action: props.action,
+        style,
         ...props,
       });
     };
 
     // Add variant methods
-    toastFn.success = (props: ToastProps) => {
+    toastFn.success = (props: Omit<ToastProps, "variant">) => {
       return sonnerToast.success(props.title as string, {
         description: props.description,
         action: props.action,
@@ -37,7 +47,7 @@ const useToast = () => {
       });
     };
 
-    toastFn.error = (props: ToastProps) => {
+    toastFn.error = (props: Omit<ToastProps, "variant">) => {
       return sonnerToast.error(props.title as string, {
         description: props.description,
         action: props.action,
@@ -45,7 +55,7 @@ const useToast = () => {
       });
     };
 
-    toastFn.warning = (props: ToastProps) => {
+    toastFn.warning = (props: Omit<ToastProps, "variant">) => {
       return sonnerToast.warning(props.title as string, {
         description: props.description,
         action: props.action,
@@ -53,7 +63,7 @@ const useToast = () => {
       });
     };
 
-    toastFn.info = (props: ToastProps) => {
+    toastFn.info = (props: Omit<ToastProps, "variant">) => {
       return sonnerToast.info(props.title as string, {
         description: props.description,
         action: props.action,
@@ -79,15 +89,24 @@ const useToast = () => {
 
 // For direct usage without the hook
 const toast = (props: ToastProps) => {
+  // Map our variant to sonner's style
+  let style: Record<string, unknown> = {};
+  if (props.variant === "destructive") {
+    style = { backgroundColor: "hsl(var(--destructive))", color: "hsl(var(--destructive-foreground))" };
+  } else if (props.variant === "success") {
+    style = { backgroundColor: "hsl(var(--success))", color: "hsl(var(--success-foreground))" };
+  }
+  
   return sonnerToast(props.title as string, {
     description: props.description,
     action: props.action,
+    style,
     ...props,
   });
 };
 
 // Add variant methods
-toast.success = (props: ToastProps) => {
+toast.success = (props: Omit<ToastProps, "variant">) => {
   return sonnerToast.success(props.title as string, {
     description: props.description,
     action: props.action,
@@ -95,7 +114,7 @@ toast.success = (props: ToastProps) => {
   });
 };
 
-toast.error = (props: ToastProps) => {
+toast.error = (props: Omit<ToastProps, "variant">) => {
   return sonnerToast.error(props.title as string, {
     description: props.description,
     action: props.action,
@@ -103,7 +122,7 @@ toast.error = (props: ToastProps) => {
   });
 };
 
-toast.warning = (props: ToastProps) => {
+toast.warning = (props: Omit<ToastProps, "variant">) => {
   return sonnerToast.warning(props.title as string, {
     description: props.description,
     action: props.action,
@@ -111,7 +130,7 @@ toast.warning = (props: ToastProps) => {
   });
 };
 
-toast.info = (props: ToastProps) => {
+toast.info = (props: Omit<ToastProps, "variant">) => {
   return sonnerToast.info(props.title as string, {
     description: props.description,
     action: props.action,
