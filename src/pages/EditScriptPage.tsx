@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Loader } from 'lucide-react';
 import ScriptEditor from '@/components/script-generator/ScriptEditor';
 import { ConsentScript, useScripts } from '@/hooks/useScripts';
-import { useToast } from '@/components/ui/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 const EditScriptPage: React.FC = () => {
   const location = useLocation();

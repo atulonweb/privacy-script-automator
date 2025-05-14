@@ -4,7 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useWebsites, Website } from '@/hooks/useWebsites';
 import { ConsentScript, useScripts } from '@/hooks/useScripts';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 
 // Import component steps
@@ -31,6 +31,7 @@ const ScriptEditor: React.FC<ScriptEditorProps> = ({ scriptData }) => {
   
   const { websites } = useWebsites();
   const { updateScript } = useScripts();
+  const { toast } = useToast();
   const navigate = useNavigate();
 
   const handleUpdate = async () => {

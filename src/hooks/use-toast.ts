@@ -1,20 +1,34 @@
-"use client"
 
 import * as React from "react"
-import {
-  Toast,
-  type ToastActionElement,
-  type ToastProps,
-} from "@/components/ui/toast"
 
-const TOAST_LIMIT = 10
-const TOAST_REMOVE_DELAY = 1000000
+// Define the types directly in this file to avoid circular dependency
+export interface ToastProps {
+  id: string
+  title?: React.ReactNode
+  description?: React.ReactNode
+  action?: React.ReactNode
+  variant?: "default" | "destructive"
+  duration?: number
+}
+
+export type ToastActionElement = React.ReactElement<{
+  className?: string
+  altText?: string
+  onClick?: () => void
+}>
 
 type ToasterToast = ToastProps & {
   id: string
   title?: React.ReactNode
   description?: React.ReactNode
   action?: ToastActionElement
+}
+
+const TOAST_LIMIT = 10
+const TOAST_REMOVE_DELAY = 1000000
+
+type ToastState = {
+  toasts: ToasterToast[]
 }
 
 const actionTypes = {
@@ -126,9 +140,9 @@ function dispatch(action: Action) {
   })
 }
 
-interface Toast extends Omit<ToasterToast, "id"> {}
-
-function toast({ ...props }: Toast) {
+export function toast({
+  ...props
+}: Omit<ToasterToast, "id">) {
   const id = generateId()
 
   const update = (props: ToasterToast) =>
@@ -136,6 +150,7 @@ function toast({ ...props }: Toast) {
       type: actionTypes.UPDATE_TOAST,
       toast: { ...props, id },
     })
+
   const dismiss = () => dispatch({ type: actionTypes.DISMISS_TOAST, toastId: id })
 
   dispatch({
@@ -157,7 +172,7 @@ function toast({ ...props }: Toast) {
   }
 }
 
-function useToast() {
+export function useToast() {
   const [state, setState] = React.useState<State>(memoryState)
 
   React.useEffect(() => {
@@ -176,6 +191,3 @@ function useToast() {
     dismiss: (toastId?: string) => dispatch({ type: actionTypes.DISMISS_TOAST, toastId }),
   }
 }
-
-export { useToast, toast }
-export type { ToastProps, ToastActionElement }

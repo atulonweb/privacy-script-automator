@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useWebsites, Website } from '@/hooks/useWebsites';
 import { useScripts } from '@/hooks/useScripts';
-import { toast } from 'sonner';
+import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +40,7 @@ const ScriptGenerator: React.FC = () => {
   const { websites, loading: loadingWebsites } = useWebsites();
   const { scripts, addScript } = useScripts();
   const navigate = useNavigate();
+  const { toast } = useToast();
 
   const generateScriptId = () => {
     return 'cg_' + Math.random().toString(36).substring(2, 15);

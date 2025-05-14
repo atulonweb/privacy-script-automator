@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { toast } from 'sonner';
+import { toast } from '@/hooks/use-toast';
 
 export type ConsentScript = {
   id: string;
@@ -48,7 +48,11 @@ export function useScripts() {
     } catch (err: any) {
       console.error('Error fetching scripts:', err);
       setError(err.message);
-      toast.error('Failed to load scripts');
+      toast({
+        title: "Error",
+        description: "Failed to load scripts",
+        variant: "destructive"
+      });
     } finally {
       setLoading(false);
     }
@@ -57,7 +61,11 @@ export function useScripts() {
   const addScript = async (scriptData: Omit<ConsentScript, 'id' | 'created_at' | 'user_id'>) => {
     try {
       if (!user) {
-        toast.error('You must be logged in to create a script');
+        toast({
+          title: "Error",
+          description: "You must be logged in to create a script",
+          variant: "destructive"
+        });
         throw new Error('User not authenticated');
       }
       
@@ -92,11 +100,18 @@ export function useScripts() {
       // Update local state with the new script
       setScripts(prevScripts => [...prevScripts, data[0]]);
       
-      toast.success('Script created successfully');
+      toast({
+        title: "Success",
+        description: "Script created successfully"
+      });
       return data[0];
     } catch (err: any) {
       console.error('Error creating script:', err);
-      toast.error(err.message || 'Failed to create script');
+      toast({
+        title: "Error",
+        description: err.message || "Failed to create script",
+        variant: "destructive"
+      });
       throw err;
     }
   };
@@ -104,7 +119,11 @@ export function useScripts() {
   const updateScript = async (id: string, scriptData: Partial<ConsentScript>) => {
     try {
       if (!user) {
-        toast.error('You must be logged in to update a script');
+        toast({
+          title: "Error",
+          description: "You must be logged in to update a script",
+          variant: "destructive"
+        });
         throw new Error('User not authenticated');
       }
       
@@ -116,11 +135,18 @@ export function useScripts() {
       
       if (error) throw error;
       
-      toast.success('Script updated successfully');
+      toast({
+        title: "Success",
+        description: "Script updated successfully"
+      });
       await fetchScripts();
     } catch (err: any) {
       console.error('Error updating script:', err);
-      toast.error(err.message || 'Failed to update script');
+      toast({
+        title: "Error",
+        description: err.message || "Failed to update script",
+        variant: "destructive"
+      });
       throw err;
     }
   };
@@ -128,7 +154,11 @@ export function useScripts() {
   const deleteScript = async (id: string) => {
     try {
       if (!user) {
-        toast.error('You must be logged in to delete a script');
+        toast({
+          title: "Error",
+          description: "You must be logged in to delete a script",
+          variant: "destructive"
+        });
         throw new Error('User not authenticated');
       }
       
@@ -143,10 +173,17 @@ export function useScripts() {
       // Update local state by removing the deleted script
       setScripts(prevScripts => prevScripts.filter(script => script.id !== id));
       
-      toast.success('Script deleted successfully');
+      toast({
+        title: "Success",
+        description: "Script deleted successfully"
+      });
     } catch (err: any) {
       console.error('Error deleting script:', err);
-      toast.error(err.message || 'Failed to delete script');
+      toast({
+        title: "Error",
+        description: err.message || "Failed to delete script",
+        variant: "destructive"
+      });
       throw err;
     }
   };

@@ -7,7 +7,7 @@ import { Loader, PlusCircle, Copy, Trash2, Edit } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useScripts, ConsentScript } from '@/hooks/useScripts';
 import { useWebsites } from '@/hooks/useWebsites';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import { generateCdnUrl } from '@/lib/utils';
 import {
   Dialog,
@@ -22,6 +22,7 @@ const ScriptsPage: React.FC = () => {
   const { scripts, loading, error, fetchScripts, deleteScript } = useScripts();
   const { websites, fetchWebsites } = useWebsites();
   const navigate = useNavigate();
+  const { toast } = useToast();
   const [selectedScript, setSelectedScript] = useState<ConsentScript | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [copying, setCopying] = useState<string | null>(null);
