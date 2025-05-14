@@ -1,4 +1,5 @@
-import { useState, useEffect } from 'react';
+
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from '@/components/ui/use-toast';
@@ -25,8 +26,10 @@ export function useScripts() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [toastShown, setToastShown] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 5;
 
-  const fetchScripts = async () => {
+  const fetchScripts = useCallback(async (attempt = 0) => {
     try {
       setLoading(true);
       setError(null);
@@ -34,6 +37,12 @@ export function useScripts() {
       if (!user) {
         setScripts([]);
         return;
+      }
+      
+      // Exponential backoff delay calculation
+      if (attempt > 0) {
+        const backoffTime = Math.min(100 * Math.pow(2, attempt), 10000);
+        await new Promise(resolve => setTimeout(resolve, backoffTime));
       }
       
       const { data, error } = await supabase
@@ -45,6 +54,7 @@ export function useScripts() {
       
       console.log("Fetched scripts:", data);
       setScripts(data || []);
+      setRetryCount(0); // Reset retry count on success
     } catch (err: any) {
       console.error('Error fetching scripts:', err);
       setError(err.message);
@@ -58,10 +68,17 @@ export function useScripts() {
         });
         setToastShown(true);
       }
+      
+      // Retry logic with exponential backoff
+      if (attempt < maxRetries) {
+        console.log(`Retrying fetch scripts (attempt ${attempt + 1} of ${maxRetries})...`);
+        setRetryCount(attempt + 1);
+        return fetchScripts(attempt + 1);
+      }
     } finally {
       setLoading(false);
     }
-  };
+  }, [user, toastShown, maxRetries]);
 
   // Reset toast shown state when user changes
   useEffect(() => {
@@ -205,7 +222,7 @@ export function useScripts() {
       setScripts([]);
       setLoading(false);
     }
-  }, [user]);
+  }, [user, fetchScripts]);
 
   return {
     scripts,
@@ -214,6 +231,7 @@ export function useScripts() {
     fetchScripts,
     addScript,
     updateScript,
-    deleteScript
+    deleteScript,
+    retryCount
   };
 }

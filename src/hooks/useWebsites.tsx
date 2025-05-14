@@ -20,8 +20,11 @@ export function useWebsites() {
   const [websites, setWebsites] = useState<Website[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [toastShown, setToastShown] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 5;
 
-  const fetchWebsites = useCallback(async () => {
+  const fetchWebsites = useCallback(async (attempt = 0) => {
     try {
       setLoading(true);
       setError(null);
@@ -29,6 +32,12 @@ export function useWebsites() {
       if (!user) {
         setWebsites([]);
         return;
+      }
+
+      // Exponential backoff delay calculation (100ms, 200ms, 400ms, etc.)
+      if (attempt > 0) {
+        const backoffTime = Math.min(100 * Math.pow(2, attempt), 10000);
+        await new Promise(resolve => setTimeout(resolve, backoffTime));
       }
       
       let query = supabase.from('websites').select('*');
@@ -44,14 +53,32 @@ export function useWebsites() {
       
       console.log("Fetched websites:", data);
       setWebsites(data || []);
+      setRetryCount(0); // Reset retry count on success
     } catch (err: any) {
       console.error('Error fetching websites:', err);
       setError(err.message);
-      toast.error('Failed to load websites');
+      
+      // Only show toast once to prevent infinite popups
+      if (!toastShown) {
+        toast.error('Failed to load websites');
+        setToastShown(true);
+      }
+      
+      // Retry logic with exponential backoff
+      if (attempt < maxRetries) {
+        console.log(`Retrying fetch websites (attempt ${attempt + 1} of ${maxRetries})...`);
+        setRetryCount(attempt + 1);
+        return fetchWebsites(attempt + 1);
+      }
     } finally {
       setLoading(false);
     }
-  }, [user, isAdmin]);
+  }, [user, isAdmin, toastShown, maxRetries]);
+
+  // Reset toast shown state when user changes
+  useEffect(() => {
+    setToastShown(false);
+  }, [user]);
 
   const addWebsite = async (name: string, domain: string) => {
     try {
@@ -142,6 +169,7 @@ export function useWebsites() {
     fetchWebsites,
     addWebsite,
     updateWebsiteStatus,
-    deleteWebsite
+    deleteWebsite,
+    retryCount
   };
 }
