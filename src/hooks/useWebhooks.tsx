@@ -48,9 +48,8 @@ export function useWebhooks(websiteId?: string) {
         return;
       }
       
-      // Using any type to bypass TypeScript errors until Supabase types are updated
       let query = supabase
-        .from('webhooks' as any)
+        .from('webhooks')
         .select('*')
         .eq('user_id', user.id);
       
@@ -63,7 +62,6 @@ export function useWebhooks(websiteId?: string) {
       if (error) throw error;
       
       console.log("Fetched webhooks:", data);
-      // Cast the data to ensure type safety
       setWebhooks(data as Webhook[] || []);
       
       // If we have exactly one webhook and it's for the specified website, set it as the current webhook
@@ -88,7 +86,7 @@ export function useWebhooks(websiteId?: string) {
       setLogsLoading(true);
       
       const { data, error } = await supabase
-        .from('webhook_logs' as any)
+        .from('webhook_logs')
         .select('*')
         .eq('webhook_id', webhookId)
         .order('created_at', { ascending: false })
@@ -129,7 +127,7 @@ export function useWebhooks(websiteId?: string) {
       
       // Create the webhook
       const { data, error } = await supabase
-        .from('webhooks' as any)
+        .from('webhooks')
         .insert({
           ...newWebhook,
           user_id: user.id,
@@ -147,15 +145,16 @@ export function useWebhooks(websiteId?: string) {
       }
       
       // Update local state
-      setWebhooks(prev => [...prev, data[0] as Webhook]);
-      setWebhook(data[0] as Webhook);
+      const newWebhookData = data[0] as Webhook;
+      setWebhooks(prev => [...prev, newWebhookData]);
+      setWebhook(newWebhookData);
       
       toast({
         title: "Success",
         description: "Webhook created successfully"
       });
       
-      return data[0] as Webhook;
+      return newWebhookData;
     } catch (err: any) {
       console.error('Error creating webhook:', err);
       toast({
@@ -180,7 +179,7 @@ export function useWebhooks(websiteId?: string) {
       
       // Update the webhook
       const { data, error } = await supabase
-        .from('webhooks' as any)
+        .from('webhooks')
         .update(webhookData)
         .eq('id', id)
         .eq('user_id', user.id)
@@ -195,9 +194,10 @@ export function useWebhooks(websiteId?: string) {
       }
       
       // Update local state
-      setWebhooks(prev => prev.map(w => w.id === id ? data[0] as Webhook : w));
+      const updatedWebhook = data[0] as Webhook;
+      setWebhooks(prev => prev.map(w => w.id === id ? updatedWebhook : w));
       if (webhook && webhook.id === id) {
-        setWebhook(data[0] as Webhook);
+        setWebhook(updatedWebhook);
       }
       
       toast({
@@ -205,7 +205,7 @@ export function useWebhooks(websiteId?: string) {
         description: "Webhook updated successfully"
       });
       
-      return data[0] as Webhook;
+      return updatedWebhook;
     } catch (err: any) {
       console.error('Error updating webhook:', err);
       toast({
@@ -230,7 +230,7 @@ export function useWebhooks(websiteId?: string) {
       
       // Delete the webhook
       const { error } = await supabase
-        .from('webhooks' as any)
+        .from('webhooks')
         .delete()
         .eq('id', id)
         .eq('user_id', user.id);

@@ -2,4 +2,5 @@
 project_id = "rzmfwwkumniuwenammaj"
 
 [functions.consent-config]
-verify_jwt = false
+verify_jwt = true
+

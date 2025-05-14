@@ -36,7 +36,7 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ website }) => {
 
   const [url, setUrl] = useState(webhook?.url || '');
   const [secret, setSecret] = useState(webhook?.secret || '');
-  const [enabled, setEnabled] = useState(webhook?.enabled || true);
+  const [enabled, setEnabled] = useState(webhook?.enabled ?? true);
   const [retryCount, setRetryCount] = useState(webhook?.retry_count || 3);
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
@@ -225,7 +225,7 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ website }) => {
               <Switch 
                 id="webhookEnabled" 
                 checked={enabled}
-                onCheckedChange={(value) => setEnabled(value)}
+                onCheckedChange={setEnabled}
               />
               <Label htmlFor="webhookEnabled">Enable webhook</Label>
             </div>
