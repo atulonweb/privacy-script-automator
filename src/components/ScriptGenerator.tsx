@@ -1,10 +1,21 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useWebsites, Website } from '@/hooks/useWebsites';
 import { useScripts } from '@/hooks/useScripts';
 import { toast } from 'sonner';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { useNavigate } from 'react-router-dom';
 
 // Import component steps
 import WebsiteSelection from './script-generator/WebsiteSelection';
@@ -25,12 +36,29 @@ const ScriptGenerator: React.FC = () => {
   const [autoHideTime, setAutoHideTime] = useState<number>(30);
   const [generatedScriptId, setGeneratedScriptId] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const [existingScriptDialogOpen, setExistingScriptDialogOpen] = useState(false);
   
   const { websites, loading: loadingWebsites } = useWebsites();
-  const { addScript } = useScripts();
+  const { scripts, addScript } = useScripts();
+  const navigate = useNavigate();
 
   const generateScriptId = () => {
     return 'cg_' + Math.random().toString(36).substring(2, 15);
+  };
+
+  // Check if a script already exists for the selected website
+  const checkExistingScript = () => {
+    if (!websiteId) return false;
+    return scripts.some(script => script.website_id === websiteId);
+  };
+
+  // Handle website selection with check for existing scripts
+  const handleWebsiteSelect = (id: string) => {
+    setWebsiteId(id);
+    const hasExistingScript = scripts.some(script => script.website_id === id);
+    if (hasExistingScript) {
+      setExistingScriptDialogOpen(true);
+    }
   };
 
   const handleSubmit = async () => {
@@ -78,7 +106,7 @@ const ScriptGenerator: React.FC = () => {
       if (newScript) {
         setGeneratedScriptId(scriptId);
         setCurrentStep(4); // Move to final step
-        toast.success("Script successfully created!");
+        toast.success("Script successfully created! You can find all your scripts in the Scripts page.");
       } else {
         throw new Error("Script could not be created - no data returned");
       }
@@ -134,7 +162,7 @@ const ScriptGenerator: React.FC = () => {
               websites={websites}
               loadingWebsites={loadingWebsites}
               websiteId={websiteId}
-              setWebsiteId={setWebsiteId}
+              setWebsiteId={handleWebsiteSelect}
               onNext={() => setCurrentStep(2)}
             />
           </TabsContent>
@@ -178,6 +206,22 @@ const ScriptGenerator: React.FC = () => {
           </TabsContent>
         </Tabs>
       </CardContent>
+
+      {/* Alert Dialog for existing scripts */}
+      <AlertDialog open={existingScriptDialogOpen} onOpenChange={setExistingScriptDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Script Already Exists</AlertDialogTitle>
+            <AlertDialogDescription>
+              This website already has one or more consent scripts. Do you want to create another one or view existing scripts?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setExistingScriptDialogOpen(false)}>Continue Creating</AlertDialogCancel>
+            <AlertDialogAction onClick={() => navigate('/dashboard/scripts')}>View Existing Scripts</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </Card>
   );
 };

@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { CopyIcon, CheckIcon, PlayIcon, EyeIcon } from 'lucide-react';
+import { CopyIcon, CheckIcon, PlayIcon, EyeIcon, ListIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Website } from '@/hooks/useWebsites';
 import { toast } from 'sonner';
@@ -72,11 +72,11 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
       
       // Add event listeners for success/failure
       script.onload = () => {
-        toast.success("Preview script loaded successfully from CDN!");
+        toast.success("Preview script loaded successfully!");
       };
       
       script.onerror = () => {
-        toast.error("Failed to load script from CDN. Please check your CDN setup.");
+        toast.error("Failed to load script. Please check your setup.");
         setShowPreview(false);
       };
       
@@ -97,6 +97,14 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
 
   return (
     <div className="space-y-6">
+      <Alert className="bg-green-50 border-green-200 mb-4">
+        <CheckIcon className="h-4 w-4 text-green-600" />
+        <AlertTitle className="text-green-800">Success!</AlertTitle>
+        <AlertDescription className="text-green-700">
+          Your script has been successfully created and is ready to use. You can always find all your scripts in the Scripts page.
+        </AlertDescription>
+      </Alert>
+      
       <div>
         <h3 className="text-lg font-medium">Your Consent Script</h3>
         <p className="text-sm text-muted-foreground">
@@ -108,8 +116,8 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
         <InfoIcon className="h-4 w-4" />
         <AlertTitle>Implementation Information</AlertTitle>
         <AlertDescription>
-          The script URL references a CDN-hosted consent management script. In a production environment, 
-          this script would load your customized consent banner based on the settings you've configured.
+          The script URL references a consent management script. Add this script to your website to display 
+          the consent banner based on the settings you've configured.
         </AlertDescription>
       </Alert>
 
@@ -125,7 +133,7 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
           {`<script src="${generateCdnUrl(scriptId)}" async></script>`}
         </div>
 
-        <div className="flex gap-2 mt-4">
+        <div className="flex flex-wrap gap-2 mt-4">
           <Button 
             onClick={handleCopyScript} 
             variant="outline" 
@@ -157,7 +165,7 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
             ) : (
               <>
                 <PlayIcon className="mr-2 h-4 w-4" />
-                Test CDN Script
+                Test Script
               </>
             )}
           </Button>
@@ -172,12 +180,21 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
         )}
       </div>
 
-      <div className="pt-4">
+      <div className="pt-4 flex gap-2">
         <Button 
           className="bg-brand-600 hover:bg-brand-700" 
           onClick={() => navigate('/dashboard', { replace: true })}
         >
           Back to Dashboard
+        </Button>
+        
+        <Button 
+          variant="outline" 
+          onClick={() => navigate('/dashboard/scripts')}
+          className="flex-1"
+        >
+          <ListIcon className="mr-2 h-4 w-4" />
+          View All Scripts
         </Button>
       </div>
     </div>
