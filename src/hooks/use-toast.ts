@@ -2,10 +2,10 @@
 "use client";
 
 import * as React from "react";
-import { toast as sonnerToast, type Toast as SonnerToast } from "sonner";
+import { toast as sonnerToast, type ExternalToast } from "sonner";
 
 // Create a compatible type for our toast props
-export type ToastProps = Omit<SonnerToast, "id"> & {
+export type ToastProps = ExternalToast & {
   title?: React.ReactNode;
   description?: React.ReactNode;
   action?: React.ReactNode;
@@ -24,7 +24,7 @@ const useToast = () => {
       return sonnerToast(props.title as string, {
         description: props.description,
         action: props.action,
-        ...(props as any),
+        ...props,
       });
     };
 
@@ -33,7 +33,7 @@ const useToast = () => {
       return sonnerToast.success(props.title as string, {
         description: props.description,
         action: props.action,
-        ...(props as any),
+        ...props,
       });
     };
 
@@ -41,7 +41,7 @@ const useToast = () => {
       return sonnerToast.error(props.title as string, {
         description: props.description,
         action: props.action,
-        ...(props as any),
+        ...props,
       });
     };
 
@@ -49,7 +49,7 @@ const useToast = () => {
       return sonnerToast.warning(props.title as string, {
         description: props.description,
         action: props.action,
-        ...(props as any),
+        ...props,
       });
     };
 
@@ -57,7 +57,7 @@ const useToast = () => {
       return sonnerToast.info(props.title as string, {
         description: props.description,
         action: props.action,
-        ...(props as any),
+        ...props,
       });
     };
 
@@ -82,7 +82,7 @@ const toast = (props: ToastProps) => {
   return sonnerToast(props.title as string, {
     description: props.description,
     action: props.action,
-    ...(props as any),
+    ...props,
   });
 };
 
@@ -91,7 +91,7 @@ toast.success = (props: ToastProps) => {
   return sonnerToast.success(props.title as string, {
     description: props.description,
     action: props.action,
-    ...(props as any),
+    ...props,
   });
 };
 
@@ -99,7 +99,7 @@ toast.error = (props: ToastProps) => {
   return sonnerToast.error(props.title as string, {
     description: props.description,
     action: props.action,
-    ...(props as any),
+    ...props,
   });
 };
 
@@ -107,7 +107,7 @@ toast.warning = (props: ToastProps) => {
   return sonnerToast.warning(props.title as string, {
     description: props.description,
     action: props.action,
-    ...(props as any),
+    ...props,
   });
 };
 
@@ -115,7 +115,7 @@ toast.info = (props: ToastProps) => {
   return sonnerToast.info(props.title as string, {
     description: props.description,
     action: props.action,
-    ...(props as any),
+    ...props,
   });
 };
 
