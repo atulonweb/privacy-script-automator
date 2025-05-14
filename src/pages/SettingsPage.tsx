@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -8,47 +8,71 @@ import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
+import { supabase } from '@/integrations/supabase/client';
 
 const SettingsPage: React.FC = () => {
   const { user } = useAuth();
-  const [fullName, setFullName] = React.useState('');
-  const [email, setEmail] = React.useState('');
-  const [saving, setSaving] = React.useState(false);
-  const [emailNotifications, setEmailNotifications] = React.useState(true);
-  const [changingPassword, setChangingPassword] = React.useState(false);
-  const [currentPassword, setCurrentPassword] = React.useState('');
-  const [newPassword, setNewPassword] = React.useState('');
-  const [confirmPassword, setConfirmPassword] = React.useState('');
+  const [fullName, setFullName] = useState('');
+  const [email, setEmail] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [emailNotifications, setEmailNotifications] = useState(true);
+  const [changingPassword, setChangingPassword] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (user) {
       setFullName(user.user_metadata?.full_name || '');
       setEmail(user.email || '');
     }
   }, [user]);
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
+    if (!user) {
+      toast.error('You need to be logged in to update your profile');
+      return;
+    }
+
     setSaving(true);
-    setTimeout(() => {
-      setSaving(false);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        data: { full_name: fullName }
+      });
+      
+      if (error) throw error;
+      
       toast.success('Profile settings saved successfully');
-    }, 1000);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update profile');
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const handleChangePassword = () => {
+  const handleChangePassword = async () => {
     if (newPassword !== confirmPassword) {
       toast.error('New passwords do not match');
       return;
     }
 
     setChangingPassword(true);
-    setTimeout(() => {
-      setChangingPassword(false);
+    try {
+      const { error } = await supabase.auth.updateUser({
+        password: newPassword
+      });
+      
+      if (error) throw error;
+      
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
       toast.success('Password changed successfully');
-    }, 1000);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to change password');
+    } finally {
+      setChangingPassword(false);
+    }
   };
 
   return (
@@ -82,8 +106,12 @@ const SettingsPage: React.FC = () => {
                     id="email"
                     type="email"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    disabled
+                    readOnly
                   />
+                  <p className="text-sm text-muted-foreground">
+                    To change your email, please contact support.
+                  </p>
                 </div>
               </CardContent>
               <CardFooter>

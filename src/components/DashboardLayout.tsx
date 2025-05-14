@@ -1,6 +1,6 @@
 
 import React, { ReactNode, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { 
   DropdownMenu, 
@@ -13,6 +13,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useMediaQuery } from '@/hooks/use-media-query';
 import { Menu, X } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -20,6 +21,8 @@ interface DashboardLayoutProps {
 
 const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { user, signOut } = useAuth();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useMediaQuery('(max-width: 768px)');
 
@@ -31,6 +34,38 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     { name: 'Settings', path: '/dashboard/settings' },
     { name: 'Testing', path: '/dashboard/testing' },
   ];
+
+  // Generate user initials from full name or email
+  const getUserInitials = () => {
+    if (!user) return '?';
+    
+    const fullName = user.user_metadata?.full_name || '';
+    if (fullName) {
+      const nameParts = fullName.split(' ');
+      if (nameParts.length >= 2) {
+        return `${nameParts[0][0]}${nameParts[1][0]}`.toUpperCase();
+      }
+      return fullName[0]?.toUpperCase() || '?';
+    }
+    
+    // Fallback to email
+    if (user.email) {
+      return user.email[0].toUpperCase();
+    }
+    
+    return '?';
+  };
+
+  const handleNavigation = (path: string) => {
+    navigate(path);
+    if (isMobile) {
+      setIsSidebarOpen(false);
+    }
+  };
+
+  const handleSignOut = () => {
+    signOut();
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -55,19 +90,25 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                 <Button variant="ghost" className="relative h-10 w-10 rounded-full">
                   <Avatar>
                     <AvatarImage src="" />
-                    <AvatarFallback className="bg-brand-100 text-brand-800">JD</AvatarFallback>
+                    <AvatarFallback className="bg-brand-100 text-brand-800">{getUserInitials()}</AvatarFallback>
                   </Avatar>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuLabel>My Account</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>Profile</DropdownMenuItem>
-                <DropdownMenuItem>Settings</DropdownMenuItem>
-                <DropdownMenuItem>Billing</DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => handleNavigation('/dashboard/settings')}>
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => handleNavigation('/dashboard/settings')}>
+                  Settings
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => handleNavigation('/dashboard/websites')}>
+                  My Websites
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
-                  <Link to="/" className="w-full">Log out</Link>
+                <DropdownMenuItem onSelect={handleSignOut}>
+                  Log out
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -93,6 +134,11 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
                     : 'text-gray-700 hover:bg-gray-100'
                   }
                 `}
+                onClick={() => {
+                  if (isMobile) {
+                    setIsSidebarOpen(false);
+                  }
+                }}
               >
                 {item.name}
               </Link>
