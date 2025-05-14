@@ -24,9 +24,16 @@ export function CookieConsentSheet({ onSavePreferences }: CookieConsentSheetProp
   const [categories, setCategories] = useState<CookieCategory[]>([
     {
       id: "essential",
-      name: "Essential Cookies",
+      name: "Strictly Necessary Cookies",
       description: "These cookies are necessary for the website to function and cannot be switched off.",
       required: true,
+      checked: true,
+    },
+    {
+      id: "analytics",
+      name: "Performance / Analytics Cookies",
+      description: "These cookies help us understand how visitors interact with the website.",
+      required: false,
       checked: true,
     },
     {
@@ -37,16 +44,16 @@ export function CookieConsentSheet({ onSavePreferences }: CookieConsentSheetProp
       checked: true,
     },
     {
-      id: "analytics",
-      name: "Analytics Cookies",
-      description: "These cookies help us understand how visitors interact with the website.",
+      id: "targeting",
+      name: "Targeting / Advertising Cookies",
+      description: "These cookies are used to track visitors across websites to display relevant advertisements.",
       required: false,
-      checked: true,
+      checked: false,
     },
     {
-      id: "marketing",
-      name: "Marketing Cookies",
-      description: "These cookies are used to track visitors across websites to display relevant advertisements.",
+      id: "social",
+      name: "Social Media Cookies",
+      description: "These cookies enable sharing content through social media platforms.",
       required: false,
       checked: false,
     },

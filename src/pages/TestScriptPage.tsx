@@ -10,6 +10,7 @@ import { ConsentScript, useScripts } from '@/hooks/useScripts';
 import { useWebsites } from '@/hooks/useWebsites';
 import { generateCdnUrl } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { CustomizeDialog } from '@/components/ui/customize-dialog';
 
 const TestScriptPage: React.FC = () => {
   const location = useLocation();

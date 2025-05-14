@@ -6,10 +6,8 @@ import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
-import { Sliders } from "lucide-react";
-import { AspectRatio } from "@/components/ui/aspect-ratio";
+import { Sliders, InfoIcon } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { InfoIcon } from "lucide-react";
 
 interface CookieCategory {
   id: string;
@@ -27,9 +25,16 @@ export function CustomizeDialog({ onSavePreferences }: CustomizeDialogProps) {
   const [categories, setCategories] = React.useState<CookieCategory[]>([
     {
       id: "essential",
-      name: "Essential Cookies",
+      name: "Strictly Necessary Cookies",
       description: "These cookies are necessary for the website to function and cannot be switched off.",
       required: true,
+      checked: true,
+    },
+    {
+      id: "analytics",
+      name: "Performance / Analytics Cookies",
+      description: "These cookies help us understand how visitors interact with the website.",
+      required: false,
       checked: true,
     },
     {
@@ -40,16 +45,16 @@ export function CustomizeDialog({ onSavePreferences }: CustomizeDialogProps) {
       checked: true,
     },
     {
-      id: "analytics",
-      name: "Analytics Cookies",
-      description: "These cookies help us understand how visitors interact with the website.",
+      id: "targeting",
+      name: "Targeting / Advertising Cookies",
+      description: "These cookies are used to track visitors across websites to display relevant advertisements.",
       required: false,
-      checked: true,
+      checked: false,
     },
     {
-      id: "marketing",
-      name: "Marketing Cookies",
-      description: "These cookies are used to track visitors across websites to display relevant advertisements.",
+      id: "social",
+      name: "Social Media Cookies",
+      description: "These cookies enable sharing content through social media platforms.",
       required: false,
       checked: false,
     },
@@ -141,13 +146,24 @@ export function CustomizeDialog({ onSavePreferences }: CustomizeDialogProps) {
                             </div>
                           )}
                           
-                          {category.id === "marketing" && (
+                          {category.id === "targeting" && (
                             <div className="pt-2">
                               <h5 className="text-sm font-medium">Included Cookies:</h5>
                               <ul className="text-xs text-muted-foreground list-disc pl-4 mt-1">
                                 <li>Advertising cookies</li>
                                 <li>Retargeting cookies</li>
-                                <li>Social media cookies</li>
+                                <li>Marketing automation cookies</li>
+                              </ul>
+                            </div>
+                          )}
+                          
+                          {category.id === "social" && (
+                            <div className="pt-2">
+                              <h5 className="text-sm font-medium">Included Cookies:</h5>
+                              <ul className="text-xs text-muted-foreground list-disc pl-4 mt-1">
+                                <li>Facebook cookies</li>
+                                <li>Twitter/X cookies</li>
+                                <li>LinkedIn cookies</li>
                               </ul>
                             </div>
                           )}
@@ -189,7 +205,7 @@ export function CustomizeDialog({ onSavePreferences }: CustomizeDialogProps) {
         <DialogFooter className="flex flex-row justify-between gap-2 sm:justify-between">
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => {
-              setCategories(categories.map(cat => ({...cat, checked: false})));
+              setCategories(categories.map(cat => ({...cat, checked: cat.required})));
               setTimeout(() => handleSavePreferences(), 100);
             }}>
               Reject All
