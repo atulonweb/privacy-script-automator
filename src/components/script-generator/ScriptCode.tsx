@@ -47,6 +47,18 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
         existingBanner.remove();
       }
       
+      // Remove any customize panel that might have been created
+      const customizePanel = document.getElementById('consentguard-customize-panel');
+      if (customizePanel) {
+        customizePanel.remove();
+      }
+      
+      // Remove settings button if it exists
+      const settingsButton = document.getElementById('consentguard-settings-button');
+      if (settingsButton) {
+        settingsButton.remove();
+      }
+      
       // Remove any script tag that might have been added
       const existingScript = document.getElementById('preview-consent-script');
       if (existingScript) {
@@ -91,6 +103,16 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
       const banner = document.getElementById('consentguard-banner');
       if (banner) {
         banner.remove();
+      }
+      
+      const customizePanel = document.getElementById('consentguard-customize-panel');
+      if (customizePanel) {
+        customizePanel.remove();
+      }
+      
+      const settingsButton = document.getElementById('consentguard-settings-button');
+      if (settingsButton) {
+        settingsButton.remove();
       }
     }
   }, [showPreview, scriptId]);
@@ -174,7 +196,8 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
         {showPreview && (
           <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
             <p className="text-sm text-yellow-800">
-              A consent banner should appear at the bottom of this page. If you don't see it, check your browser console for errors.
+              A consent banner should appear at the bottom of this page. You can try clicking the "Customize" button to view the options panel.
+              After dismissing the banner, a small "Cookie Settings" button will appear in the bottom right corner to reopen it.
             </p>
           </div>
         )}

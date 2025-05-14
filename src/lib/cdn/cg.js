@@ -96,9 +96,10 @@
    * Create and display the consent banner
    */
   function createBanner() {
-    // Check if user has already provided consent
-    if (document.cookie.includes('consentguard_consent=')) {
-      return; // Don't show banner if consent already given
+    // Remove any existing banner first
+    const existingBanner = document.getElementById('consentguard-banner');
+    if (existingBanner) {
+      existingBanner.remove();
     }
     
     // Create container element
@@ -247,15 +248,355 @@
   }
   
   /**
-   * Show customize options panel (simplified version)
+   * Show a proper customize options panel
    */
   function showCustomizePanel() {
-    // This is a simplified version
-    // In a real implementation, you would show a modal with checkboxes
-    // for different cookie categories
-    alert('This would show a panel with customization options for different cookie categories.');
-    manageCookies('partial');
-    hideBanner();
+    // Hide the main banner first
+    const mainBanner = document.getElementById('consentguard-banner');
+    if (mainBanner) {
+      mainBanner.style.display = 'none';
+    }
+    
+    // Check if the panel already exists
+    let panel = document.getElementById('consentguard-customize-panel');
+    if (panel) {
+      panel.style.display = 'block';
+      return;
+    }
+    
+    // Create the customization panel
+    panel = document.createElement('div');
+    panel.id = 'consentguard-customize-panel';
+    
+    // Set position styles similar to the banner
+    let positionStyles = '';
+    if (config.bannerPosition === 'top') {
+      positionStyles = 'top: 0; left: 0; right: 0;';
+    } else {
+      positionStyles = 'bottom: 0; left: 0; right: 0;';
+    }
+    
+    // Apply styles to panel (use the same color scheme as banner)
+    panel.style.cssText = `
+      position: fixed;
+      ${positionStyles}
+      background-color: ${config.bannerColor};
+      color: ${config.textColor};
+      padding: 20px;
+      font-family: Arial, sans-serif;
+      font-size: 14px;
+      z-index: 99999;
+      box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.15);
+      max-height: 80vh;
+      overflow-y: auto;
+    `;
+    
+    // Panel header
+    const header = document.createElement('div');
+    header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;';
+    
+    const title = document.createElement('h3');
+    title.textContent = 'Cookie Preferences';
+    title.style.cssText = 'margin: 0; font-size: 18px;';
+    
+    const closeButton = document.createElement('button');
+    closeButton.innerHTML = '&times;';
+    closeButton.style.cssText = `
+      background: none;
+      border: none;
+      color: ${config.textColor};
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      margin: 0;
+    `;
+    
+    header.appendChild(title);
+    header.appendChild(closeButton);
+    
+    // Description
+    const description = document.createElement('p');
+    description.textContent = 'Customize your cookie preferences below. Some cookies are essential for the website to function and cannot be disabled.';
+    description.style.cssText = 'margin-bottom: 20px;';
+    
+    // Cookie categories
+    const categories = [
+      {
+        id: 'necessary',
+        name: 'Necessary Cookies',
+        description: 'These cookies are essential for the website to function and cannot be disabled.',
+        required: true
+      },
+      {
+        id: 'functional',
+        name: 'Functional Cookies',
+        description: 'These cookies enable website functionality and personalized features.',
+        required: false
+      },
+      {
+        id: 'analytics',
+        name: 'Analytics Cookies',
+        description: 'These cookies help us understand how visitors interact with our website.',
+        required: false
+      },
+      {
+        id: 'marketing',
+        name: 'Marketing Cookies',
+        description: 'These cookies are used to track visitors across websites to display relevant advertisements.',
+        required: false
+      }
+    ];
+    
+    // Create settings container
+    const settingsContainer = document.createElement('div');
+    settingsContainer.style.cssText = 'display: flex; flex-direction: column; gap: 15px;';
+    
+    // Add cookie categories
+    categories.forEach(category => {
+      const categoryEl = document.createElement('div');
+      categoryEl.style.cssText = 'padding: 10px; background-color: rgba(255, 255, 255, 0.1); border-radius: 4px;';
+      
+      const headerRow = document.createElement('div');
+      headerRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center;';
+      
+      const categoryName = document.createElement('strong');
+      categoryName.textContent = category.name;
+      
+      const toggle = document.createElement('div');
+      
+      // If the category is required, show "Required" text instead of a toggle
+      if (category.required) {
+        toggle.textContent = 'Required';
+        toggle.style.cssText = 'font-size: 12px; opacity: 0.7;';
+      } else {
+        // Create a switch-like toggle
+        const switchLabel = document.createElement('label');
+        switchLabel.className = 'consentguard-switch';
+        switchLabel.style.cssText = `
+          position: relative;
+          display: inline-block;
+          width: 40px;
+          height: 24px;
+        `;
+        
+        const input = document.createElement('input');
+        input.type = 'checkbox';
+        input.checked = true; // Default to checked
+        input.id = `consentguard-${category.id}`;
+        input.style.cssText = 'opacity: 0; width: 0; height: 0;';
+        
+        const slider = document.createElement('span');
+        slider.style.cssText = `
+          position: absolute;
+          cursor: pointer;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: rgba(255,255,255,0.3);
+          transition: .3s;
+          border-radius: 24px;
+        `;
+        
+        // Create the slider ball
+        const sliderBall = document.createElement('span');
+        sliderBall.style.cssText = `
+          position: absolute;
+          content: "";
+          height: 16px;
+          width: 16px;
+          left: 4px;
+          bottom: 4px;
+          background-color: white;
+          transition: .3s;
+          border-radius: 50%;
+        `;
+        
+        // Move the ball when checked
+        if (input.checked) {
+          sliderBall.style.transform = 'translateX(16px)';
+          slider.style.backgroundColor = config.buttonColor;
+        }
+        
+        // Toggle event
+        input.addEventListener('change', function() {
+          if (this.checked) {
+            sliderBall.style.transform = 'translateX(16px)';
+            slider.style.backgroundColor = config.buttonColor;
+          } else {
+            sliderBall.style.transform = 'translateX(0)';
+            slider.style.backgroundColor = 'rgba(255,255,255,0.3)';
+          }
+        });
+        
+        slider.appendChild(sliderBall);
+        switchLabel.appendChild(input);
+        switchLabel.appendChild(slider);
+        toggle.appendChild(switchLabel);
+      }
+      
+      headerRow.appendChild(categoryName);
+      headerRow.appendChild(toggle);
+      
+      const description = document.createElement('p');
+      description.textContent = category.description;
+      description.style.cssText = 'margin: 5px 0 0 0; font-size: 12px; opacity: 0.8;';
+      
+      categoryEl.appendChild(headerRow);
+      categoryEl.appendChild(description);
+      settingsContainer.appendChild(categoryEl);
+    });
+    
+    // Buttons container
+    const buttonsContainer = document.createElement('div');
+    buttonsContainer.style.cssText = 'display: flex; justify-content: space-between; margin-top: 20px;';
+    
+    // Accept all button
+    const acceptAllBtn = document.createElement('button');
+    acceptAllBtn.textContent = 'Accept All';
+    acceptAllBtn.style.cssText = `
+      background-color: ${config.buttonColor};
+      color: ${config.buttonTextColor};
+      border: none;
+      padding: 8px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: bold;
+    `;
+    
+    // Reject all button
+    const rejectAllBtn = document.createElement('button');
+    rejectAllBtn.textContent = 'Reject All';
+    rejectAllBtn.style.cssText = `
+      background-color: transparent;
+      color: ${config.textColor};
+      border: 1px solid ${config.textColor};
+      padding: 8px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+    `;
+    
+    // Save preferences button
+    const saveBtn = document.createElement('button');
+    saveBtn.textContent = 'Save Preferences';
+    saveBtn.style.cssText = `
+      background-color: ${config.buttonColor};
+      color: ${config.buttonTextColor};
+      border: none;
+      padding: 8px 15px;
+      border-radius: 4px;
+      cursor: pointer;
+    `;
+    
+    // Add event listeners for buttons
+    closeButton.addEventListener('click', function() {
+      panel.style.display = 'none';
+      const mainBanner = document.getElementById('consentguard-banner');
+      if (mainBanner) {
+        mainBanner.style.display = 'flex';
+      } else {
+        createBanner();
+      }
+    });
+    
+    acceptAllBtn.addEventListener('click', function() {
+      manageCookies('accept');
+      recordAnalytics('accept');
+      panel.remove();
+    });
+    
+    rejectAllBtn.addEventListener('click', function() {
+      manageCookies('reject');
+      recordAnalytics('reject');
+      panel.remove();
+    });
+    
+    saveBtn.addEventListener('click', function() {
+      // Get user preferences
+      const functional = document.getElementById('consentguard-functional')?.checked || false;
+      const analytics = document.getElementById('consentguard-analytics')?.checked || false;
+      const marketing = document.getElementById('consentguard-marketing')?.checked || false;
+      
+      // Create a preference object
+      const preferences = {
+        necessary: true, // Always required
+        functional,
+        analytics,
+        marketing
+      };
+      
+      // Store preferences in a cookie
+      const preferencesJson = JSON.stringify(preferences);
+      const expiryDate = new Date();
+      expiryDate.setMonth(expiryDate.getMonth() + 6);
+      
+      document.cookie = `consentguard_preferences=${encodeURIComponent(preferencesJson)}; expires=${expiryDate.toUTCString()}; path=/; SameSite=Lax`;
+      document.cookie = `consentguard_consent=partial; expires=${expiryDate.toUTCString()}; path=/; SameSite=Lax`;
+      
+      recordAnalytics('partial');
+      panel.remove();
+    });
+    
+    // Append buttons to container
+    buttonsContainer.appendChild(rejectAllBtn);
+    buttonsContainer.appendChild(saveBtn);
+    buttonsContainer.appendChild(acceptAllBtn);
+    
+    // Assemble panel
+    panel.appendChild(header);
+    panel.appendChild(description);
+    panel.appendChild(settingsContainer);
+    panel.appendChild(buttonsContainer);
+    
+    // Add to page
+    document.body.appendChild(panel);
+  }
+  
+  /**
+   * Add a small button to re-open cookie settings after dismissal
+   */
+  function addSettingsButton() {
+    // Only add if user has already made a choice (cookie exists)
+    if (document.cookie.includes('consentguard_consent=')) {
+      // Create the button
+      const settingsButton = document.createElement('button');
+      settingsButton.id = 'consentguard-settings-button';
+      settingsButton.textContent = 'Cookie Settings';
+      settingsButton.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background-color: ${config.bannerColor};
+        color: ${config.textColor};
+        border: none;
+        border-radius: 4px;
+        padding: 6px 12px;
+        font-family: Arial, sans-serif;
+        font-size: 12px;
+        cursor: pointer;
+        z-index: 99998;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        opacity: 0.7;
+        transition: opacity 0.3s;
+      `;
+      
+      // Add hover effect
+      settingsButton.addEventListener('mouseover', function() {
+        this.style.opacity = '1';
+      });
+      
+      settingsButton.addEventListener('mouseout', function() {
+        this.style.opacity = '0.7';
+      });
+      
+      // Open customize panel on click
+      settingsButton.addEventListener('click', function() {
+        showCustomizePanel();
+      });
+      
+      // Add to page
+      document.body.appendChild(settingsButton);
+    }
   }
   
   /**
@@ -266,11 +607,17 @@
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', async function() {
         await fetchConfig();
-        createBanner();
+        if (!document.cookie.includes('consentguard_consent=')) {
+          createBanner();
+        }
+        addSettingsButton();
       });
     } else {
       await fetchConfig();
-      createBanner();
+      if (!document.cookie.includes('consentguard_consent=')) {
+        createBanner();
+      }
+      addSettingsButton();
     }
   }
   
