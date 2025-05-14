@@ -6,7 +6,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Loader } from 'lucide-react';
 import { useWebsites } from '@/hooks/useWebsites';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import { toast } from '@/components/ui/use-toast';
 import { useScripts } from '@/hooks/useScripts';
 
 const WebsitesPage: React.FC = () => {
@@ -33,12 +33,18 @@ const WebsitesPage: React.FC = () => {
 
   const handleAddWebsite = () => {
     // This would open a modal or navigate to add website page
-    toast.info("Add website functionality coming soon");
+    toast({
+      title: "Info",
+      description: "Add website functionality coming soon"
+    });
   };
 
   const handleEditWebsite = (id: string) => {
     // This would open a modal or navigate to edit website page
-    toast.info("Edit website functionality coming soon");
+    toast({
+      title: "Info",
+      description: "Edit website functionality coming soon"
+    });
   };
 
   const handleViewScript = (websiteId: string) => {
@@ -54,6 +60,11 @@ const WebsitesPage: React.FC = () => {
         state: { selectedWebsiteId: websiteId }
       });
     }
+  };
+
+  // Handle retry fetch button click
+  const handleRetryFetch = () => {
+    fetchWebsites(0); // Reset attempt counter when manually retrying
   };
 
   // Show loading only during initial load
@@ -76,7 +87,7 @@ const WebsitesPage: React.FC = () => {
         ) : error ? (
           <div className="py-12 text-center">
             <p className="text-red-500">Error loading websites: {error}</p>
-            <Button variant="outline" className="mt-4" onClick={fetchWebsites}>
+            <Button variant="outline" className="mt-4" onClick={handleRetryFetch}>
               Try Again
             </Button>
           </div>

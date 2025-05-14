@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -119,6 +120,11 @@ const ScriptsPage: React.FC = () => {
     }
   };
 
+  // Handle retry fetch button click
+  const handleRetryFetch = () => {
+    fetchScripts(0); // Reset attempt counter when manually retrying
+  };
+
   // Show loading only during initial load
   const showLoading = isInitialLoad && (loading || !websites.length);
 
@@ -141,7 +147,7 @@ const ScriptsPage: React.FC = () => {
         ) : error ? (
           <div className="py-12 text-center">
             <p className="text-red-500">Error loading scripts: {error}</p>
-            <Button onClick={fetchScripts} variant="outline" className="mt-4">
+            <Button onClick={handleRetryFetch} variant="outline" className="mt-4">
               Try Again
             </Button>
           </div>
