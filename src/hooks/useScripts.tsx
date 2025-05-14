@@ -1,8 +1,7 @@
-
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
-import { toast } from '@/hooks/use-toast';
+import { toast } from '@/components/ui/use-toast';
 
 export type ConsentScript = {
   id: string;
@@ -25,6 +24,7 @@ export function useScripts() {
   const [scripts, setScripts] = useState<ConsentScript[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [toastShown, setToastShown] = useState(false);
 
   const fetchScripts = async () => {
     try {
@@ -48,15 +48,25 @@ export function useScripts() {
     } catch (err: any) {
       console.error('Error fetching scripts:', err);
       setError(err.message);
-      toast({
-        title: "Error",
-        description: "Failed to load scripts",
-        variant: "destructive"
-      });
+      
+      // Only show toast once to prevent infinite popups
+      if (!toastShown) {
+        toast({
+          title: "Error",
+          description: "Failed to load scripts",
+          variant: "destructive"
+        });
+        setToastShown(true);
+      }
     } finally {
       setLoading(false);
     }
   };
+
+  // Reset toast shown state when user changes
+  useEffect(() => {
+    setToastShown(false);
+  }, [user]);
 
   const addScript = async (scriptData: Omit<ConsentScript, 'id' | 'created_at' | 'user_id'>) => {
     try {

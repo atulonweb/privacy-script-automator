@@ -4,3 +4,5 @@ project_id = "rzmfwwkumniuwenammaj"
 [functions.consent-config]
 verify_jwt = true
 
+[http.cors]
+allow_origins = ["https://*", "http://localhost:*"]

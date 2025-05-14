@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -27,6 +26,8 @@ const ScriptsPage: React.FC = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [copying, setCopying] = useState<string | null>(null);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [retryCount, setRetryCount] = useState(0);
+  const maxRetries = 3;
 
   useEffect(() => {
     console.log("ScriptsPage mounted, fetching scripts and websites");
@@ -35,6 +36,14 @@ const ScriptsPage: React.FC = () => {
         await Promise.all([fetchScripts(), fetchWebsites()]);
       } catch (error) {
         console.error("Error loading scripts or websites:", error);
+        // If we haven't exceeded max retries, try again after a delay
+        if (retryCount < maxRetries) {
+          const timeout = setTimeout(() => {
+            setRetryCount(prev => prev + 1);
+            loadData();
+          }, 2000); // 2 second delay between retries
+          return () => clearTimeout(timeout);
+        }
       } finally {
         // Mark initial load as complete regardless of success/failure
         setIsInitialLoad(false);
@@ -42,7 +51,7 @@ const ScriptsPage: React.FC = () => {
     };
     
     loadData();
-  }, [fetchScripts, fetchWebsites]);
+  }, [fetchScripts, fetchWebsites, retryCount]);
 
   useEffect(() => {
     console.log("Scripts loaded:", scripts);
