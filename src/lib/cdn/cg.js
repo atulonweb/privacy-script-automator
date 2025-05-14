@@ -27,6 +27,45 @@
     autoHideTime: 30
   };
   
+  // Cookie categories with default states
+  const cookieCategories = [
+    {
+      id: "necessary",
+      name: "Strictly Necessary Cookies",
+      description: "These cookies are essential for the website to function and cannot be switched off.",
+      required: true,
+      checked: true
+    },
+    {
+      id: "analytics",
+      name: "Performance / Analytics Cookies",
+      description: "These cookies help us understand how visitors interact with the website.",
+      required: false,
+      checked: false
+    },
+    {
+      id: "functional",
+      name: "Functional Cookies",
+      description: "These cookies enable the website to provide enhanced functionality and personalization.",
+      required: false,
+      checked: false
+    },
+    {
+      id: "advertising",
+      name: "Targeting / Advertising Cookies",
+      description: "These cookies are used to display relevant advertisements and track visitor preferences.",
+      required: false,
+      checked: false
+    },
+    {
+      id: "social",
+      name: "Social Media Cookies",
+      description: "These cookies enable sharing content via social media platforms and may track your online activity.",
+      required: false,
+      checked: false
+    }
+  ];
+  
   // API endpoint using the Supabase Edge Function
   const API_ENDPOINT = 'https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/consent-config';
   
@@ -85,6 +124,57 @@
   }
   
   /**
+   * Get saved consent preferences from cookies
+   */
+  function getSavedPreferences() {
+    const consentCookie = getCookie('consentguard_consent');
+    const preferencesCookie = getCookie('consentguard_preferences');
+    
+    if (!consentCookie) return null;
+    
+    if (consentCookie === 'accept') {
+      return { 
+        choice: 'accept', 
+        preferences: cookieCategories.reduce((acc, cat) => ({ ...acc, [cat.id]: true }), {})
+      };
+    } else if (consentCookie === 'reject') {
+      return { 
+        choice: 'reject', 
+        preferences: cookieCategories.reduce((acc, cat) => (
+          { ...acc, [cat.id]: cat.required }
+        ), {})
+      };
+    } else if (consentCookie === 'partial' && preferencesCookie) {
+      try {
+        const savedPreferences = JSON.parse(decodeURIComponent(preferencesCookie));
+        return { 
+          choice: 'partial', 
+          preferences: savedPreferences 
+        };
+      } catch (e) {
+        console.error('Error parsing preferences cookie', e);
+        return null;
+      }
+    }
+    
+    return null;
+  }
+  
+  /**
+   * Get cookie by name
+   */
+  function getCookie(name) {
+    const cookies = document.cookie.split('; ');
+    for (const cookie of cookies) {
+      const [cookieName, cookieValue] = cookie.split('=');
+      if (cookieName === name) {
+        return cookieValue;
+      }
+    }
+    return null;
+  }
+  
+  /**
    * Manage cookies based on consent choice
    * @param {string} choice - User's consent choice (accept, reject, partial)
    * @param {object} preferences - Optional preferences for partial consent
@@ -106,10 +196,23 @@
       document.cookie = `consentguard_preferences=${encodeURIComponent(preferencesJson)}; expires=${expiryDate.toUTCString()}; path=/; SameSite=Lax`;
     }
     
-    if (choice === 'reject') {
-      // If rejected, you might want to disable certain cookies or tracking
-      // This is where you would implement cookie blocking logic
+    // Execute appropriate cookie handling based on preferences
+    if (choice === 'accept') {
+      // All cookies accepted, no need to block any
+      console.log('ConsentGuard: All cookies accepted');
+    } else if (choice === 'reject') {
+      // Only necessary cookies allowed
+      console.log('ConsentGuard: Only necessary cookies allowed');
+    } else if (choice === 'partial' && preferences) {
+      // Handle each category based on preferences
+      console.log('ConsentGuard: Custom cookie preferences saved:', preferences);
     }
+    
+    // Here you would implement logic to actually enable/disable specific cookie categories
+    // This often involves setting a variable that other scripts check before loading
+    window.ConsentGuardPreferences = preferences || 
+      (choice === 'accept' ? cookieCategories.reduce((acc, cat) => ({...acc, [cat.id]: true}), {}) :
+       cookieCategories.reduce((acc, cat) => ({...acc, [cat.id]: cat.required}), {}));
   }
   
   /**
@@ -342,55 +445,38 @@
     description.textContent = 'Customize your cookie preferences below. Some cookies are essential for the website to function and cannot be disabled.';
     description.style.cssText = 'margin-bottom: 20px;';
     
-    // Cookie categories
-    const categories = [
-      {
-        id: 'necessary',
-        name: 'Necessary Cookies',
-        description: 'These cookies are essential for the website to function and cannot be disabled.',
-        required: true
-      },
-      {
-        id: 'functional',
-        name: 'Functional Cookies',
-        description: 'These cookies enable website functionality and personalized features.',
-        required: false
-      },
-      {
-        id: 'analytics',
-        name: 'Analytics Cookies',
-        description: 'These cookies help us understand how visitors interact with our website.',
-        required: false
-      },
-      {
-        id: 'marketing',
-        name: 'Marketing Cookies',
-        description: 'These cookies are used to track visitors across websites to display relevant advertisements.',
-        required: false
-      }
-    ];
-    
     // Create settings container
     const settingsContainer = document.createElement('div');
     settingsContainer.style.cssText = 'display: flex; flex-direction: column; gap: 15px;';
     
+    // Get saved preferences
+    const savedPrefs = getSavedPreferences();
+    
     // Add cookie categories
-    categories.forEach(category => {
+    cookieCategories.forEach(category => {
+      // Initialize checked state based on saved preferences if available
+      if (savedPrefs && savedPrefs.preferences) {
+        if (savedPrefs.preferences[category.id] !== undefined) {
+          category.checked = savedPrefs.preferences[category.id];
+        }
+      }
+      
       const categoryEl = document.createElement('div');
-      categoryEl.style.cssText = 'padding: 10px; background-color: rgba(255, 255, 255, 0.1); border-radius: 4px;';
+      categoryEl.style.cssText = 'padding: 15px; background-color: rgba(255, 255, 255, 0.1); border-radius: 4px; margin-bottom: 10px;';
       
       const headerRow = document.createElement('div');
-      headerRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center;';
+      headerRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;';
       
       const categoryName = document.createElement('strong');
       categoryName.textContent = category.name;
+      categoryName.style.cssText = 'font-size: 16px;';
       
       const toggle = document.createElement('div');
       
       // If the category is required, show "Required" text instead of a toggle
       if (category.required) {
         toggle.textContent = 'Required';
-        toggle.style.cssText = 'font-size: 12px; opacity: 0.7;';
+        toggle.style.cssText = 'font-size: 12px; opacity: 0.7; background-color: rgba(255, 255, 255, 0.2); padding: 3px 8px; border-radius: 4px;';
       } else {
         // Create a switch-like toggle
         const switchLabel = document.createElement('label');
@@ -398,13 +484,13 @@
         switchLabel.style.cssText = `
           position: relative;
           display: inline-block;
-          width: 40px;
-          height: 24px;
+          width: 50px;
+          height: 26px;
         `;
         
         const input = document.createElement('input');
         input.type = 'checkbox';
-        input.checked = true; // Default to checked
+        input.checked = category.checked;
         input.id = `consentguard-${category.id}`;
         input.style.cssText = 'opacity: 0; width: 0; height: 0;';
         
@@ -418,7 +504,7 @@
           bottom: 0;
           background-color: rgba(255,255,255,0.3);
           transition: .3s;
-          border-radius: 24px;
+          border-radius: 26px;
         `;
         
         // Create the slider ball
@@ -426,8 +512,8 @@
         sliderBall.style.cssText = `
           position: absolute;
           content: "";
-          height: 16px;
-          width: 16px;
+          height: 18px;
+          width: 18px;
           left: 4px;
           bottom: 4px;
           background-color: white;
@@ -437,14 +523,14 @@
         
         // Move the ball when checked
         if (input.checked) {
-          sliderBall.style.transform = 'translateX(16px)';
+          sliderBall.style.transform = 'translateX(24px)';
           slider.style.backgroundColor = config.buttonColor;
         }
         
         // Toggle event
         input.addEventListener('change', function() {
           if (this.checked) {
-            sliderBall.style.transform = 'translateX(16px)';
+            sliderBall.style.transform = 'translateX(24px)';
             slider.style.backgroundColor = config.buttonColor;
           } else {
             sliderBall.style.transform = 'translateX(0)';
@@ -463,12 +549,17 @@
       
       const description = document.createElement('p');
       description.textContent = category.description;
-      description.style.cssText = 'margin: 5px 0 0 0; font-size: 12px; opacity: 0.8;';
+      description.style.cssText = 'margin: 5px 0 0 0; font-size: 14px; opacity: 0.9;';
       
       categoryEl.appendChild(headerRow);
       categoryEl.appendChild(description);
       settingsContainer.appendChild(categoryEl);
     });
+    
+    // Privacy policy link
+    const policyLink = document.createElement('div');
+    policyLink.style.cssText = 'margin-top: 15px; font-size: 13px;';
+    policyLink.innerHTML = 'For more information, please read our <a href="/privacy-policy" style="color: inherit; text-decoration: underline;">Privacy Policy</a>';
     
     // Buttons container
     const buttonsContainer = document.createElement('div');
@@ -481,10 +572,11 @@
       background-color: ${config.buttonColor};
       color: ${config.buttonTextColor};
       border: none;
-      padding: 8px 15px;
+      padding: 10px 18px;
       border-radius: 4px;
       cursor: pointer;
       font-weight: bold;
+      min-width: 100px;
     `;
     
     // Reject all button
@@ -494,9 +586,10 @@
       background-color: transparent;
       color: ${config.textColor};
       border: 1px solid ${config.textColor};
-      padding: 8px 15px;
+      padding: 10px 18px;
       border-radius: 4px;
       cursor: pointer;
+      min-width: 100px;
     `;
     
     // Save preferences button
@@ -506,9 +599,11 @@
       background-color: ${config.buttonColor};
       color: ${config.buttonTextColor};
       border: none;
-      padding: 8px 15px;
+      padding: 10px 18px;
       border-radius: 4px;
       cursor: pointer;
+      font-weight: bold;
+      min-width: 140px;
     `;
     
     // Add event listeners for buttons
@@ -523,32 +618,48 @@
     });
     
     acceptAllBtn.addEventListener('click', function() {
-      manageCookies('accept');
-      recordAnalytics('accept');
-      panel.remove();
-      addSettingsButton(); // Add the settings button after accepting
+      // Set all toggles to checked for visual feedback
+      cookieCategories.forEach(category => {
+        const toggle = document.getElementById(`consentguard-${category.id}`);
+        if (toggle) toggle.checked = true;
+      });
+      
+      setTimeout(() => {
+        manageCookies('accept');
+        recordAnalytics('accept');
+        panel.remove();
+        addSettingsButton(); // Add the settings button after accepting
+      }, 300);
     });
     
     rejectAllBtn.addEventListener('click', function() {
-      manageCookies('reject');
-      recordAnalytics('reject');
-      panel.remove();
-      addSettingsButton(); // Add the settings button after rejecting
+      // Set all non-required toggles to unchecked for visual feedback
+      cookieCategories.forEach(category => {
+        if (!category.required) {
+          const toggle = document.getElementById(`consentguard-${category.id}`);
+          if (toggle) toggle.checked = false;
+        }
+      });
+      
+      setTimeout(() => {
+        manageCookies('reject');
+        recordAnalytics('reject');
+        panel.remove();
+        addSettingsButton(); // Add the settings button after rejecting
+      }, 300);
     });
     
     saveBtn.addEventListener('click', function() {
-      // Get user preferences
-      const functional = document.getElementById('consentguard-functional')?.checked || false;
-      const analytics = document.getElementById('consentguard-analytics')?.checked || false;
-      const marketing = document.getElementById('consentguard-marketing')?.checked || false;
-      
-      // Create a preference object
-      const preferences = {
-        necessary: true, // Always required
-        functional,
-        analytics,
-        marketing
-      };
+      // Get user preferences for each category
+      const preferences = {};
+      cookieCategories.forEach(category => {
+        if (category.required) {
+          preferences[category.id] = true; // Always true for required
+        } else {
+          const toggle = document.getElementById(`consentguard-${category.id}`);
+          preferences[category.id] = toggle ? toggle.checked : false;
+        }
+      });
       
       // Store preferences in a cookie and manage cookies
       manageCookies('partial', preferences);
@@ -567,6 +678,7 @@
     panel.appendChild(header);
     panel.appendChild(description);
     panel.appendChild(settingsContainer);
+    panel.appendChild(policyLink);
     panel.appendChild(buttonsContainer);
     
     // Add to page
@@ -631,21 +743,31 @@
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', async function() {
         await fetchConfig();
-        const hasConsent = document.cookie.includes('consentguard_consent=');
+        const savedPreferences = getSavedPreferences();
         
-        if (!hasConsent) {
+        if (!savedPreferences) {
           createBanner();
         } else {
+          // Reapply saved preferences
+          manageCookies(
+            savedPreferences.choice, 
+            savedPreferences.preferences
+          );
           addSettingsButton();
         }
       });
     } else {
       await fetchConfig();
-      const hasConsent = document.cookie.includes('consentguard_consent=');
+      const savedPreferences = getSavedPreferences();
       
-      if (!hasConsent) {
+      if (!savedPreferences) {
         createBanner();
       } else {
+        // Reapply saved preferences
+        manageCookies(
+          savedPreferences.choice, 
+          savedPreferences.preferences
+        );
         addSettingsButton();
       }
     }
