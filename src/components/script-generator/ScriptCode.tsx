@@ -1,13 +1,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { CopyIcon, CheckIcon, PlayIcon, EyeIcon, ListIcon } from 'lucide-react';
+import { CopyIcon, CheckIcon, PlayIcon, EyeIcon, ListIcon, InfoIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Website } from '@/hooks/useWebsites';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { InfoIcon } from 'lucide-react';
 import { generateCdnUrl } from '@/lib/utils';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import WebhookSettings from './WebhookSettings';
 
 interface ScriptCodeProps {
   scriptId: string;
@@ -17,6 +18,7 @@ interface ScriptCodeProps {
 const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
   const [copiedScript, setCopiedScript] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [activeTab, setActiveTab] = useState('script');
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -27,6 +29,26 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
     toast({
       title: "Success",
       description: "Script code copied to clipboard",
+      duration: 2000,
+    });
+    
+    setTimeout(() => {
+      setCopiedScript(false);
+    }, 3000);
+  };
+
+  const handleCopyAdvancedScript = () => {
+    const scriptCode = `<script 
+  src="${generateCdnUrl(scriptId)}" 
+  data-user-id="YOUR_USER_ID"
+  data-session-id="YOUR_SESSION_ID"
+  async
+></script>`;
+    navigator.clipboard.writeText(scriptCode);
+    setCopiedScript(true);
+    toast({
+      title: "Success",
+      description: "Advanced script code copied to clipboard",
       duration: 2000,
     });
     
@@ -105,91 +127,134 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
         </AlertDescription>
       </Alert>
       
-      <div>
-        <h3 className="text-lg font-medium">Your Consent Script</h3>
-        <p className="text-sm text-muted-foreground">
-          Add this script to your website's &lt;head&gt; tag.
-        </p>
-      </div>
+      <Tabs defaultValue="script" value={activeTab} onValueChange={setActiveTab}>
+        <TabsList className="mb-4">
+          <TabsTrigger value="script">Script Installation</TabsTrigger>
+          <TabsTrigger value="webhook" disabled={!website}>Webhook Integration</TabsTrigger>
+        </TabsList>
 
-      <Alert>
-        <InfoIcon className="h-4 w-4" />
-        <AlertTitle>Implementation Information</AlertTitle>
-        <AlertDescription>
-          The script URL references a consent management script. Add this script to your website to display 
-          the consent banner based on the settings you've configured.
-        </AlertDescription>
-      </Alert>
-
-      <div>
-        {website && (
-          <div className="mb-4 p-4 bg-gray-50 rounded-md">
-            <p className="font-medium">{website.name}</p>
-            <p className="text-sm text-muted-foreground">{website.domain}</p>
+        <TabsContent value="script" className="space-y-6">
+          <div>
+            <h3 className="text-lg font-medium">Your Consent Script</h3>
+            <p className="text-sm text-muted-foreground">
+              Add this script to your website's &lt;head&gt; tag.
+            </p>
           </div>
-        )}
 
-        <div className="bg-gray-50 p-4 rounded-md font-mono text-sm overflow-x-auto">
-          {`<script src="${generateCdnUrl(scriptId)}" async></script>`}
-        </div>
+          <Alert>
+            <InfoIcon className="h-4 w-4" />
+            <AlertTitle>Implementation Information</AlertTitle>
+            <AlertDescription>
+              The script URL references a consent management script. Add this script to your website to display 
+              the consent banner based on the settings you've configured.
+            </AlertDescription>
+          </Alert>
 
-        <div className="flex flex-wrap gap-2 mt-4">
-          <Button 
-            onClick={handleCopyScript} 
-            variant="outline" 
-            className="flex-1"
-          >
-            {copiedScript ? (
-              <>
-                <CheckIcon className="mr-2 h-4 w-4" />
-                Copied!
-              </>
-            ) : (
-              <>
-                <CopyIcon className="mr-2 h-4 w-4" />
-                Copy Script
-              </>
+          <div>
+            {website && (
+              <div className="mb-4 p-4 bg-gray-50 rounded-md">
+                <p className="font-medium">{website.name}</p>
+                <p className="text-sm text-muted-foreground">{website.domain}</p>
+              </div>
             )}
-          </Button>
-          
-          <Button
-            onClick={togglePreview}
-            variant={showPreview ? "secondary" : "outline"}
-            className="flex-1"
-          >
-            {showPreview ? (
-              <>
-                <EyeIcon className="mr-2 h-4 w-4" />
-                Hide Preview
-              </>
-            ) : (
-              <>
-                <PlayIcon className="mr-2 h-4 w-4" />
-                Test Script
-              </>
-            )}
-          </Button>
-        </div>
-        
-        {showPreview && (
-          <div className="mt-4">
-            <div className="p-4 bg-green-50 border border-green-200 rounded-md mb-4">
-              <p className="text-sm text-green-800 font-medium mb-2">
-                Preview Active
-              </p>
-              <p className="text-sm text-green-700">
-                A consent banner should appear at the bottom of this page. Features:
-              </p>
-              <ul className="list-disc list-inside text-sm text-green-700 mt-2">
-                <li>Click "Customize" in the banner to open the settings panel with cookie categories</li>
-                <li>Toggle cookie categories on/off in the customize panel</li>
-                <li>Use "Save Preferences", "Accept All", or "Reject All" buttons in the panel</li>
-                <li>After closing the banner, use the "Cookie Settings" button in the corner to reopen</li>
-              </ul>
+
+            <div className="space-y-4">
+              <div>
+                <h4 className="font-medium mb-2">Basic Implementation</h4>
+                <div className="bg-gray-50 p-4 rounded-md font-mono text-sm overflow-x-auto">
+                  {`<script src="${generateCdnUrl(scriptId)}" async></script>`}
+                </div>
+
+                <Button 
+                  onClick={handleCopyScript} 
+                  variant="outline" 
+                  className="mt-2"
+                >
+                  {copiedScript ? (
+                    <>
+                      <CheckIcon className="mr-2 h-4 w-4" />
+                      Copied!
+                    </>
+                  ) : (
+                    <>
+                      <CopyIcon className="mr-2 h-4 w-4" />
+                      Copy Script
+                    </>
+                  )}
+                </Button>
+              </div>
+
+              <div>
+                <h4 className="font-medium mb-2">Advanced Implementation (with Data Attributes)</h4>
+                <div className="bg-gray-50 p-4 rounded-md font-mono text-sm overflow-x-auto">
+                  {`<script 
+  src="${generateCdnUrl(scriptId)}" 
+  data-user-id="YOUR_USER_ID"
+  data-session-id="YOUR_SESSION_ID"
+  async
+></script>`}
+                </div>
+                <p className="text-xs text-muted-foreground mt-2">
+                  Using data attributes allows you to track consent preferences for specific users or sessions.
+                  These values will be included in analytics and webhook payloads.
+                </p>
+
+                <Button 
+                  onClick={handleCopyAdvancedScript} 
+                  variant="outline" 
+                  className="mt-2"
+                >
+                  <CopyIcon className="mr-2 h-4 w-4" />
+                  Copy Advanced Script
+                </Button>
+              </div>
             </div>
+
+            <div className="flex flex-wrap gap-2 mt-4">
+              <Button
+                onClick={togglePreview}
+                variant={showPreview ? "secondary" : "outline"}
+                className="flex-1"
+              >
+                {showPreview ? (
+                  <>
+                    <EyeIcon className="mr-2 h-4 w-4" />
+                    Hide Preview
+                  </>
+                ) : (
+                  <>
+                    <PlayIcon className="mr-2 h-4 w-4" />
+                    Test Script
+                  </>
+                )}
+              </Button>
+            </div>
+            
+            {showPreview && (
+              <div className="mt-4">
+                <div className="p-4 bg-green-50 border border-green-200 rounded-md mb-4">
+                  <p className="text-sm text-green-800 font-medium mb-2">
+                    Preview Active
+                  </p>
+                  <p className="text-sm text-green-700">
+                    A consent banner should appear at the bottom of this page. Features:
+                  </p>
+                  <ul className="list-disc list-inside text-sm text-green-700 mt-2">
+                    <li>Click "Customize" in the banner to open the settings panel with cookie categories</li>
+                    <li>Toggle cookie categories on/off in the customize panel</li>
+                    <li>Use "Save Preferences", "Accept All", or "Reject All" buttons in the panel</li>
+                    <li>After closing the banner, use the "Cookie Settings" button in the corner to reopen</li>
+                  </ul>
+                </div>
+              </div>
+            )}
           </div>
-        )}
-      </div>
+        </TabsContent>
+
+        <TabsContent value="webhook">
+          {website && <WebhookSettings website={website} />}
+        </TabsContent>
+      </Tabs>
 
       <div className="pt-4 flex gap-2">
         <Button 

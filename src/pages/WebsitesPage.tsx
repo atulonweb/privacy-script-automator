@@ -7,15 +7,18 @@ import { Loader } from 'lucide-react';
 import { useWebsites } from '@/hooks/useWebsites';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { useScripts } from '@/hooks/useScripts';
 
 const WebsitesPage: React.FC = () => {
   const { websites, loading, error, fetchWebsites } = useWebsites();
+  const { scripts, fetchScripts } = useScripts();
   const navigate = useNavigate();
 
   useEffect(() => {
     console.log("WebsitesPage mounted, fetching websites");
     fetchWebsites();
-  }, [fetchWebsites]);
+    fetchScripts();
+  }, [fetchWebsites, fetchScripts]);
 
   const handleAddWebsite = () => {
     // This would open a modal or navigate to add website page
@@ -28,7 +31,18 @@ const WebsitesPage: React.FC = () => {
   };
 
   const handleViewScript = (websiteId: string) => {
-    navigate('/dashboard/scripts');
+    // Find the associated script for this website
+    const websiteScript = scripts.find(script => script.website_id === websiteId);
+    
+    if (websiteScript) {
+      // Navigate to the script detail page
+      navigate(`/dashboard/scripts/test/${websiteScript.script_id}`);
+    } else {
+      // No script found, navigate to script creation
+      navigate('/dashboard/scripts/create', { 
+        state: { selectedWebsiteId: websiteId }
+      });
+    }
   };
 
   return (
@@ -95,7 +109,7 @@ const WebsitesPage: React.FC = () => {
                         disabled={!website.active}
                         onClick={() => handleViewScript(website.id)}
                       >
-                        View Script
+                        Manage Script
                       </Button>
                     </div>
                   </div>
