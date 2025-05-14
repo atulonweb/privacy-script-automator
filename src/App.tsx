@@ -1,5 +1,6 @@
 
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "./context/AuthContext";
 
 // Pages
 import HomePage from "./pages/HomePage";
@@ -25,25 +26,27 @@ import { Toaster } from "./components/ui/toaster";
 export default function App() {
   return (
     <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
-        
-        <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
-        <Route path="/dashboard/websites" element={<ProtectedRoute><WebsitesPage /></ProtectedRoute>} />
-        <Route path="/dashboard/scripts" element={<ProtectedRoute><ScriptsPage /></ProtectedRoute>} />
-        <Route path="/dashboard/scripts/create" element={<ProtectedRoute><ScriptGeneratorPage /></ProtectedRoute>} />
-        <Route path="/dashboard/scripts/edit/:id" element={<ProtectedRoute><EditScriptPage /></ProtectedRoute>} />
-        <Route path="/dashboard/scripts/test/:id" element={<ProtectedRoute><TestScriptPage /></ProtectedRoute>} />
-        <Route path="/dashboard/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
-        <Route path="/dashboard/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-        <Route path="/dashboard/testing" element={<ProtectedRoute><TestingPage /></ProtectedRoute>} />
-        
-        <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-      <Toaster />
+      <AuthProvider>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          
+          <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+          <Route path="/dashboard/websites" element={<ProtectedRoute><WebsitesPage /></ProtectedRoute>} />
+          <Route path="/dashboard/scripts" element={<ProtectedRoute><ScriptsPage /></ProtectedRoute>} />
+          <Route path="/dashboard/scripts/create" element={<ProtectedRoute><ScriptGeneratorPage /></ProtectedRoute>} />
+          <Route path="/dashboard/scripts/edit/:id" element={<ProtectedRoute><EditScriptPage /></ProtectedRoute>} />
+          <Route path="/dashboard/scripts/test/:id" element={<ProtectedRoute><TestScriptPage /></ProtectedRoute>} />
+          <Route path="/dashboard/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
+          <Route path="/dashboard/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
+          <Route path="/dashboard/testing" element={<ProtectedRoute><TestingPage /></ProtectedRoute>} />
+          
+          <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+        <Toaster />
+      </AuthProvider>
     </BrowserRouter>
   );
 }
