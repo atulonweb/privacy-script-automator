@@ -74,9 +74,17 @@
    */
   async function fetchConfig() {
     try {
-      const response = await fetch(`${API_ENDPOINT}?scriptId=${scriptId}`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+      
+      const response = await fetch(`${API_ENDPOINT}?scriptId=${scriptId}`, {
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId);
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch configuration');
+        throw new Error(`Failed to fetch configuration: ${response.status} ${response.statusText}`);
       }
       
       const data = await response.json();
@@ -742,6 +750,28 @@
     // Wait for DOM to be fully loaded
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', async function() {
+        try {
+          await fetchConfig();
+          const savedPreferences = getSavedPreferences();
+          
+          if (!savedPreferences) {
+            createBanner();
+          } else {
+            // Reapply saved preferences
+            manageCookies(
+              savedPreferences.choice, 
+              savedPreferences.preferences
+            );
+            addSettingsButton();
+          }
+        } catch (error) {
+          console.error('ConsentGuard: Failed to initialize', error);
+          // Still create the banner with default config
+          createBanner();
+        }
+      });
+    } else {
+      try {
         await fetchConfig();
         const savedPreferences = getSavedPreferences();
         
@@ -755,20 +785,10 @@
           );
           addSettingsButton();
         }
-      });
-    } else {
-      await fetchConfig();
-      const savedPreferences = getSavedPreferences();
-      
-      if (!savedPreferences) {
+      } catch (error) {
+        console.error('ConsentGuard: Failed to initialize', error);
+        // Still create the banner with default config
         createBanner();
-      } else {
-        // Reapply saved preferences
-        manageCookies(
-          savedPreferences.choice, 
-          savedPreferences.preferences
-        );
-        addSettingsButton();
       }
     }
   }

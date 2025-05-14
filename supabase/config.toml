@@ -2,7 +2,7 @@
 project_id = "rzmfwwkumniuwenammaj"
 
 [functions.consent-config]
-verify_jwt = true
+verify_jwt = false
 
 [http.cors]
 allow_origins = ["https://*", "http://localhost:*"]

@@ -5,11 +5,11 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { ArrowLeft, PlayIcon, EyeIcon, Loader } from 'lucide-react';
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { ConsentScript, useScripts } from '@/hooks/useScripts';
 import { useWebsites } from '@/hooks/useWebsites';
 import { generateCdnUrl } from '@/lib/utils';
-import { useToast } from '@/hooks/use-toast';
+import { useToast } from '@/components/ui/use-toast';
 import { CustomizeDialog } from '@/components/ui/customize-dialog';
 
 const TestScriptPage: React.FC = () => {
@@ -21,6 +21,7 @@ const TestScriptPage: React.FC = () => {
   const { scripts, loading: scriptsLoading, fetchScripts } = useScripts();
   const { toast } = useToast();
   const [loading, setLoading] = useState(true);
+  const [testError, setTestError] = useState<string | null>(null);
   
   // Get script data from location state or fetch it if not available
   const [scriptData, setScriptData] = useState<ConsentScript | null>(
@@ -104,6 +105,9 @@ const TestScriptPage: React.FC = () => {
     // Remove any consent cookies to ensure the banner appears again
     document.cookie = "consentguard_consent=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
     document.cookie = "consentguard_preferences=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+
+    // Clear any previous errors
+    setTestError(null);
   };
 
   const togglePreview = () => {
@@ -116,19 +120,35 @@ const TestScriptPage: React.FC = () => {
       // Make sure to clean up any existing elements first
       cleanupConsentElements();
 
-      // Create and inject the script
-      const script = document.createElement('script');
-      script.id = 'preview-consent-script';
-      
-      // Modify the URL to include a test parameter to prevent analytics tracking
-      script.src = `${generateCdnUrl(scriptData.script_id)}&testMode=true`;
-      script.async = true;
-      
-      document.head.appendChild(script);
+      try {
+        // Create and inject the script
+        const script = document.createElement('script');
+        script.id = 'preview-consent-script';
+        
+        // Modify the URL to include a test parameter to prevent analytics tracking
+        script.src = `${generateCdnUrl(scriptData.script_id)}&testMode=true`;
+        script.async = true;
+        
+        // Add error handling to the script
+        script.onerror = (e) => {
+          console.error("Failed to load consent script:", e);
+          setTestError("Failed to load the consent script. Please make sure the script is properly configured.");
+          toast({
+            title: "Error",
+            description: "Failed to load consent script. Please try refreshing the page.",
+            variant: "destructive"
+          });
+        };
+        
+        document.head.appendChild(script);
+      } catch (error) {
+        console.error("Error in preview:", error);
+        setTestError("Failed to initialize the preview. Please try again.");
+      }
     } else {
       cleanupConsentElements();
     }
-  }, [showPreview, scriptData]);
+  }, [showPreview, scriptData, toast]);
 
   const handleBack = () => {
     navigate('/dashboard/scripts');
@@ -232,7 +252,16 @@ const TestScriptPage: React.FC = () => {
               </Button>
             </div>
             
-            {showPreview && (
+            {testError && (
+              <Alert variant="destructive">
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>
+                  {testError}
+                </AlertDescription>
+              </Alert>
+            )}
+            
+            {showPreview && !testError && (
               <div className="p-4 bg-green-50 border border-green-200 rounded-md">
                 <p className="text-sm text-green-800 font-medium mb-2">
                   Preview Active
