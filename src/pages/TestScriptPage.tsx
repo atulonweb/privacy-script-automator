@@ -4,11 +4,12 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, PlayIcon, EyeIcon } from 'lucide-react';
+import { ArrowLeft, PlayIcon, EyeIcon, Loader } from 'lucide-react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ConsentScript } from '@/hooks/useScripts';
+import { ConsentScript, useScripts } from '@/hooks/useScripts';
 import { useWebsites } from '@/hooks/useWebsites';
 import { generateCdnUrl } from '@/lib/utils';
+import { useToast } from '@/components/ui/use-toast';
 
 const TestScriptPage: React.FC = () => {
   const location = useLocation();
@@ -16,13 +17,55 @@ const TestScriptPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [showPreview, setShowPreview] = useState(false);
   const { websites } = useWebsites();
+  const { scripts, loading: scriptsLoading, fetchScripts } = useScripts();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(true);
   
   // Get script data from location state or fetch it if not available
   const [scriptData, setScriptData] = useState<ConsentScript | null>(
     location.state?.scriptData || null
   );
   
-  const websiteName = location.state?.websiteName || 'Your Website';
+  const [websiteName, setWebsiteName] = useState<string>(
+    location.state?.websiteName || 'Your Website'
+  );
+
+  useEffect(() => {
+    // If script data wasn't passed via location state, fetch it using the id
+    if (!scriptData && id) {
+      const loadScript = async () => {
+        setLoading(true);
+        await fetchScripts();
+        setLoading(false);
+      };
+      
+      loadScript();
+    } else {
+      setLoading(false);
+    }
+  }, [id, scriptData, fetchScripts]);
+  
+  // Find the script after fetching if we didn't have it from location state
+  useEffect(() => {
+    if (!scriptData && id && scripts.length > 0) {
+      const foundScript = scripts.find(script => script.id === id);
+      if (foundScript) {
+        setScriptData(foundScript);
+        
+        // Also find the website name
+        const website = websites.find(w => w.id === foundScript.website_id);
+        if (website) {
+          setWebsiteName(website.name);
+        }
+      } else {
+        toast({
+          title: "Error",
+          description: "Script not found",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [id, scripts, websites, scriptData, toast]);
 
   // Clean up the preview when component unmounts
   useEffect(() => {
@@ -89,6 +132,54 @@ const TestScriptPage: React.FC = () => {
   const handleBack = () => {
     navigate('/dashboard/scripts');
   };
+
+  if (loading || scriptsLoading) {
+    return (
+      <DashboardLayout>
+        <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+          <div className="flex items-center">
+            <Button variant="ghost" onClick={handleBack} className="mr-2">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Scripts
+            </Button>
+            <h2 className="text-3xl font-bold tracking-tight">Test Script</h2>
+          </div>
+          
+          <Card>
+            <CardContent className="py-12 text-center">
+              <Loader className="h-8 w-8 animate-spin text-brand-600 mx-auto mb-4" />
+              <p className="text-muted-foreground">Loading script data...</p>
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
+
+  if (!scriptData) {
+    return (
+      <DashboardLayout>
+        <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
+          <div className="flex items-center">
+            <Button variant="ghost" onClick={handleBack} className="mr-2">
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Back to Scripts
+            </Button>
+            <h2 className="text-3xl font-bold tracking-tight">Test Script</h2>
+          </div>
+          
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="text-muted-foreground mb-4">Script not found. Please select a script to test from the scripts list.</p>
+              <Button onClick={handleBack} className="bg-brand-600 hover:bg-brand-700">
+                Back to Scripts
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      </DashboardLayout>
+    );
+  }
 
   return (
     <DashboardLayout>
