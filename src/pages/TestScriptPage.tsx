@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -10,6 +9,7 @@ import { ConsentScript, useScripts } from '@/hooks/useScripts';
 import { useWebsites } from '@/hooks/useWebsites';
 import { generateCdnUrl } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { CustomizeDialog } from '@/components/ui/customize-dialog';
 
 const TestScriptPage: React.FC = () => {
   const location = useLocation();
@@ -133,6 +133,14 @@ const TestScriptPage: React.FC = () => {
     navigate('/dashboard/scripts');
   };
 
+  const handleSavePreferences = (preferences: Record<string, boolean>) => {
+    console.log('Saved preferences:', preferences);
+    toast.success({
+      title: "Success", 
+      description: "Cookie preferences saved successfully"
+    });
+  };
+
   if (loading || scriptsLoading) {
     return (
       <DashboardLayout>
@@ -211,39 +219,48 @@ const TestScriptPage: React.FC = () => {
               {scriptData && `<script src="${generateCdnUrl(scriptData.script_id)}" async></script>`}
             </div>
             
-            <Button
-              onClick={togglePreview}
-              variant={showPreview ? "secondary" : "outline"}
-              className="w-full"
-            >
-              {showPreview ? (
-                <>
-                  <EyeIcon className="mr-2 h-4 w-4" />
-                  Hide Preview
-                </>
-              ) : (
-                <>
-                  <PlayIcon className="mr-2 h-4 w-4" />
-                  Test Script
-                </>
-              )}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                onClick={togglePreview}
+                variant={showPreview ? "secondary" : "outline"}
+                className="flex-1"
+              >
+                {showPreview ? (
+                  <>
+                    <EyeIcon className="mr-2 h-4 w-4" />
+                    Hide Preview
+                  </>
+                ) : (
+                  <>
+                    <PlayIcon className="mr-2 h-4 w-4" />
+                    Test Script
+                  </>
+                )}
+              </Button>
+            </div>
             
             {showPreview && (
-              <div className="p-4 bg-green-50 border border-green-200 rounded-md">
-                <p className="text-sm text-green-800 font-medium mb-2">
-                  Preview Active
-                </p>
-                <p className="text-sm text-green-700">
-                  A consent banner should appear at the bottom of this page. Features:
-                </p>
-                <ul className="list-disc list-inside text-sm text-green-700 mt-2">
-                  <li>Click "Customize" to open the settings panel with cookie categories</li>
-                  <li>Toggle cookie categories on/off in the customize panel</li>
-                  <li>Use "Save Preferences", "Accept All", or "Reject All" buttons</li>
-                  <li>After closing the banner, use the "Cookie Settings" button in the corner to reopen</li>
-                </ul>
-              </div>
+              <>
+                <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+                  <p className="text-sm text-green-800 font-medium mb-2">
+                    Preview Active
+                  </p>
+                  <p className="text-sm text-green-700">
+                    A consent banner should appear at the bottom of this page. Features:
+                  </p>
+                  <ul className="list-disc list-inside text-sm text-green-700 mt-2">
+                    <li>Click "Customize" to open the settings panel with cookie categories</li>
+                    <li>Toggle cookie categories on/off in the customize panel</li>
+                    <li>Use "Save Preferences", "Accept All", or "Reject All" buttons</li>
+                    <li>After closing the banner, use the "Cookie Settings" button in the corner to reopen</li>
+                  </ul>
+                </div>
+                
+                <div className="mt-3 border rounded-md p-4 bg-gray-50">
+                  <h4 className="font-medium mb-2">Try our new detailed customization dialog:</h4>
+                  <CustomizeDialog onSavePreferences={handleSavePreferences} />
+                </div>
+              </>
             )}
           </CardContent>
         </Card>

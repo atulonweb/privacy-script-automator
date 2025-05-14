@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { InfoIcon } from 'lucide-react';
 import { generateCdnUrl } from '@/lib/utils';
+import { CustomizeDialog } from '@/components/ui/customize-dialog';
 
 interface ScriptCodeProps {
   scriptId: string;
@@ -37,6 +38,14 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
 
   const togglePreview = () => {
     setShowPreview(!showPreview);
+  };
+  
+  const handleSavePreferences = (preferences: Record<string, boolean>) => {
+    console.log('Saved preferences:', preferences);
+    toast.success({
+      title: "Success",
+      description: "Cookie preferences saved successfully"
+    });
   };
 
   // Clean up the preview when component unmounts
@@ -172,19 +181,26 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
         </div>
         
         {showPreview && (
-          <div className="mt-4 p-4 bg-green-50 border border-green-200 rounded-md">
-            <p className="text-sm text-green-800 font-medium mb-2">
-              Preview Active
-            </p>
-            <p className="text-sm text-green-700">
-              A consent banner should appear at the bottom of this page. Features:
-            </p>
-            <ul className="list-disc list-inside text-sm text-green-700 mt-2">
-              <li>Click "Customize" to open the settings panel with cookie categories</li>
-              <li>Toggle cookie categories on/off in the customize panel</li>
-              <li>Use "Save Preferences", "Accept All", or "Reject All" buttons</li>
-              <li>After closing the banner, use the "Cookie Settings" button in the corner to reopen</li>
-            </ul>
+          <div className="mt-4">
+            <div className="p-4 bg-green-50 border border-green-200 rounded-md mb-4">
+              <p className="text-sm text-green-800 font-medium mb-2">
+                Preview Active
+              </p>
+              <p className="text-sm text-green-700">
+                A consent banner should appear at the bottom of this page. Features:
+              </p>
+              <ul className="list-disc list-inside text-sm text-green-700 mt-2">
+                <li>Click "Customize" to open the settings panel with cookie categories</li>
+                <li>Toggle cookie categories on/off in the customize panel</li>
+                <li>Use "Save Preferences", "Accept All", or "Reject All" buttons</li>
+                <li>After closing the banner, use the "Cookie Settings" button in the corner to reopen</li>
+              </ul>
+            </div>
+            
+            <div className="mt-3 border rounded-md p-4 bg-gray-50">
+              <h4 className="font-medium mb-2">Try our new detailed customization dialog:</h4>
+              <CustomizeDialog onSavePreferences={handleSavePreferences} />
+            </div>
           </div>
         )}
       </div>
