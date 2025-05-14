@@ -5,5 +5,12 @@ import App from './App.tsx';
 import './index.css';
 
 // Create root using ReactDOM's createRoot API
-const root = createRoot(document.getElementById("root")!);
-root.render(<React.StrictMode><App /></React.StrictMode>);
+const container = document.getElementById('root');
+const root = createRoot(container!);
+
+// Properly wrap App with React.StrictMode
+root.render(
+  <React.StrictMode>
+    <App />
+  </React.StrictMode>
+);

@@ -23,7 +23,8 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
 import { Toaster } from "./components/ui/toaster";
 
-export default function App() {
+// Define App as a React functional component
+const App = () => {
   return (
     <BrowserRouter>
       <AuthProvider>
@@ -49,4 +50,6 @@ export default function App() {
       </AuthProvider>
     </BrowserRouter>
   );
-}
+};
+
+export default App;
