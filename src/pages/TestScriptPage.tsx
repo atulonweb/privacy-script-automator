@@ -10,6 +10,7 @@ import { useWebsites } from '@/hooks/useWebsites';
 import { generateCdnUrl } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { CustomizeDialog } from '@/components/ui/customize-dialog';
+import { CookieConsentSheet } from '@/components/ui/cookie-consent-sheet';
 
 const TestScriptPage: React.FC = () => {
   const location = useLocation();
@@ -257,8 +258,11 @@ const TestScriptPage: React.FC = () => {
                 </div>
                 
                 <div className="mt-3 border rounded-md p-4 bg-gray-50">
-                  <h4 className="font-medium mb-2">Try our new detailed customization dialog:</h4>
-                  <CustomizeDialog onSavePreferences={handleSavePreferences} />
+                  <h4 className="font-medium mb-2">Try our cookie customization options:</h4>
+                  <div className="flex flex-wrap gap-4">
+                    <CustomizeDialog onSavePreferences={handleSavePreferences} />
+                    <CookieConsentSheet onSavePreferences={handleSavePreferences} />
+                  </div>
                 </div>
               </>
             )}

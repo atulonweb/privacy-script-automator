@@ -9,6 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { InfoIcon } from 'lucide-react';
 import { generateCdnUrl } from '@/lib/utils';
 import { CustomizeDialog } from '@/components/ui/customize-dialog';
+import { CookieConsentSheet } from '@/components/ui/cookie-consent-sheet';
 
 interface ScriptCodeProps {
   scriptId: string;
@@ -198,8 +199,11 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
             </div>
             
             <div className="mt-3 border rounded-md p-4 bg-gray-50">
-              <h4 className="font-medium mb-2">Try our new detailed customization dialog:</h4>
-              <CustomizeDialog onSavePreferences={handleSavePreferences} />
+              <h4 className="font-medium mb-2">Try our cookie customization options:</h4>
+              <div className="flex flex-wrap gap-4">
+                <CustomizeDialog onSavePreferences={handleSavePreferences} />
+                <CookieConsentSheet onSavePreferences={handleSavePreferences} />
+              </div>
             </div>
           </div>
         )}
