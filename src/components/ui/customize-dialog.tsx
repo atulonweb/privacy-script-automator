@@ -1,4 +1,3 @@
-
 import React, { useState } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { InfoIcon, PlusIcon } from "lucide-react";
 import { Alert, AlertDescription } from "./alert";
 import { PresetScriptsLibrary } from "./preset-scripts-library";
+import { useToast } from "@/hooks/use-toast";
 
 export function CustomizeDialog({
   open,
@@ -28,6 +28,7 @@ export function CustomizeDialog({
     }
   }
 }) {
+  const { toast } = useToast();
   const [settings, setSettings] = useState(initialSettings);
   const [activeTab, setActiveTab] = useState("categories");
   const [newScript, setNewScript] = useState({
@@ -48,6 +49,11 @@ export function CustomizeDialog({
   
   const handleSaveSettings = () => {
     onSave(settings);
+    toast({
+      title: "Settings Saved",
+      description: "Your script configuration has been saved successfully.",
+      variant: "success"
+    });
   };
   
   const handleAddScript = () => {
@@ -76,6 +82,12 @@ export function CustomizeDialog({
       async: true,
       content: ""
     });
+
+    toast({
+      title: "Script Added",
+      description: `Added ${scriptObj.id} to ${newScript.category} category.`,
+      variant: "default"
+    });
   };
   
   const handleRemoveScript = (category, scriptId) => {
@@ -86,18 +98,33 @@ export function CustomizeDialog({
         [category]: settings.scripts[category].filter(s => s.id !== scriptId)
       }
     });
+
+    toast({
+      title: "Script Removed",
+      description: `Removed ${scriptId} from ${category} category.`,
+      variant: "default"
+    });
   };
 
   const handleAddPresetScript = (script) => {
+    // Use the category from the script, not from newScript state
+    const category = script.category || "analytics";
+    
     setSettings({
       ...settings,
       scripts: {
         ...settings.scripts,
-        [newScript.category]: [
-          ...settings.scripts[newScript.category],
+        [category]: [
+          ...settings.scripts[category],
           script
         ]
       }
+    });
+
+    toast({
+      title: "Script Added",
+      description: `Added ${script.id} to ${category} category.`,
+      variant: "default"
     });
   };
 
@@ -335,16 +362,7 @@ export function CustomizeDialog({
           open={presetLibraryOpen}
           onOpenChange={setPresetLibraryOpen}
           onAddScript={(script) => {
-            setSettings({
-              ...settings,
-              scripts: {
-                ...settings.scripts,
-                [newScript.category]: [
-                  ...settings.scripts[newScript.category],
-                  script
-                ]
-              }
-            });
+            handleAddPresetScript(script);
             setPresetLibraryOpen(false);
           }}
           currentScripts={[

@@ -17,6 +17,9 @@ interface ScriptConfiguration {
   }
 }
 
+// Local storage key
+const SCRIPT_CONFIG_STORAGE_KEY = 'consentguard_script_config';
+
 interface UseScriptTestingProps {
   scriptData: ConsentScript | null;
 }
@@ -27,7 +30,9 @@ export const useScriptTesting = ({ scriptData }: UseScriptTestingProps) => {
   const [testError, setTestError] = useState<string | null>(null);
   const [consoleLogs, setConsoleLogs] = useState<string[]>([]);
   const [cookies, setCookies] = useState<string[]>([]);
-  const [scriptConfiguration, setScriptConfiguration] = useState<ScriptConfiguration>({
+  
+  // Initialize with default config
+  const defaultConfig: ScriptConfiguration = {
     analytics: true,
     advertising: false,
     functional: true,
@@ -42,7 +47,31 @@ export const useScriptTesting = ({ scriptData }: UseScriptTestingProps) => {
       functional: [],
       social: []
     }
-  });
+  };
+  
+  // Get stored configuration from localStorage or use default
+  const getStoredConfig = (): ScriptConfiguration => {
+    try {
+      const storedConfig = localStorage.getItem(SCRIPT_CONFIG_STORAGE_KEY);
+      if (storedConfig) {
+        return JSON.parse(storedConfig);
+      }
+    } catch (error) {
+      console.error('Error loading stored configuration:', error);
+    }
+    return defaultConfig;
+  };
+  
+  const [scriptConfiguration, setScriptConfiguration] = useState<ScriptConfiguration>(getStoredConfig());
+
+  // Save configuration to localStorage whenever it changes
+  useEffect(() => {
+    try {
+      localStorage.setItem(SCRIPT_CONFIG_STORAGE_KEY, JSON.stringify(scriptConfiguration));
+    } catch (error) {
+      console.error('Error saving configuration to localStorage:', error);
+    }
+  }, [scriptConfiguration]);
 
   // Override console.log to capture messages
   useEffect(() => {

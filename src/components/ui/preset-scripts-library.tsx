@@ -206,7 +206,8 @@ export function PresetScriptsLibrary({
       const scriptToAdd = {
         id: customScript.id,
         src: customScript.src,
-        async: customScript.async
+        async: customScript.async,
+        category: customScript.category // Make sure category is included
       };
       onAddScript(scriptToAdd);
       setShowScriptForm(false);

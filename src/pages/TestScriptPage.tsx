@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import DashboardLayout from '@/components/DashboardLayout';
@@ -13,6 +12,7 @@ import { useScriptTesting } from '@/hooks/useScriptTesting';
 import BasicTestingTab from '@/components/test-script/BasicTestingTab';
 import AdvancedTestingTab from '@/components/test-script/AdvancedTestingTab';
 import MonitoringTab from '@/components/test-script/MonitoringTab';
+import { Toaster } from '@/components/ui/sonner';
 
 const TestScriptPage: React.FC = () => {
   const navigate = useNavigate();
@@ -61,6 +61,7 @@ const TestScriptPage: React.FC = () => {
             </CardContent>
           </Card>
         </div>
+        <Toaster />
       </DashboardLayout>
     );
   }
@@ -86,6 +87,7 @@ const TestScriptPage: React.FC = () => {
             </CardContent>
           </Card>
         </div>
+        <Toaster />
       </DashboardLayout>
     );
   }
@@ -161,6 +163,8 @@ const TestScriptPage: React.FC = () => {
         onSave={handleSaveConfiguration}
         initialSettings={scriptConfiguration}
       />
+
+      <Toaster />
     </DashboardLayout>
   );
 };
