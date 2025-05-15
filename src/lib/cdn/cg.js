@@ -24,7 +24,60 @@
     buttonTextColor: '#2563eb',
     showPoweredBy: true,
     autoHide: false,
-    autoHideTime: 30
+    autoHideTime: 30,
+    language: 'en',
+    secureFlags: true,
+    webhookUrl: '',
+    translations: {}
+  };
+  
+  // Default translations
+  const defaultTranslations = {
+    en: {
+      mainText: 'This website uses cookies to ensure you get the best experience on our website.',
+      acceptAll: 'Accept All',
+      rejectAll: 'Reject All',
+      customize: 'Customize',
+      cookiePreferences: 'Cookie Preferences',
+      preferencesDescription: 'Customize your cookie preferences below. Some cookies are essential for the website to function and cannot be disabled.',
+      savePreferences: 'Save Preferences',
+      poweredBy: 'Powered by',
+      required: 'Required',
+      privacyPolicy: 'For more information, please read our',
+      privacyPolicyLink: 'Privacy Policy',
+      cookieSettings: 'Cookie Settings',
+      additionalInfo: 'Additional Information'
+    },
+    fr: {
+      mainText: 'Ce site utilise des cookies pour vous garantir la meilleure expérience sur notre site.',
+      acceptAll: 'Tout accepter',
+      rejectAll: 'Tout refuser',
+      customize: 'Personnaliser',
+      cookiePreferences: 'Préférences de cookies',
+      preferencesDescription: 'Personnalisez vos préférences de cookies ci-dessous. Certains cookies sont essentiels au fonctionnement du site et ne peuvent pas être désactivés.',
+      savePreferences: 'Enregistrer les préférences',
+      poweredBy: 'Propulsé par',
+      required: 'Obligatoire',
+      privacyPolicy: 'Pour plus d\'informations, veuillez lire notre',
+      privacyPolicyLink: 'Politique de confidentialité',
+      cookieSettings: 'Paramètres des cookies',
+      additionalInfo: 'Informations supplémentaires'
+    },
+    es: {
+      mainText: 'Este sitio web utiliza cookies para garantizar que obtenga la mejor experiencia en nuestro sitio web.',
+      acceptAll: 'Aceptar todo',
+      rejectAll: 'Rechazar todo',
+      customize: 'Personalizar',
+      cookiePreferences: 'Preferencias de cookies',
+      preferencesDescription: 'Personalice sus preferencias de cookies a continuación. Algunas cookies son esenciales para que el sitio web funcione y no se pueden desactivar.',
+      savePreferences: 'Guardar preferencias',
+      poweredBy: 'Desarrollado por',
+      required: 'Requerido',
+      privacyPolicy: 'Para más información, por favor lea nuestra',
+      privacyPolicyLink: 'Política de Privacidad',
+      cookieSettings: 'Configuración de cookies',
+      additionalInfo: 'Información adicional'
+    }
   };
   
   // Cookie categories with default states
@@ -68,6 +121,27 @@
   
   // API endpoint using the Supabase Edge Function
   const API_ENDPOINT = 'https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/consent-config';
+  
+  /**
+   * Get translation for a specific key
+   * @param {string} key - Translation key
+   */
+  function getTranslation(key) {
+    const lang = config.language || 'en';
+    
+    // Try to get from custom translations first
+    if (config.translations && config.translations[lang] && config.translations[lang][key]) {
+      return config.translations[lang][key];
+    }
+    
+    // Fall back to default translations
+    if (defaultTranslations[lang] && defaultTranslations[lang][key]) {
+      return defaultTranslations[lang][key];
+    }
+    
+    // Ultimate fallback to English
+    return defaultTranslations.en[key] || key;
+  }
   
   /**
    * Fetch configuration from the API
@@ -132,6 +206,32 @@
   }
   
   /**
+   * Notify webhook about consent changes if configured
+   * @param {string} choice - User's consent choice
+   * @param {object} preferences - Consent preferences
+   */
+  async function notifyConsentWebhook(choice, preferences) {
+    if (!config.webhookUrl) return;
+    
+    try {
+      await fetch(config.webhookUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          scriptId: scriptId,
+          choice: choice,
+          preferences: preferences,
+          timestamp: new Date().toISOString()
+        })
+      });
+    } catch (error) {
+      console.error('ConsentGuard: Error notifying webhook', error);
+    }
+  }
+  
+  /**
    * Get saved consent preferences from cookies
    */
   function getSavedPreferences() {
@@ -183,6 +283,98 @@
   }
   
   /**
+   * Load third-party scripts based on consent preferences
+   * @param {object} preferences - User's consent preferences
+   */
+  function loadScriptsByConsent(preferences) {
+    // This is where you would add code to load specific scripts
+    // based on the user's consent preferences
+    
+    // Example: Load Google Analytics if analytics cookies are accepted
+    if (preferences.analytics) {
+      loadGoogleAnalytics();
+    }
+    
+    // Example: Load Facebook Pixel if advertising cookies are accepted
+    if (preferences.advertising) {
+      loadFacebookPixel();
+    }
+    
+    // Example: Load functional scripts
+    if (preferences.functional) {
+      loadFunctionalScripts();
+    }
+    
+    // Example: Load social media scripts
+    if (preferences.social) {
+      loadSocialMediaScripts();
+    }
+  }
+  
+  /**
+   * Example function to load Google Analytics
+   * Replace with your actual implementation
+   */
+  function loadGoogleAnalytics() {
+    // Check if GA is already loaded
+    if (window.ga || window.gtag) return;
+    
+    console.log('ConsentGuard: Loading Google Analytics');
+    
+    // Example implementation - replace with your actual GA code
+    const script = document.createElement('script');
+    script.src = "https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID";
+    script.async = true;
+    document.head.appendChild(script);
+    
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ window.dataLayer.push(arguments); }
+    gtag('js', new Date());
+    gtag('config', 'GA_MEASUREMENT_ID');
+  }
+  
+  /**
+   * Example function to load Facebook Pixel
+   * Replace with your actual implementation
+   */
+  function loadFacebookPixel() {
+    // Check if FB Pixel is already loaded
+    if (window.fbq) return;
+    
+    console.log('ConsentGuard: Loading Facebook Pixel');
+    
+    // Example implementation - replace with your actual FB Pixel code
+    !function(f,b,e,v,n,t,s)
+    {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+    n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+    if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+    n.queue=[];t=b.createElement(e);t.async=!0;
+    t.src=v;s=b.getElementsByTagName(e)[0];
+    s.parentNode.insertBefore(t,s)}(window, document,'script',
+    'https://connect.facebook.net/en_US/fbevents.js');
+    fbq('init', 'PIXEL_ID');
+    fbq('track', 'PageView');
+  }
+  
+  /**
+   * Example function to load functional scripts
+   * Replace with your actual implementation
+   */
+  function loadFunctionalScripts() {
+    console.log('ConsentGuard: Loading functional scripts');
+    // Implement your actual functional scripts loading logic here
+  }
+  
+  /**
+   * Example function to load social media scripts
+   * Replace with your actual implementation
+   */
+  function loadSocialMediaScripts() {
+    console.log('ConsentGuard: Loading social media scripts');
+    // Implement your actual social media scripts loading logic here
+  }
+  
+  /**
    * Manage cookies based on consent choice
    * @param {string} choice - User's consent choice (accept, reject, partial)
    * @param {object} preferences - Optional preferences for partial consent
@@ -196,31 +388,44 @@
     const expiryDate = new Date();
     expiryDate.setMonth(expiryDate.getMonth() + 6); // Cookie valid for 6 months
     
-    document.cookie = `consentguard_consent=${choice}; expires=${expiryDate.toUTCString()}; path=/; SameSite=Lax`;
+    // Build cookie flags
+    let cookieFlags = `; expires=${expiryDate.toUTCString()}; path=/; SameSite=Lax`;
+    if (config.secureFlags && window.location.protocol === 'https:') {
+      cookieFlags += '; Secure';
+    }
+    
+    document.cookie = `consentguard_consent=${choice}${cookieFlags}`;
     
     // If we have specific preferences, store them too
     if (preferences) {
       const preferencesJson = JSON.stringify(preferences);
-      document.cookie = `consentguard_preferences=${encodeURIComponent(preferencesJson)}; expires=${expiryDate.toUTCString()}; path=/; SameSite=Lax`;
+      document.cookie = `consentguard_preferences=${encodeURIComponent(preferencesJson)}${cookieFlags}`;
     }
     
-    // Execute appropriate cookie handling based on preferences
+    // Prepare preferences object for script loading
+    let finalPreferences;
     if (choice === 'accept') {
-      // All cookies accepted, no need to block any
-      console.log('ConsentGuard: All cookies accepted');
+      // All cookies accepted
+      finalPreferences = cookieCategories.reduce((acc, cat) => ({...acc, [cat.id]: true}), {});
     } else if (choice === 'reject') {
       // Only necessary cookies allowed
-      console.log('ConsentGuard: Only necessary cookies allowed');
+      finalPreferences = cookieCategories.reduce((acc, cat) => ({...acc, [cat.id]: cat.required}), {});
     } else if (choice === 'partial' && preferences) {
-      // Handle each category based on preferences
-      console.log('ConsentGuard: Custom cookie preferences saved:', preferences);
+      // Use provided preferences
+      finalPreferences = preferences;
+    } else {
+      // Fallback to only necessary cookies
+      finalPreferences = cookieCategories.reduce((acc, cat) => ({...acc, [cat.id]: cat.required}), {});
     }
     
-    // Here you would implement logic to actually enable/disable specific cookie categories
-    // This often involves setting a variable that other scripts check before loading
-    window.ConsentGuardPreferences = preferences || 
-      (choice === 'accept' ? cookieCategories.reduce((acc, cat) => ({...acc, [cat.id]: true}), {}) :
-       cookieCategories.reduce((acc, cat) => ({...acc, [cat.id]: cat.required}), {}));
+    // Store preferences in a global variable for other scripts to access
+    window.ConsentGuardPreferences = finalPreferences;
+    
+    // Load scripts based on preferences
+    loadScriptsByConsent(finalPreferences);
+    
+    // Notify webhook if configured
+    notifyConsentWebhook(choice, finalPreferences);
   }
   
   /**
@@ -262,14 +467,27 @@
       transition: transform 0.3s ease;
     `;
     
+    // Add ARIA attributes for accessibility
+    banner.setAttribute('role', 'dialog');
+    banner.setAttribute('aria-labelledby', 'consentguard-title');
+    banner.setAttribute('aria-describedby', 'consentguard-desc');
+    
     // Create content wrapper
     const contentWrapper = document.createElement('div');
     contentWrapper.style.cssText = 'flex: 1; margin-right: 20px;';
     
     // Create main text
     const text = document.createElement('p');
+    text.id = 'consentguard-desc';
     text.style.cssText = 'margin: 0 0 10px 0;';
-    text.textContent = 'This website uses cookies to ensure you get the best experience on our website.';
+    text.textContent = getTranslation('mainText');
+    
+    // Hidden title for screen readers
+    const srTitle = document.createElement('h2');
+    srTitle.id = 'consentguard-title';
+    srTitle.textContent = 'Cookie Consent';
+    srTitle.style.cssText = 'position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;';
+    contentWrapper.appendChild(srTitle);
     
     // Create button wrapper
     const buttonWrapper = document.createElement('div');
@@ -277,7 +495,8 @@
     
     // Create accept button
     const acceptButton = document.createElement('button');
-    acceptButton.textContent = 'Accept All';
+    acceptButton.textContent = getTranslation('acceptAll');
+    acceptButton.setAttribute('aria-label', getTranslation('acceptAll'));
     acceptButton.style.cssText = `
       background-color: ${config.buttonColor};
       color: ${config.buttonTextColor};
@@ -291,7 +510,8 @@
     
     // Create reject button
     const rejectButton = document.createElement('button');
-    rejectButton.textContent = 'Reject All';
+    rejectButton.textContent = getTranslation('rejectAll');
+    rejectButton.setAttribute('aria-label', getTranslation('rejectAll'));
     rejectButton.style.cssText = `
       background-color: transparent;
       color: ${config.textColor};
@@ -304,7 +524,8 @@
     
     // Create customize button
     const customizeButton = document.createElement('button');
-    customizeButton.textContent = 'Customize';
+    customizeButton.textContent = getTranslation('customize');
+    customizeButton.setAttribute('aria-label', getTranslation('customize'));
     customizeButton.style.cssText = `
       background-color: transparent;
       color: ${config.textColor};
@@ -319,7 +540,7 @@
     if (config.showPoweredBy) {
       const poweredBy = document.createElement('div');
       poweredBy.style.cssText = 'font-size: 11px; margin-top: 8px; opacity: 0.7;';
-      poweredBy.innerHTML = 'Powered by <a href="https://consentguard.com" target="_blank" style="color: inherit; text-decoration: underline;">ConsentGuard</a>';
+      poweredBy.innerHTML = `${getTranslation('poweredBy')} <a href="https://consentguard.com" target="_blank" style="color: inherit; text-decoration: underline;">ConsentGuard</a>`;
       contentWrapper.appendChild(poweredBy);
     }
     
@@ -342,6 +563,11 @@
       showCustomizePanel();
       recordAnalytics('customize');
     });
+    
+    // Ensure keyboard navigation works
+    acceptButton.tabIndex = 0;
+    rejectButton.tabIndex = 0;
+    customizeButton.tabIndex = 0;
     
     // Append elements to DOM
     buttonWrapper.appendChild(acceptButton);
@@ -402,6 +628,11 @@
     panel = document.createElement('div');
     panel.id = 'consentguard-customize-panel';
     
+    // Add ARIA attributes for accessibility
+    panel.setAttribute('role', 'dialog');
+    panel.setAttribute('aria-labelledby', 'consentguard-panel-title');
+    panel.setAttribute('aria-describedby', 'consentguard-panel-desc');
+    
     // Set position styles similar to the banner
     let positionStyles = '';
     if (config.bannerPosition === 'top') {
@@ -430,11 +661,13 @@
     header.style.cssText = 'display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;';
     
     const title = document.createElement('h3');
-    title.textContent = 'Cookie Preferences';
+    title.id = 'consentguard-panel-title';
+    title.textContent = getTranslation('cookiePreferences');
     title.style.cssText = 'margin: 0; font-size: 18px;';
     
     const closeButton = document.createElement('button');
     closeButton.innerHTML = '&times;';
+    closeButton.setAttribute('aria-label', 'Close');
     closeButton.style.cssText = `
       background: none;
       border: none;
@@ -450,7 +683,8 @@
     
     // Description
     const description = document.createElement('p');
-    description.textContent = 'Customize your cookie preferences below. Some cookies are essential for the website to function and cannot be disabled.';
+    description.id = 'consentguard-panel-desc';
+    description.textContent = getTranslation('preferencesDescription');
     description.style.cssText = 'margin-bottom: 20px;';
     
     // Create settings container
@@ -483,7 +717,7 @@
       
       // If the category is required, show "Required" text instead of a toggle
       if (category.required) {
-        toggle.textContent = 'Required';
+        toggle.textContent = getTranslation('required');
         toggle.style.cssText = 'font-size: 12px; opacity: 0.7; background-color: rgba(255, 255, 255, 0.2); padding: 3px 8px; border-radius: 4px;';
       } else {
         // Create a switch-like toggle
@@ -500,6 +734,7 @@
         input.type = 'checkbox';
         input.checked = category.checked;
         input.id = `consentguard-${category.id}`;
+        input.setAttribute('aria-label', `${category.name} consent toggle`);
         input.style.cssText = 'opacity: 0; width: 0; height: 0;';
         
         const slider = document.createElement('span');
@@ -546,6 +781,22 @@
           }
         });
         
+        // Add keyboard support
+        input.addEventListener('keydown', function(event) {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            this.checked = !this.checked;
+            
+            if (this.checked) {
+              sliderBall.style.transform = 'translateX(24px)';
+              slider.style.backgroundColor = config.buttonColor;
+            } else {
+              sliderBall.style.transform = 'translateX(0)';
+              slider.style.backgroundColor = 'rgba(255,255,255,0.3)';
+            }
+          }
+        });
+        
         slider.appendChild(sliderBall);
         switchLabel.appendChild(input);
         switchLabel.appendChild(slider);
@@ -567,7 +818,7 @@
     // Privacy policy link
     const policyLink = document.createElement('div');
     policyLink.style.cssText = 'margin-top: 15px; font-size: 13px;';
-    policyLink.innerHTML = 'For more information, please read our <a href="/privacy-policy" style="color: inherit; text-decoration: underline;">Privacy Policy</a>';
+    policyLink.innerHTML = `${getTranslation('privacyPolicy')} <a href="/privacy-policy" style="color: inherit; text-decoration: underline;">${getTranslation('privacyPolicyLink')}</a>`;
     
     // Buttons container
     const buttonsContainer = document.createElement('div');
@@ -575,7 +826,8 @@
     
     // Accept all button
     const acceptAllBtn = document.createElement('button');
-    acceptAllBtn.textContent = 'Accept All';
+    acceptAllBtn.textContent = getTranslation('acceptAll');
+    acceptAllBtn.setAttribute('aria-label', getTranslation('acceptAll'));
     acceptAllBtn.style.cssText = `
       background-color: ${config.buttonColor};
       color: ${config.buttonTextColor};
@@ -589,7 +841,8 @@
     
     // Reject all button
     const rejectAllBtn = document.createElement('button');
-    rejectAllBtn.textContent = 'Reject All';
+    rejectAllBtn.textContent = getTranslation('rejectAll');
+    rejectAllBtn.setAttribute('aria-label', getTranslation('rejectAll'));
     rejectAllBtn.style.cssText = `
       background-color: transparent;
       color: ${config.textColor};
@@ -602,7 +855,8 @@
     
     // Save preferences button
     const saveBtn = document.createElement('button');
-    saveBtn.textContent = 'Save Preferences';
+    saveBtn.textContent = getTranslation('savePreferences');
+    saveBtn.setAttribute('aria-label', getTranslation('savePreferences'));
     saveBtn.style.cssText = `
       background-color: ${config.buttonColor};
       color: ${config.buttonTextColor};
@@ -677,6 +931,12 @@
       addSettingsButton(); // Add the settings button after saving preferences
     });
     
+    // Ensure keyboard navigation works
+    acceptAllBtn.tabIndex = 0;
+    rejectAllBtn.tabIndex = 0;
+    saveBtn.tabIndex = 0;
+    closeButton.tabIndex = 0;
+    
     // Append buttons to container
     buttonsContainer.appendChild(rejectAllBtn);
     buttonsContainer.appendChild(saveBtn);
@@ -706,7 +966,8 @@
     // Create the button
     const settingsButton = document.createElement('button');
     settingsButton.id = 'consentguard-settings-button';
-    settingsButton.textContent = 'Cookie Settings';
+    settingsButton.textContent = getTranslation('cookieSettings');
+    settingsButton.setAttribute('aria-label', getTranslation('cookieSettings'));
     settingsButton.style.cssText = `
       position: fixed;
       bottom: 20px;
@@ -738,6 +999,9 @@
     settingsButton.addEventListener('click', function() {
       showCustomizePanel();
     });
+    
+    // Ensure keyboard navigation works
+    settingsButton.tabIndex = 0;
     
     // Add to page
     document.body.appendChild(settingsButton);
@@ -796,3 +1060,4 @@
   // Start initialization
   init();
 })();
+
