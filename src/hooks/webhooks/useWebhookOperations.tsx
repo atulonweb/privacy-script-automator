@@ -7,7 +7,7 @@ import { Webhook } from '@/types/webhook.types';
 export function useWebhookOperations(userId: string | undefined, onSuccessCallback?: () => void) {
   const [isProcessing, setIsProcessing] = useState(false);
 
-  const createWebhook = async (data: Partial<Webhook>) => {
+  const createWebhook = async (data: Omit<Partial<Webhook>, 'user_id' | 'url' | 'website_id'> & { url: string, website_id: string }) => {
     try {
       setIsProcessing(true);
       
@@ -17,7 +17,11 @@ export function useWebhookOperations(userId: string | undefined, onSuccessCallba
       
       const webhook = {
         user_id: userId,
-        ...data
+        url: data.url,
+        website_id: data.website_id,
+        secret: data.secret || null,
+        enabled: data.enabled !== undefined ? data.enabled : true,
+        retry_count: data.retry_count !== undefined ? data.retry_count : 3,
       };
       
       const { data: newWebhook, error } = await supabase

@@ -46,10 +46,10 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ website }) => {
   // Update local state when webhook data changes
   useEffect(() => {
     if (webhook) {
-      setUrl(webhook.url || '');
+      setUrl(webhook.url);
       setSecret(webhook.secret || '');
-      setEnabled(webhook.enabled ?? true);
-      setRetryCount(webhook.retry_count || 3);
+      setEnabled(webhook.enabled);
+      setRetryCount(webhook.retry_count);
     } else {
       // Reset to defaults when no webhook is available
       setUrl('');
@@ -107,7 +107,7 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ website }) => {
         await createWebhook({
           website_id: website.id,
           url,
-          secret: secret || undefined,
+          secret: secret || null,
           enabled,
           retry_count: retryCount
         });
