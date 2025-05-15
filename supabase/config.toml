@@ -4,6 +4,9 @@ project_id = "rzmfwwkumniuwenammaj"
 [functions.consent-config]
 verify_jwt = false
 
+[functions.admin-setup]
+verify_jwt = false
+
 [http.cors]
 allow_origins = ["*"]
 exposed_headers = ["Content-Length", "Content-Type", "Authorization"]

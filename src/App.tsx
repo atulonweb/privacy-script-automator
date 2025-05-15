@@ -12,6 +12,7 @@ import ScriptsPage from "./pages/ScriptsPage";
 import AnalyticsPage from "./pages/AnalyticsPage";
 import SettingsPage from "./pages/SettingsPage";
 import AdminDashboardPage from "./pages/AdminDashboardPage";
+import AdminSetupPage from "./pages/AdminSetupPage";
 import NotFound from "./pages/NotFound";
 import ScriptGeneratorPage from "./pages/ScriptGeneratorPage";
 import TestingPage from "./pages/TestingPage";
@@ -32,6 +33,7 @@ const App = () => {
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
+          <Route path="/admin-setup" element={<AdminSetupPage />} />
           
           <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           <Route path="/dashboard/websites" element={<ProtectedRoute><WebsitesPage /></ProtectedRoute>} />
