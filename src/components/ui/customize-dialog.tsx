@@ -7,8 +7,9 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { InfoIcon } from "lucide-react";
+import { InfoIcon, PlusIcon } from "lucide-react";
 import { Alert, AlertDescription } from "./alert";
+import { PresetScriptsLibrary } from "./preset-scripts-library";
 
 export function CustomizeDialog({
   open,
@@ -36,6 +37,7 @@ export function CustomizeDialog({
     async: true,
     content: ""
   });
+  const [presetLibraryOpen, setPresetLibraryOpen] = useState(false);
   
   const handleCategoryToggle = (category) => {
     setSettings({
@@ -82,6 +84,19 @@ export function CustomizeDialog({
       scripts: {
         ...settings.scripts,
         [category]: settings.scripts[category].filter(s => s.id !== scriptId)
+      }
+    });
+  };
+
+  const handleAddPresetScript = (script) => {
+    setSettings({
+      ...settings,
+      scripts: {
+        ...settings.scripts,
+        [newScript.category]: [
+          ...settings.scripts[newScript.category],
+          script
+        ]
       }
     });
   };
@@ -167,6 +182,17 @@ export function CustomizeDialog({
             </Alert>
             
             <div className="space-y-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-sm font-medium">Script Configuration</h3>
+                <Button 
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setPresetLibraryOpen(true)}
+                >
+                  <PlusIcon className="h-4 w-4 mr-1" /> Add from Library
+                </Button>
+              </div>
+
               <div className="space-y-3">
                 <h3 className="text-sm font-medium">Add New Script</h3>
                 
@@ -192,7 +218,7 @@ export function CustomizeDialog({
                       <option value="analytics">Analytics</option>
                       <option value="advertising">Advertising</option>
                       <option value="functional">Functional</option>
-                      <option value="social">Social Media</option>
+                      <option value="social">Social</option>
                     </select>
                   </div>
                 </div>
@@ -303,6 +329,31 @@ export function CustomizeDialog({
             Save Preferences
           </Button>
         </div>
+
+        {/* Preset Scripts Library Dialog */}
+        <PresetScriptsLibrary 
+          open={presetLibraryOpen}
+          onOpenChange={setPresetLibraryOpen}
+          onAddScript={(script) => {
+            setSettings({
+              ...settings,
+              scripts: {
+                ...settings.scripts,
+                [newScript.category]: [
+                  ...settings.scripts[newScript.category],
+                  script
+                ]
+              }
+            });
+            setPresetLibraryOpen(false);
+          }}
+          currentScripts={[
+            ...settings.scripts.analytics,
+            ...settings.scripts.advertising, 
+            ...settings.scripts.functional, 
+            ...settings.scripts.social
+          ]}
+        />
       </DialogContent>
     </Dialog>
   );

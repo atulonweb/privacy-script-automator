@@ -1,3 +1,4 @@
+
 /**
  * Core functionality for ConsentGuard
  */
@@ -73,9 +74,53 @@ export async function init() {
   }
 }
 
+/**
+ * Look for custom script configuration in the script tag
+ */
+function getScriptConfiguration() {
+  try {
+    // Find the script tag that loaded this script
+    const scripts = document.querySelectorAll('script');
+    for (const script of scripts) {
+      if (script.src && script.src.includes('cg.js')) {
+        // Check if it has a data-config attribute
+        if (script.getAttribute('data-config')) {
+          const configData = JSON.parse(script.getAttribute('data-config'));
+          console.log('ConsentGuard: Found script configuration', configData);
+          return configData;
+        }
+      }
+    }
+    return null;
+  } catch (error) {
+    console.error('ConsentGuard: Error parsing script configuration', error);
+    return null;
+  }
+}
+
 async function initializeConsentManager() {
   try {
+    // First check for inline script configuration
+    const scriptConfig = getScriptConfiguration();
+    
+    // Then fetch remote config
     await fetchConfig();
+    
+    // Apply any script configuration found in script tag
+    if (scriptConfig) {
+      if (scriptConfig.scripts) {
+        config.scripts = {
+          ...config.scripts,
+          ...scriptConfig.scripts
+        };
+      }
+      
+      // Allow other config options to be set via script tag
+      if (scriptConfig.language) {
+        config.language = scriptConfig.language;
+      }
+    }
+    
     const savedPreferences = getSavedPreferences();
     
     if (!savedPreferences) {
