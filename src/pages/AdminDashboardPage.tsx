@@ -1,5 +1,5 @@
-
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
   Card, 
   CardContent, 
@@ -33,6 +33,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
 const AdminDashboardPage: React.FC = () => {
+  const navigate = useNavigate(); // Add the useNavigate hook
   const [statistics, setStatistics] = useState({
     totalUsers: 0,
     totalWebsites: 0,
