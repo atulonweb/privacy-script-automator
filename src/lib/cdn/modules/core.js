@@ -1,4 +1,3 @@
-
 /**
  * Core functionality for ConsentGuard
  */
@@ -22,7 +21,26 @@ export let config = {
   language: 'en',
   secureFlags: true,
   webhookUrl: '',
-  translations: {}
+  translations: {},
+  // Script configuration by category
+  scripts: {
+    analytics: [
+      { 
+        id: 'google-analytics', 
+        src: "https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID",
+        async: true
+      }
+    ],
+    advertising: [
+      { 
+        id: 'facebook-pixel', 
+        src: "https://connect.facebook.net/en_US/fbevents.js",
+        async: true
+      }
+    ],
+    functional: [],
+    social: []
+  }
 };
 
 // Export the config so other modules can access it
@@ -31,6 +49,14 @@ export const setConfig = (newConfig) => {
     ...config,
     ...newConfig
   };
+  
+  // Ensure nested objects like scripts are properly merged
+  if (newConfig.scripts) {
+    config.scripts = {
+      ...config.scripts,
+      ...newConfig.scripts
+    };
+  }
 };
 
 /**
