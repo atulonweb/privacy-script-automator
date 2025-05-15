@@ -64,7 +64,8 @@ export const useScriptGenerator = () => {
         button_text_color: buttonTextColor,
         show_powered_by: showPoweredBy,
         auto_hide: autoHide,
-        auto_hide_time: autoHideTime
+        auto_hide_time: autoHideTime,
+        updated_at: new Date().toISOString()
       });
       
       // Prepare the data object
@@ -78,7 +79,8 @@ export const useScriptGenerator = () => {
         button_text_color: buttonTextColor,
         show_powered_by: showPoweredBy,
         auto_hide: autoHide,
-        auto_hide_time: autoHideTime
+        auto_hide_time: autoHideTime,
+        updated_at: new Date().toISOString()
       };
       
       // Directly call the addScript function with all required data

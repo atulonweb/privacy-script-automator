@@ -56,7 +56,8 @@ const ScriptSavingTest: React.FC = () => {
         button_text_color: '#2563eb',
         show_powered_by: true,
         auto_hide: false,
-        auto_hide_time: 30
+        auto_hide_time: 30,
+        updated_at: new Date().toISOString()
       };
 
       console.log('Test: Sending script data to addScript', testScript);
