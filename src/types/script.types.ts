@@ -12,5 +12,6 @@ export type ConsentScript = {
   auto_hide: boolean;
   auto_hide_time: number;
   created_at: string;
+  updated_at: string;
   user_id: string;
 };
