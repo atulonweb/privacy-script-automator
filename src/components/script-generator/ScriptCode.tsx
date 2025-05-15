@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
-import { CopyIcon, CheckIcon, PlayIcon, EyeIcon, ListIcon, InfoIcon } from 'lucide-react';
+import { CopyIcon, CheckIcon, PlayIcon, EyeIcon, ListIcon, InfoIcon, HelpCircleIcon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Website } from '@/hooks/useWebsites';
 import { useToast } from '@/hooks/use-toast';
@@ -9,6 +9,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { generateCdnUrl } from '@/lib/utils';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import WebhookSettings from './WebhookSettings';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface ScriptCodeProps {
   scriptId: string;
@@ -143,10 +144,21 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
 
           <Alert>
             <InfoIcon className="h-4 w-4" />
-            <AlertTitle>Implementation Information</AlertTitle>
+            <AlertTitle>How Your Consent Script Works</AlertTitle>
             <AlertDescription>
-              The script URL references a consent management script. Add this script to your website to display 
-              the consent banner based on the settings you've configured.
+              <p className="mb-2">
+                This script provides complete cookie consent management for your website:
+              </p>
+              <ul className="list-disc list-inside text-sm space-y-1 ml-2">
+                <li>Blocks third-party scripts until consent is given</li>
+                <li>Manages user consent preferences</li>
+                <li>Ensures GDPR, CCPA and other privacy regulation compliance</li>
+                <li>Stores user preferences as cookies</li>
+                <li>Automatically loads approved scripts after consent</li>
+              </ul>
+              <p className="mt-2 text-sm">
+                The configuration for your script (including design settings and script blocking rules) is loaded remotely using the script ID in the URL.
+              </p>
             </AlertDescription>
           </Alert>
 
@@ -160,7 +172,22 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
 
             <div className="space-y-4">
               <div>
-                <h4 className="font-medium mb-2">Basic Implementation</h4>
+                <div className="flex items-center gap-2 mb-2">
+                  <h4 className="font-medium">Basic Implementation</h4>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full p-0">
+                          <HelpCircleIcon className="h-4 w-4" />
+                          <span className="sr-only">More information</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-sm">
+                        <p>Even this basic implementation handles all consent management functionality. The script automatically loads your configuration from our servers using the script ID.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <div className="bg-gray-50 p-4 rounded-md font-mono text-sm overflow-x-auto">
                   {`<script src="${generateCdnUrl(scriptId)}" async></script>`}
                 </div>
@@ -185,7 +212,22 @@ const ScriptCode: React.FC<ScriptCodeProps> = ({ scriptId, website }) => {
               </div>
 
               <div>
-                <h4 className="font-medium mb-2">Advanced Implementation (with Data Attributes)</h4>
+                <div className="flex items-center gap-2 mb-2">
+                  <h4 className="font-medium">Advanced Implementation (with Data Attributes)</h4>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full p-0">
+                          <HelpCircleIcon className="h-4 w-4" />
+                          <span className="sr-only">More information</span>
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-sm">
+                        <p>This implementation adds user tracking capabilities to the basic script. The data attributes allow you to associate consent choices with specific users or sessions in your analytics and webhooks.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <div className="bg-gray-50 p-4 rounded-md font-mono text-sm overflow-x-auto">
                   {`<script 
   src="${generateCdnUrl(scriptId)}" 

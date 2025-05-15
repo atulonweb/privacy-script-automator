@@ -2,6 +2,7 @@
 import React from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import ScriptWizard from '@/components/ScriptWizard';
+import HowItWorks from '@/components/script-generator/HowItWorks';
 
 const ScriptGeneratorPage: React.FC = () => {
   return (
@@ -14,6 +15,8 @@ const ScriptGeneratorPage: React.FC = () => {
         <div className="mt-8">
           <ScriptWizard />
         </div>
+        
+        <HowItWorks />
       </div>
     </DashboardLayout>
   );
