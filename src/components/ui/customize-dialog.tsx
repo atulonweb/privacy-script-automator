@@ -1,226 +1,308 @@
 
-import * as React from "react";
+import React, { useState } from "react";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Label } from "@/components/ui/label";
-import { Sliders, InfoIcon } from "lucide-react";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
+import { InfoIcon } from "lucide-react";
+import { Alert, AlertDescription } from "./alert";
 
-interface CookieCategory {
-  id: string;
-  name: string;
-  description: string;
-  required: boolean;
-  checked: boolean;
-}
-
-interface CustomizeDialogProps {
-  onSavePreferences: (preferences: Record<string, boolean>) => void;
-}
-
-export function CustomizeDialog({ onSavePreferences }: CustomizeDialogProps) {
-  const [categories, setCategories] = React.useState<CookieCategory[]>([
-    {
-      id: "essential",
-      name: "Strictly Necessary Cookies",
-      description: "These cookies are necessary for the website to function and cannot be switched off.",
-      required: true,
-      checked: true,
-    },
-    {
-      id: "analytics",
-      name: "Performance / Analytics Cookies",
-      description: "These cookies help us understand how visitors interact with the website.",
-      required: false,
-      checked: true,
-    },
-    {
-      id: "functional",
-      name: "Functional Cookies",
-      description: "These cookies enable the website to provide enhanced functionality and personalization.",
-      required: false,
-      checked: true,
-    },
-    {
-      id: "targeting",
-      name: "Targeting / Advertising Cookies",
-      description: "These cookies are used to track visitors across websites to display relevant advertisements.",
-      required: false,
-      checked: false,
-    },
-    {
-      id: "social",
-      name: "Social Media Cookies",
-      description: "These cookies enable sharing content through social media platforms.",
-      required: false,
-      checked: false,
-    },
-  ]);
-
-  const handleSwitchChange = (id: string, checked: boolean) => {
-    setCategories(
-      categories.map((category) =>
-        category.id === id ? { ...category, checked } : category
-      )
-    );
+export function CustomizeDialog({
+  open,
+  onOpenChange,
+  onSave,
+  initialSettings = {
+    analytics: true,
+    advertising: false,
+    functional: true,
+    social: false,
+    scripts: {
+      analytics: [],
+      advertising: [],
+      functional: [],
+      social: []
+    }
+  }
+}) {
+  const [settings, setSettings] = useState(initialSettings);
+  const [activeTab, setActiveTab] = useState("categories");
+  const [newScript, setNewScript] = useState({
+    id: "",
+    category: "analytics",
+    src: "",
+    async: true,
+    content: ""
+  });
+  
+  const handleCategoryToggle = (category) => {
+    setSettings({
+      ...settings,
+      [category]: !settings[category]
+    });
   };
-
-  const handleSavePreferences = () => {
-    const preferences = categories.reduce(
-      (acc, category) => ({ ...acc, [category.id]: category.checked }),
-      {} as Record<string, boolean>
-    );
-    onSavePreferences(preferences);
+  
+  const handleSaveSettings = () => {
+    onSave(settings);
+  };
+  
+  const handleAddScript = () => {
+    if (!newScript.id) return;
+    
+    const scriptObj = newScript.src 
+      ? { id: newScript.id, src: newScript.src, async: newScript.async } 
+      : { id: newScript.id, content: newScript.content };
+      
+    setSettings({
+      ...settings,
+      scripts: {
+        ...settings.scripts,
+        [newScript.category]: [
+          ...settings.scripts[newScript.category],
+          scriptObj
+        ]
+      }
+    });
+    
+    // Reset form
+    setNewScript({
+      id: "",
+      category: "analytics",
+      src: "",
+      async: true,
+      content: ""
+    });
+  };
+  
+  const handleRemoveScript = (category, scriptId) => {
+    setSettings({
+      ...settings,
+      scripts: {
+        ...settings.scripts,
+        [category]: settings.scripts[category].filter(s => s.id !== scriptId)
+      }
+    });
   };
 
   return (
-    <Dialog>
-      <DialogTrigger asChild>
-        <Button variant="outline" className="flex gap-2 items-center">
-          <Sliders className="h-4 w-4" />
-          <span>Customize</span>
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px] max-h-[80vh] overflow-hidden flex flex-col">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Cookie Preferences</DialogTitle>
+          <DialogTitle>Customize Consent Settings</DialogTitle>
           <DialogDescription>
-            Customize which cookies you want to accept. Essential cookies cannot be disabled as they are necessary for the website to function properly.
+            Configure your cookie preferences and script settings
           </DialogDescription>
         </DialogHeader>
         
-        <ScrollArea className="flex-grow pr-4 my-4">
-          <div className="space-y-5">
-            {categories.map((category) => (
-              <div key={category.id} className="pb-4 border-b border-gray-100 last:border-0">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Label htmlFor={category.id} className="text-base font-medium">
-                      {category.name}
-                    </Label>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <Button variant="ghost" size="icon" className="h-5 w-5 rounded-full">
-                          <InfoIcon className="h-3 w-3" />
-                          <span className="sr-only">Info</span>
-                        </Button>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-80">
-                        <div className="space-y-2">
-                          <h4 className="font-medium">{category.name}</h4>
-                          <p className="text-sm text-muted-foreground">{category.description}</p>
-                          
-                          {category.id === "essential" && (
-                            <div className="pt-2">
-                              <h5 className="text-sm font-medium">Included Cookies:</h5>
-                              <ul className="text-xs text-muted-foreground list-disc pl-4 mt-1">
-                                <li>Session cookies</li>
-                                <li>CSRF token cookies</li>
-                                <li>Authentication cookies</li>
-                              </ul>
-                            </div>
-                          )}
-                          
-                          {category.id === "functional" && (
-                            <div className="pt-2">
-                              <h5 className="text-sm font-medium">Included Cookies:</h5>
-                              <ul className="text-xs text-muted-foreground list-disc pl-4 mt-1">
-                                <li>Language preference cookies</li>
-                                <li>Theme preference cookies</li>
-                                <li>Personalization cookies</li>
-                              </ul>
-                            </div>
-                          )}
-                          
-                          {category.id === "analytics" && (
-                            <div className="pt-2">
-                              <h5 className="text-sm font-medium">Included Cookies:</h5>
-                              <ul className="text-xs text-muted-foreground list-disc pl-4 mt-1">
-                                <li>Google Analytics cookies</li>
-                                <li>Usage statistics cookies</li>
-                                <li>Performance monitoring cookies</li>
-                              </ul>
-                            </div>
-                          )}
-                          
-                          {category.id === "targeting" && (
-                            <div className="pt-2">
-                              <h5 className="text-sm font-medium">Included Cookies:</h5>
-                              <ul className="text-xs text-muted-foreground list-disc pl-4 mt-1">
-                                <li>Advertising cookies</li>
-                                <li>Retargeting cookies</li>
-                                <li>Marketing automation cookies</li>
-                              </ul>
-                            </div>
-                          )}
-                          
-                          {category.id === "social" && (
-                            <div className="pt-2">
-                              <h5 className="text-sm font-medium">Included Cookies:</h5>
-                              <ul className="text-xs text-muted-foreground list-disc pl-4 mt-1">
-                                <li>Facebook cookies</li>
-                                <li>Twitter/X cookies</li>
-                                <li>LinkedIn cookies</li>
-                              </ul>
-                            </div>
-                          )}
-                        </div>
-                      </PopoverContent>
-                    </Popover>
-                  </div>
-                  <Switch
-                    id={category.id}
-                    checked={category.checked}
-                    disabled={category.required}
-                    onCheckedChange={(checked) => handleSwitchChange(category.id, checked)}
-                  />
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="mt-4">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="categories">Cookie Categories</TabsTrigger>
+            <TabsTrigger value="scripts">Script Configuration</TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="categories" className="pt-4 space-y-4">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium">Necessary</h3>
+                  <p className="text-xs text-muted-foreground">Required for the website to function properly</p>
                 </div>
-                <p className="text-sm text-muted-foreground mt-1">
-                  {category.description}
-                </p>
-                {category.required && (
-                  <p className="text-xs text-muted-foreground mt-2 italic">
-                    This cookie category cannot be disabled as it is essential for the website to function properly.
-                  </p>
-                )}
+                <Switch checked={true} disabled />
               </div>
-            ))}
-            
-            <div className="pt-2">
-              <h3 className="text-base font-medium mb-2">Additional Information</h3>
-              <p className="text-sm text-muted-foreground">
-                For more information about how we use cookies and your personal data, please visit our{" "}
-                <a href="#" className="text-blue-600 hover:underline">
-                  Privacy Policy
-                </a>
-                .
-              </p>
+              
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium">Analytics</h3>
+                  <p className="text-xs text-muted-foreground">Help us understand how visitors use our website</p>
+                </div>
+                <Switch 
+                  checked={settings.analytics} 
+                  onCheckedChange={() => handleCategoryToggle('analytics')} 
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium">Advertising</h3>
+                  <p className="text-xs text-muted-foreground">Used for targeted advertising</p>
+                </div>
+                <Switch 
+                  checked={settings.advertising} 
+                  onCheckedChange={() => handleCategoryToggle('advertising')} 
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium">Functional</h3>
+                  <p className="text-xs text-muted-foreground">Enhance website functionality and personalization</p>
+                </div>
+                <Switch 
+                  checked={settings.functional} 
+                  onCheckedChange={() => handleCategoryToggle('functional')} 
+                />
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-sm font-medium">Social Media</h3>
+                  <p className="text-xs text-muted-foreground">Enable sharing and social media features</p>
+                </div>
+                <Switch 
+                  checked={settings.social} 
+                  onCheckedChange={() => handleCategoryToggle('social')} 
+                />
+              </div>
             </div>
-          </div>
-        </ScrollArea>
+          </TabsContent>
+          
+          <TabsContent value="scripts" className="pt-4">
+            <Alert className="mb-4">
+              <InfoIcon className="h-4 w-4" />
+              <AlertDescription>
+                Configure which scripts will be loaded for each consent category
+              </AlertDescription>
+            </Alert>
+            
+            <div className="space-y-6">
+              <div className="space-y-3">
+                <h3 className="text-sm font-medium">Add New Script</h3>
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="script-id">Script ID</Label>
+                    <Input 
+                      id="script-id" 
+                      placeholder="unique-script-id" 
+                      value={newScript.id}
+                      onChange={e => setNewScript({...newScript, id: e.target.value})}
+                    />
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <Label htmlFor="script-category">Category</Label>
+                    <select 
+                      id="script-category"
+                      className="w-full p-2 border rounded-md"
+                      value={newScript.category}
+                      onChange={e => setNewScript({...newScript, category: e.target.value})}
+                    >
+                      <option value="analytics">Analytics</option>
+                      <option value="advertising">Advertising</option>
+                      <option value="functional">Functional</option>
+                      <option value="social">Social Media</option>
+                    </select>
+                  </div>
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      id="external-script"
+                      name="script-type"
+                      checked={!!newScript.src}
+                      onChange={() => setNewScript({...newScript, src: "https://", content: ""})}
+                    />
+                    <Label htmlFor="external-script">External Script</Label>
+                  </div>
+                  
+                  {!!newScript.src && (
+                    <>
+                      <Input 
+                        placeholder="https://example.com/script.js" 
+                        value={newScript.src}
+                        onChange={e => setNewScript({...newScript, src: e.target.value})}
+                      />
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="script-async"
+                          checked={newScript.async}
+                          onChange={e => setNewScript({...newScript, async: e.target.checked})}
+                        />
+                        <Label htmlFor="script-async">Load Asynchronously</Label>
+                      </div>
+                    </>
+                  )}
+                </div>
+                
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      id="inline-script"
+                      name="script-type"
+                      checked={!!newScript.content}
+                      onChange={() => setNewScript({...newScript, content: "// Your script code here", src: ""})}
+                    />
+                    <Label htmlFor="inline-script">Inline Script</Label>
+                  </div>
+                  
+                  {!!newScript.content && (
+                    <Textarea 
+                      placeholder="// JavaScript code here" 
+                      className="font-mono"
+                      value={newScript.content}
+                      onChange={e => setNewScript({...newScript, content: e.target.value})}
+                      rows={4}
+                    />
+                  )}
+                </div>
+                
+                <Button onClick={handleAddScript} disabled={!newScript.id || (!newScript.src && !newScript.content)}>
+                  Add Script
+                </Button>
+              </div>
+              
+              <div className="space-y-4">
+                <h3 className="text-sm font-medium">Configured Scripts</h3>
+                
+                {['analytics', 'advertising', 'functional', 'social'].map(category => (
+                  <div key={category} className="space-y-2">
+                    <h4 className="text-xs font-medium capitalize">{category}</h4>
+                    {settings.scripts[category].length === 0 ? (
+                      <p className="text-xs text-muted-foreground">No scripts configured</p>
+                    ) : (
+                      <ul className="text-xs space-y-2">
+                        {settings.scripts[category].map(script => (
+                          <li key={script.id} className="p-2 bg-gray-50 rounded flex justify-between items-center">
+                            <div>
+                              <span className="font-medium">{script.id}</span>
+                              {script.src ? (
+                                <p className="text-xs text-muted-foreground">Source: {script.src}</p>
+                              ) : (
+                                <p className="text-xs text-muted-foreground">Inline script: {script.content.substring(0, 30)}...</p>
+                              )}
+                            </div>
+                            <Button 
+                              variant="ghost" 
+                              size="sm"
+                              onClick={() => handleRemoveScript(category, script.id)}
+                            >
+                              Remove
+                            </Button>
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
         
-        <DialogFooter className="flex flex-row justify-between gap-2 sm:justify-between">
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => {
-              setCategories(categories.map(cat => ({...cat, checked: cat.required})));
-              setTimeout(() => handleSavePreferences(), 100);
-            }}>
-              Reject All
-            </Button>
-            <Button onClick={() => {
-              setCategories(categories.map(cat => ({...cat, checked: true})));
-              setTimeout(() => handleSavePreferences(), 100);
-            }}>
-              Accept All
-            </Button>
-          </div>
-          <Button onClick={handleSavePreferences} className="ml-auto">
+        <div className="flex justify-end space-x-2 mt-6">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={handleSaveSettings}>
             Save Preferences
           </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
