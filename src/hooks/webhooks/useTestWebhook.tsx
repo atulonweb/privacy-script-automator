@@ -23,8 +23,11 @@ export function useTestWebhook() {
         throw new Error('No active session');
       }
       
-      // Call the test webhook endpoint
-      const response = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/consent-config/test-webhook`, {
+      // Use the correct Supabase URL directly from the client configuration
+      const supabaseUrl = "https://rzmfwwkumniuwenammaj.supabase.co";
+      
+      // Call the test webhook endpoint with the correct URL
+      const response = await fetch(`${supabaseUrl}/functions/v1/consent-config/test-webhook`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
