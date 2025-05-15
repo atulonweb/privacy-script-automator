@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { toast } from 'sonner';
@@ -12,7 +12,7 @@ const MakeAdminPage = () => {
   const navigate = useNavigate();
   
   const promoteUser = async () => {
-    const email = "atulonweb@gmail.com";
+    const email = "admin@example.com";
     setLoading(true);
     
     try {
@@ -46,12 +46,12 @@ const MakeAdminPage = () => {
         <CardHeader className="space-y-1">
           <CardTitle className="text-2xl font-bold text-center">Promote User to Admin</CardTitle>
           <CardDescription className="text-center">
-            This will promote atulonweb@gmail.com to admin role
+            This will promote admin@example.com to admin role
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-gray-600">
-            This action will promote user with email <strong>atulonweb@gmail.com</strong> to admin role.
+            This action will promote user with email <strong>admin@example.com</strong> to admin role.
             The user must exist in the system for this to work.
           </p>
           
