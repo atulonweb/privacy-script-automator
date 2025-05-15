@@ -4,117 +4,102 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Webhook } from '@/types/webhook.types';
 
-export function useWebhookOperations(userId: string | undefined) {
-  const createWebhook = async (newWebhook: {
-    website_id: string;
-    url: string;
-    secret?: string;
-    enabled?: boolean;
-    retry_count?: number;
-  }) => {
+export function useWebhookOperations(userId: string | undefined, onSuccessCallback?: () => void) {
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const createWebhook = async (data: Partial<Webhook>) => {
     try {
+      setIsProcessing(true);
+      
       if (!userId) {
-        toast({
-          title: "Error",
-          description: "You must be logged in to create a webhook"
-        });
-        throw new Error('User not authenticated');
+        throw new Error('User authentication required');
       }
       
-      // Create the webhook
-      const { data, error } = await supabase
+      const webhook = {
+        user_id: userId,
+        ...data
+      };
+      
+      const { data: newWebhook, error } = await supabase
         .from('webhooks')
-        .insert({
-          ...newWebhook,
-          user_id: userId,
-          enabled: newWebhook.enabled ?? true,
-          retry_count: newWebhook.retry_count ?? 3
-        })
-        .select();
+        .insert(webhook)
+        .select('*')
+        .single();
       
       if (error) throw error;
-      
-      console.log('Created webhook:', data);
-      
-      if (!data || data.length === 0) {
-        throw new Error('Failed to create webhook');
-      }
-      
-      // Return the created webhook
-      const newWebhookData = data[0] as Webhook;
       
       toast({
         title: "Success",
         description: "Webhook created successfully"
       });
       
-      return newWebhookData;
-    } catch (err: any) {
-      console.error('Error creating webhook:', err);
+      if (onSuccessCallback) {
+        onSuccessCallback();
+      }
+      
+      return newWebhook as Webhook;
+    } catch (error: any) {
+      console.error('Error creating webhook:', error);
       toast({
         title: "Error",
-        description: err.message || "Failed to create webhook"
+        description: error.message || "Failed to create webhook",
+        variant: "destructive"
       });
-      throw err;
+      throw error;
+    } finally {
+      setIsProcessing(false);
     }
   };
 
-  const updateWebhook = async (id: string, webhookData: Partial<Webhook>) => {
+  const updateWebhook = async (id: string, data: Partial<Webhook>) => {
     try {
+      setIsProcessing(true);
+      
       if (!userId) {
-        toast({
-          title: "Error",
-          description: "You must be logged in to update a webhook"
-        });
-        throw new Error('User not authenticated');
+        throw new Error('User authentication required');
       }
       
-      // Update the webhook
-      const { data, error } = await supabase
+      const { data: updatedWebhook, error } = await supabase
         .from('webhooks')
-        .update(webhookData)
+        .update(data)
         .eq('id', id)
         .eq('user_id', userId)
-        .select();
+        .select('*')
+        .single();
       
       if (error) throw error;
-      
-      console.log('Updated webhook:', data);
-      
-      if (!data || data.length === 0) {
-        throw new Error('Failed to update webhook');
-      }
-      
-      // Return the updated webhook
-      const updatedWebhook = data[0] as Webhook;
       
       toast({
         title: "Success",
         description: "Webhook updated successfully"
       });
       
-      return updatedWebhook;
-    } catch (err: any) {
-      console.error('Error updating webhook:', err);
+      if (onSuccessCallback) {
+        onSuccessCallback();
+      }
+      
+      return updatedWebhook as Webhook;
+    } catch (error: any) {
+      console.error('Error updating webhook:', error);
       toast({
         title: "Error",
-        description: err.message || "Failed to update webhook"
+        description: error.message || "Failed to update webhook",
+        variant: "destructive"
       });
-      throw err;
+      throw error;
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   const deleteWebhook = async (id: string) => {
     try {
+      setIsProcessing(true);
+      
       if (!userId) {
-        toast({
-          title: "Error",
-          description: "You must be logged in to delete a webhook"
-        });
-        throw new Error('User not authenticated');
+        throw new Error('User authentication required');
       }
       
-      // Delete the webhook
       const { error } = await supabase
         .from('webhooks')
         .delete()
@@ -127,17 +112,27 @@ export function useWebhookOperations(userId: string | undefined) {
         title: "Success",
         description: "Webhook deleted successfully"
       });
-    } catch (err: any) {
-      console.error('Error deleting webhook:', err);
+      
+      if (onSuccessCallback) {
+        onSuccessCallback();
+      }
+      
+      return true;
+    } catch (error: any) {
+      console.error('Error deleting webhook:', error);
       toast({
         title: "Error",
-        description: err.message || "Failed to delete webhook"
+        description: error.message || "Failed to delete webhook",
+        variant: "destructive"
       });
-      throw err;
+      throw error;
+    } finally {
+      setIsProcessing(false);
     }
   };
 
   return {
+    isProcessing,
     createWebhook,
     updateWebhook,
     deleteWebhook

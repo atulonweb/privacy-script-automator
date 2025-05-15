@@ -21,7 +21,7 @@ export function useWebhooks(websiteId?: string) {
   } = useFetchWebhooks(user?.id, websiteId);
   
   const { logs, logsLoading, fetchWebhookLogs } = useWebhookLogs();
-  const { createWebhook, updateWebhook, deleteWebhook } = useWebhookOperations(user?.id);
+  const { createWebhook, updateWebhook, deleteWebhook } = useWebhookOperations(user?.id, fetchWebhooks);
   const { testWebhook, isTesting } = useTestWebhook();
 
   // Initial fetch of webhooks

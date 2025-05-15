@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -31,16 +31,33 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ website }) => {
     updateWebhook,
     deleteWebhook,
     testWebhook,
-    fetchWebhookLogs
+    fetchWebhookLogs,
+    fetchWebhooks
   } = useWebhooks(website.id);
 
-  const [url, setUrl] = useState(webhook?.url || '');
-  const [secret, setSecret] = useState(webhook?.secret || '');
-  const [enabled, setEnabled] = useState(webhook?.enabled ?? true);
-  const [retryCount, setRetryCount] = useState(webhook?.retry_count || 3);
+  const [url, setUrl] = useState('');
+  const [secret, setSecret] = useState('');
+  const [enabled, setEnabled] = useState(true);
+  const [retryCount, setRetryCount] = useState(3);
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [activeTab, setActiveTab] = useState('settings');
+
+  // Update local state when webhook data changes
+  useEffect(() => {
+    if (webhook) {
+      setUrl(webhook.url || '');
+      setSecret(webhook.secret || '');
+      setEnabled(webhook.enabled ?? true);
+      setRetryCount(webhook.retry_count || 3);
+    } else {
+      // Reset to defaults when no webhook is available
+      setUrl('');
+      setSecret('');
+      setEnabled(true);
+      setRetryCount(3);
+    }
+  }, [webhook]);
 
   const handleSave = async () => {
     if (!url) {
@@ -95,6 +112,10 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ website }) => {
           retry_count: retryCount
         });
       }
+      
+      // Refresh webhooks after saving
+      fetchWebhooks();
+      
     } catch (error) {
       console.error('Error saving webhook:', error);
       // Toast is already shown by the hook

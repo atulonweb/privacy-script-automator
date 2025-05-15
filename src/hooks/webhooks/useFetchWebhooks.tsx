@@ -36,9 +36,11 @@ export function useFetchWebhooks(userId: string | undefined, websiteId?: string)
       console.log("Fetched webhooks:", data);
       setWebhooks(data as Webhook[] || []);
       
-      // If we have exactly one webhook and it's for the specified website, set it as the current webhook
-      if (data && data.length === 1 && websiteId) {
+      // If we have webhooks for the specified website, set the first one as the current webhook
+      if (data && data.length > 0 && websiteId) {
         setWebhook(data[0] as Webhook);
+      } else {
+        setWebhook(null);
       }
     } catch (err: any) {
       console.error('Error fetching webhooks:', err);
