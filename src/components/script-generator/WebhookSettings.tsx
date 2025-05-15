@@ -311,12 +311,13 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ website }) => {
                       <TableHead className="w-[100px]">Status</TableHead>
                       <TableHead>Time</TableHead>
                       <TableHead className="hidden md:table-cell">Event Type</TableHead>
-                      <TableHead className="hidden md:table-cell">Details</TableHead>
+                      <TableHead className="hidden md:table-cell">Response</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {logs.map((log) => {
                       const eventType = log.request_payload?.event || 'unknown';
+                      const hasResponse = log.response_body || log.parsed_response;
                       
                       return (
                         <TableRow key={log.id}>
@@ -359,13 +360,31 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ website }) => {
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <Button variant="ghost" size="sm">
-                                    View Payload
+                                    View Details
                                   </Button>
                                 </TooltipTrigger>
-                                <TooltipContent side="left" className="max-w-[400px]">
-                                  <p className="font-mono text-xs whitespace-pre-wrap">
-                                    {formatJson(log.request_payload)}
-                                  </p>
+                                <TooltipContent side="left" className="max-w-[500px]">
+                                  <div className="space-y-2">
+                                    <div>
+                                      <p className="font-semibold text-xs">Request Payload:</p>
+                                      <p className="font-mono text-xs whitespace-pre-wrap">
+                                        {formatJson(log.request_payload)}
+                                      </p>
+                                    </div>
+                                    
+                                    {hasResponse && (
+                                      <div>
+                                        <p className="font-semibold text-xs mt-2">Response:</p>
+                                        <p className="font-mono text-xs whitespace-pre-wrap">
+                                          {formatJson(log.parsed_response || log.response_body)}
+                                        </p>
+                                      </div>
+                                    )}
+                                    
+                                    {!hasResponse && log.status === 'success' && (
+                                      <p className="text-xs italic">No response data available</p>
+                                    )}
+                                  </div>
                                 </TooltipContent>
                               </Tooltip>
                             </TooltipProvider>

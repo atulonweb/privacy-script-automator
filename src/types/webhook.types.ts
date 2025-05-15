@@ -22,5 +22,6 @@ export type WebhookLog = {
   error_message: string | null;
   request_payload: any;
   response_body: string | null;
+  parsed_response?: any; // Added for parsed response data
   created_at: string;
 };

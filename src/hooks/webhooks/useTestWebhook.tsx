@@ -36,7 +36,21 @@ export function useTestWebhook() {
         body: JSON.stringify({ webhookId: id })
       });
       
-      const result = await response.json();
+      // Get the response as text first
+      const responseText = await response.text();
+      console.log("Raw webhook test response:", responseText);
+      
+      // Then try to parse it as JSON if possible
+      let result;
+      try {
+        result = responseText ? JSON.parse(responseText) : { success: response.ok };
+      } catch (e) {
+        console.warn("Failed to parse webhook response as JSON:", e);
+        result = { 
+          success: response.ok,
+          rawResponse: responseText || "(empty response)"
+        };
+      }
       
       if (!response.ok) {
         throw new Error(result.error || 'Failed to test webhook');
@@ -50,7 +64,7 @@ export function useTestWebhook() {
       toast({
         title: result.success ? "Success" : "Error",
         description: result.success 
-          ? "Test webhook sent successfully" 
+          ? `Test webhook sent successfully: ${result.message || result.status || 'OK'}`
           : `Failed to send test webhook: ${result.error || 'Unknown error'}`
       });
       
