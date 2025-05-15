@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Card, 
   CardContent, 
@@ -7,7 +7,6 @@ import {
   CardHeader, 
   CardTitle 
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import {
   AreaChart,
   Area,
@@ -20,40 +19,148 @@ import {
   Legend,
   ResponsiveContainer
 } from 'recharts';
-import DashboardLayout from '@/components/DashboardLayout';
-
-const mockData = {
-  users: [
-    { id: 1, name: 'John Doe', email: 'john@example.com', websites: 2, plan: 'Pro', joined: '2023-10-12' },
-    { id: 2, name: 'Jane Smith', email: 'jane@example.com', websites: 3, plan: 'Enterprise', joined: '2023-09-15' },
-    { id: 3, name: 'Mark Johnson', email: 'mark@example.com', websites: 1, plan: 'Free', joined: '2023-11-01' },
-    { id: 4, name: 'Sarah Williams', email: 'sarah@example.com', websites: 5, plan: 'Pro', joined: '2023-08-22' },
-  ],
-  statistics: {
-    totalUsers: 427,
-    totalWebsites: 893,
-    activeScripts: 812,
-    revenue: 28450
-  },
-  graphData: [
-    { month: 'Jan', users: 150, websites: 250, revenue: 8500 },
-    { month: 'Feb', users: 220, websites: 300, revenue: 10200 },
-    { month: 'Mar', users: 250, websites: 400, revenue: 12000 },
-    { month: 'Apr', users: 280, websites: 460, revenue: 15000 },
-    { month: 'May', users: 300, websites: 500, revenue: 16500 },
-    { month: 'Jun', users: 350, websites: 550, revenue: 18000 },
-    { month: 'Jul', users: 427, websites: 893, revenue: 28450 },
-  ],
-  planDistribution: [
-    { name: 'Free', value: 240 },
-    { name: 'Pro', value: 140 },
-    { name: 'Enterprise', value: 47 },
-  ]
-};
+import AdminLayout from '@/components/AdminLayout';
+import { supabase } from '@/integrations/supabase/client';
+import { 
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
 const AdminDashboardPage: React.FC = () => {
+  const [statistics, setStatistics] = useState({
+    totalUsers: 0,
+    totalWebsites: 0,
+    activeScripts: 0,
+    revenue: 0
+  });
+  
+  const [graphData, setGraphData] = useState<any[]>([]);
+  const [planDistribution, setPlanDistribution] = useState<any[]>([]);
+  const [recentUsers, setRecentUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAdminData = async () => {
+      try {
+        setLoading(true);
+        
+        // Fetch user count
+        const { count: userCount, error: userError } = await supabase
+          .from('profiles')
+          .select('id', { count: 'exact', head: true });
+          
+        if (userError) throw userError;
+        
+        // Fetch website count
+        const { count: websiteCount, error: websiteError } = await supabase
+          .from('websites')
+          .select('id', { count: 'exact', head: true });
+          
+        if (websiteError) throw websiteError;
+        
+        // Fetch script count
+        const { count: scriptCount, error: scriptError } = await supabase
+          .from('consent_scripts')
+          .select('id', { count: 'exact', head: true });
+          
+        if (scriptError) throw scriptError;
+        
+        // Fetch recent users
+        const { data: users, error: usersError } = await supabase
+          .from('profiles')
+          .select(`
+            id, 
+            full_name,
+            created_at
+          `)
+          .order('created_at', { ascending: false })
+          .limit(5);
+          
+        if (usersError) throw usersError;
+        
+        // Get additional data for those users
+        const enhancedUsers = await Promise.all(users.map(async (user) => {
+          // Get website count for this user
+          const { count: userWebsites, error: websiteCountError } = await supabase
+            .from('websites')
+            .select('id', { count: 'exact', head: true })
+            .eq('user_id', user.id);
+            
+          if (websiteCountError) throw websiteCountError;
+          
+          // Get user email
+          const { data: userData, error: userDataError } = await supabase.auth.admin.getUserById(user.id);
+          if (userDataError) throw userDataError;
+          
+          return {
+            ...user,
+            email: userData?.user?.email || '',
+            websites: userWebsites || 0,
+            // For demo purposes, we're using a placeholder for the plan
+            plan: Math.random() > 0.5 ? 'Pro' : (Math.random() > 0.5 ? 'Free' : 'Enterprise')
+          };
+        }));
+        
+        // Create dummy graph data
+        const dummyGraphData = generateDummyGraphData();
+        const dummyPlanDistribution = [
+          { name: 'Free', value: Math.floor(userCount * 0.6) || 5 },
+          { name: 'Pro', value: Math.floor(userCount * 0.3) || 3 },
+          { name: 'Enterprise', value: Math.floor(userCount * 0.1) || 1 },
+        ];
+        
+        setStatistics({
+          totalUsers: userCount || 0,
+          totalWebsites: websiteCount || 0,
+          activeScripts: scriptCount || 0,
+          revenue: calculateEstimatedRevenue(userCount || 0) || 0
+        });
+        
+        setGraphData(dummyGraphData);
+        setPlanDistribution(dummyPlanDistribution);
+        setRecentUsers(enhancedUsers || []);
+      } catch (error: any) {
+        console.error("Error fetching admin data:", error);
+        toast.error(`Failed to load admin data: ${error.message}`);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchAdminData();
+  }, []);
+  
+  const generateDummyGraphData = () => {
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul'];
+    return months.map((month, index) => {
+      const baseFactor = (index + 1) * 1.5;
+      return {
+        month,
+        users: Math.floor(50 * baseFactor),
+        websites: Math.floor(80 * baseFactor),
+        revenue: Math.floor(5000 * baseFactor)
+      };
+    });
+  };
+  
+  const calculateEstimatedRevenue = (userCount: number) => {
+    // Simple revenue calculation for demo purposes
+    return userCount * 20 + 5000;
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
+  };
+
   return (
-    <DashboardLayout>
+    <AdminLayout>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <div className="flex items-center justify-between">
           <h2 className="text-3xl font-bold tracking-tight">Admin Dashboard</h2>
@@ -68,7 +175,7 @@ const AdminDashboardPage: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{mockData.statistics.totalUsers}</div>
+              <div className="text-2xl font-bold">{statistics.totalUsers}</div>
               <p className="text-xs text-muted-foreground">
                 Active registered users
               </p>
@@ -82,7 +189,7 @@ const AdminDashboardPage: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {mockData.statistics.totalWebsites}
+                {statistics.totalWebsites}
               </div>
               <p className="text-xs text-muted-foreground">
                 Websites using ConsentGuard
@@ -97,7 +204,7 @@ const AdminDashboardPage: React.FC = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
-                {mockData.statistics.activeScripts}
+                {statistics.activeScripts}
               </div>
               <p className="text-xs text-muted-foreground">
                 Scripts currently in use
@@ -111,7 +218,7 @@ const AdminDashboardPage: React.FC = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">${mockData.statistics.revenue}</div>
+              <div className="text-2xl font-bold">${statistics.revenue}</div>
               <p className="text-xs text-muted-foreground">
                 Monthly recurring revenue
               </p>
@@ -129,7 +236,7 @@ const AdminDashboardPage: React.FC = () => {
             <CardContent className="pl-2">
               <ResponsiveContainer width="100%" height={350}>
                 <AreaChart
-                  data={mockData.graphData}
+                  data={graphData}
                   margin={{
                     top: 10,
                     right: 30,
@@ -155,7 +262,7 @@ const AdminDashboardPage: React.FC = () => {
             </CardHeader>
             <CardContent>
               <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={mockData.planDistribution}>
+                <BarChart data={planDistribution}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="name" />
                   <YAxis />
@@ -177,24 +284,24 @@ const AdminDashboardPage: React.FC = () => {
           </CardHeader>
           <CardContent>
             <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium">User</th>
-                    <th className="text-left py-3 px-4 font-medium">Email</th>
-                    <th className="text-left py-3 px-4 font-medium">Websites</th>
-                    <th className="text-left py-3 px-4 font-medium">Plan</th>
-                    <th className="text-left py-3 px-4 font-medium">Joined</th>
-                    <th className="text-left py-3 px-4 font-medium">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {mockData.users.map((user) => (
-                    <tr key={user.id} className="border-b">
-                      <td className="py-3 px-4 font-medium">{user.name}</td>
-                      <td className="py-3 px-4">{user.email}</td>
-                      <td className="py-3 px-4">{user.websites}</td>
-                      <td className="py-3 px-4">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>User</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Websites</TableHead>
+                    <TableHead>Plan</TableHead>
+                    <TableHead>Joined</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {recentUsers.map((user) => (
+                    <TableRow key={user.id}>
+                      <TableCell className="font-medium">{user.full_name || 'Unknown'}</TableCell>
+                      <TableCell>{user.email}</TableCell>
+                      <TableCell>{user.websites}</TableCell>
+                      <TableCell>
                         <span 
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
                             ${user.plan === 'Enterprise' 
@@ -206,20 +313,34 @@ const AdminDashboardPage: React.FC = () => {
                         >
                           {user.plan}
                         </span>
-                      </td>
-                      <td className="py-3 px-4">{user.joined}</td>
-                      <td className="py-3 px-4">
-                        <Button variant="outline" size="sm">View Details</Button>
-                      </td>
-                    </tr>
+                      </TableCell>
+                      <TableCell>{formatDate(user.created_at)}</TableCell>
+                      <TableCell>
+                        <Button variant="outline" size="sm" onClick={() => navigate(`/admin/users/${user.id}`)}>View Details</Button>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </tbody>
-              </table>
+                  {recentUsers.length === 0 && !loading && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                        No users found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  {loading && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
+                        Loading users...
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </div>
           </CardContent>
         </Card>
       </div>
-    </DashboardLayout>
+    </AdminLayout>
   );
 };
 

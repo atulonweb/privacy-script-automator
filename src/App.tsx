@@ -19,6 +19,9 @@ import ScriptGeneratorPage from "./pages/ScriptGeneratorPage";
 import TestingPage from "./pages/TestingPage";
 import EditScriptPage from "./pages/EditScriptPage";
 import TestScriptPage from "./pages/TestScriptPage";
+import AdminUsersPage from "./pages/AdminUsersPage";
+import AdminSettingsPage from "./pages/AdminSettingsPage";
+import AdminWebhooksPage from "./pages/AdminWebhooksPage";
 
 // Components
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -47,7 +50,13 @@ const App = () => {
           <Route path="/dashboard/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
           <Route path="/dashboard/testing" element={<ProtectedRoute><TestingPage /></ProtectedRoute>} />
           
+          {/* Admin Routes */}
           <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
+          <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
+          <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
+          <Route path="/admin/settings" element={<AdminRoute><AdminSettingsPage /></AdminRoute>} />
+          <Route path="/admin/webhooks" element={<AdminRoute><AdminWebhooksPage /></AdminRoute>} />
+          
           <Route path="*" element={<NotFound />} />
         </Routes>
         <Toaster />

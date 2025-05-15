@@ -114,7 +114,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       
       // Redirect based on user role
       if (data.user?.app_metadata?.role === 'admin') {
-        navigate('/admin/dashboard');
+        navigate('/admin');
         toast.success('Admin login successful!');
       } else {
         navigate('/dashboard');
