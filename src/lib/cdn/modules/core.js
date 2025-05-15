@@ -23,12 +23,13 @@ export let config = {
   secureFlags: true,
   webhookUrl: '',
   translations: {},
-  // Script configuration by category
+  // Script configuration by category - these are PLACEHOLDER examples
+  // and must be replaced with actual script configuration
   scripts: {
     analytics: [
       { 
         id: 'google-analytics', 
-        src: "https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID",
+        src: "https://www.googletagmanager.com/gtag/js?id=REPLACE_WITH_YOUR_GA_ID",
         async: true
       }
     ],
@@ -76,6 +77,8 @@ export async function init() {
 
 /**
  * Look for custom script configuration in the script tag
+ * This function checks for a data-config attribute on the script tag
+ * that can be used to override the default configuration
  */
 function getScriptConfiguration() {
   try {

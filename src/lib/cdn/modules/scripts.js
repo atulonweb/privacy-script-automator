@@ -12,12 +12,8 @@ import { config } from './core.js';
 export function loadScriptsByConsent(preferences) {
   // Get script configuration from global config
   const scripts = config.scripts || {
-    analytics: [
-      { id: 'google-analytics', src: "https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID" }
-    ],
-    advertising: [
-      { id: 'facebook-pixel', src: "https://connect.facebook.net/en_US/fbevents.js" }
-    ],
+    analytics: [],
+    advertising: [],
     functional: [],
     social: []
   };
@@ -55,6 +51,16 @@ function loadScriptsForCategory(category, scripts = []) {
   if (!Array.isArray(scripts) || scripts.length === 0) return;
   
   scripts.forEach(scriptConfig => {
+    // Check if script has placeholder IDs that need to be replaced
+    if (scriptConfig.src && (
+        scriptConfig.src.includes('REPLACE_WITH_YOUR_') || 
+        scriptConfig.src.includes('_MEASUREMENT_ID') ||
+        scriptConfig.src.includes('PIXEL_ID')
+    )) {
+      console.warn(`ConsentGuard: Script ${scriptConfig.id} has placeholder values that need to be replaced.`);
+      return; // Skip loading scripts with placeholder values
+    }
+    
     if (scriptConfig.id && scriptConfig.src) {
       loadScript(scriptConfig.id, scriptConfig.src, scriptConfig.async !== false, scriptConfig.attributes);
     } else if (scriptConfig.id && scriptConfig.content) {

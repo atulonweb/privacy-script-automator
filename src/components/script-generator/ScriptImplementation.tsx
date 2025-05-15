@@ -14,6 +14,7 @@ interface ScriptImplementationProps {
 
 const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, website }) => {
   const [copiedScript, setCopiedScript] = useState(false);
+  const [copiedAdvancedScript, setCopiedAdvancedScript] = useState(false);
   const { toast } = useToast();
 
   const handleCopyScript = () => {
@@ -34,12 +35,13 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
   const handleCopyAdvancedScript = () => {
     const scriptCode = `<script 
   src="${generateCdnUrl(scriptId)}" 
+  data-config='{"scripts": {"analytics": [{"id": "google-analytics", "src": "https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX", "async": true}]}}'
   data-user-id="YOUR_USER_ID"
   data-session-id="YOUR_SESSION_ID"
   async
 ></script>`;
     navigator.clipboard.writeText(scriptCode);
-    setCopiedScript(true);
+    setCopiedAdvancedScript(true);
     toast({
       title: "Success",
       description: "Advanced script code copied to clipboard",
@@ -47,7 +49,7 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
     });
     
     setTimeout(() => {
-      setCopiedScript(false);
+      setCopiedAdvancedScript(false);
     }, 3000);
   };
 
@@ -72,7 +74,8 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
                 </Button>
               </TooltipTrigger>
               <TooltipContent className="max-w-sm">
-                <p>Even this basic implementation handles all consent management functionality. The script automatically loads your configuration from our servers using the script ID.</p>
+                <p>This basic implementation handles all consent management functionality. The script automatically loads your configuration from our servers using the script ID.</p>
+                <p className="mt-1 font-semibold">Note: Any scripts with placeholder IDs (like GA_MEASUREMENT_ID) will not be loaded until properly configured.</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -102,7 +105,7 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
 
       <div>
         <div className="flex items-center gap-2 mb-2">
-          <h4 className="font-medium">Advanced Implementation (with Data Attributes)</h4>
+          <h4 className="font-medium">Advanced Implementation (with Inline Config)</h4>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -112,7 +115,8 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
                 </Button>
               </TooltipTrigger>
               <TooltipContent className="max-w-sm">
-                <p>This implementation adds user tracking capabilities to the basic script. The data attributes allow you to associate consent choices with specific users or sessions in your analytics and webhooks.</p>
+                <p>This implementation adds user tracking capabilities and inline script configuration. The data-config attribute allows you to define scripts directly in your HTML, overriding the default placeholders.</p>
+                <p className="mt-1">Replace G-XXXXXXXXXX with your actual Google Analytics ID.</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -120,14 +124,15 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
         <div className="bg-gray-50 p-4 rounded-md font-mono text-sm overflow-x-auto">
           {`<script 
   src="${generateCdnUrl(scriptId)}" 
+  data-config='{"scripts": {"analytics": [{"id": "google-analytics", "src": "https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX", "async": true}]}}'
   data-user-id="YOUR_USER_ID"
   data-session-id="YOUR_SESSION_ID"
   async
 ></script>`}
         </div>
         <p className="text-xs text-muted-foreground mt-2">
-          Using data attributes allows you to track consent preferences for specific users or sessions.
-          These values will be included in analytics and webhook payloads.
+          Using data-config allows you to provide actual script URLs and IDs directly in your HTML.
+          The data-user-id and data-session-id values will be included in analytics and webhook payloads.
         </p>
 
         <Button 
@@ -135,8 +140,17 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
           variant="outline" 
           className="mt-2"
         >
-          <CopyIcon className="mr-2 h-4 w-4" />
-          Copy Advanced Script
+          {copiedAdvancedScript ? (
+            <>
+              <CheckIcon className="mr-2 h-4 w-4" />
+              Copied!
+            </>
+          ) : (
+            <>
+              <CopyIcon className="mr-2 h-4 w-4" />
+              Copy Advanced Script
+            </>
+          )}
         </Button>
       </div>
     </div>
