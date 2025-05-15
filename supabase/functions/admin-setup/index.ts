@@ -14,15 +14,6 @@ serve(async (req) => {
   }
 
   try {
-    // Get the authorization header from request
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Authorization header is required" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     // Create admin client using service_role key from environment variables
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL") || "",
