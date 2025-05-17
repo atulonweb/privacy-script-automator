@@ -11,11 +11,10 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Search, UserPlus, Edit, Trash2 } from 'lucide-react';
+import { UserPlus, Trash } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
-import { useNavigate } from 'react-router-dom';
 import { 
   Dialog,
   DialogContent,
@@ -25,7 +24,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
-import { Label } from '@/components/ui/label';
 import AdminForm from '@/components/admin/AdminForm';
 
 type Admin = {
@@ -37,12 +35,11 @@ type Admin = {
 
 const AdminManagementPage = () => {
   const [admins, setAdmins] = useState<Admin[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [searchTerm, setSearchTerm] = useState<string>('');
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState<boolean>(false);
-  const [adminToDelete, setAdminToDelete] = useState<Admin | null>(null);
-  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState<boolean>(false);
-  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isRemovingAdmin, setIsRemovingAdmin] = useState(false);
+  const [adminToRemove, setAdminToRemove] = useState<Admin | null>(null);
+  const { user } = useAuth();
 
   useEffect(() => {
     fetchAdmins();
@@ -53,243 +50,198 @@ const AdminManagementPage = () => {
       setLoading(true);
       
       // Get all users with admin role
-      const { data: adminUsers, error: adminError } = await supabase
-        .from('profiles')
-        .select(`
-          id,
-          full_name,
-          created_at
-        `)
-        .order('created_at', { ascending: false });
+      const { data: users, error: userError } = await supabase.auth.admin.listUsers();
       
-      if (adminError) throw adminError;
+      if (userError) throw userError;
       
-      // Enhance with user auth details
-      const enhancedAdmins = await Promise.all(
-        adminUsers.map(async (admin) => {
-          try {
-            const { data: userData, error: userDataError } = await supabase.auth.admin.getUserById(admin.id);
-            if (userDataError) throw userDataError;
-            
-            // Only include if they have admin role
-            if (userData?.user?.app_metadata?.role === 'admin') {
-              return {
-                id: admin.id,
-                email: userData?.user?.email || 'No email',
-                full_name: admin.full_name,
-                created_at: admin.created_at,
-              };
-            }
-            return null;
-          } catch (error) {
-            console.error("Error fetching admin details:", error);
-            return null;
-          }
-        })
+      const adminUsers = users.users.filter(user => 
+        user.app_metadata?.role === 'admin'
       );
       
-      // Filter out null values and set admins
-      setAdmins(enhancedAdmins.filter(admin => admin !== null) as Admin[]);
+      // Get more details for each admin from the profiles table
+      const adminsWithDetails = await Promise.all(adminUsers.map(async (admin) => {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', admin.id)
+          .single();
+        
+        return {
+          id: admin.id,
+          email: admin.email || 'No email',
+          full_name: profile?.full_name || null,
+          created_at: admin.created_at || new Date().toISOString(),
+        };
+      }));
+      
+      setAdmins(adminsWithDetails);
     } catch (error: any) {
       console.error("Error fetching admins:", error);
-      toast.error(`Failed to load admins: ${error.message}`);
+      toast.error('Failed to load admins');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleAddAdmin = () => {
-    setIsAddDialogOpen(true);
-  };
-
-  const handleEditAdmin = (admin: Admin) => {
-    navigate(`/admin/admins/edit/${admin.id}`);
-  };
-
-  const confirmDeleteAdmin = (admin: Admin) => {
-    setAdminToDelete(admin);
-    setIsDeleteConfirmOpen(true);
-  };
-
-  const handleDeleteAdmin = async () => {
-    if (!adminToDelete) return;
+  const handleRemoveAdmin = async () => {
+    if (!adminToRemove) return;
     
     try {
-      // Remove admin role
+      setIsRemovingAdmin(true);
+      
+      // Don't allow removing yourself
+      if (adminToRemove.id === user?.id) {
+        toast.error("You can't remove your own admin privileges");
+        return;
+      }
+
+      // Call our admin-role edge function to remove admin role
       const response = await fetch('https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/admin-role', {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
         },
-        body: JSON.stringify({ 
-          userId: adminToDelete.id 
-        }),
+        body: JSON.stringify({ userId: adminToRemove.id }),
       });
-
-      const data = await response.json();
+      
+      const result = await response.json();
       
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to remove admin role');
+        throw new Error(result.error || 'Failed to remove admin role');
       }
-
-      toast.success('Admin role has been removed successfully.');
       
-      // Refresh admins list
-      fetchAdmins();
-      
+      toast.success('Admin role removed successfully');
+      setAdmins(admins.filter(admin => admin.id !== adminToRemove.id));
     } catch (error: any) {
-      console.error("Error removing admin role:", error);
-      toast.error(error.message || 'An error occurred while removing admin role');
+      console.error("Error removing admin:", error);
+      toast.error(error.message || 'An error occurred while removing admin');
     } finally {
-      setIsDeleteConfirmOpen(false);
-      setAdminToDelete(null);
+      setIsRemovingAdmin(false);
+      setAdminToRemove(null);
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
+  const handleAdminAdded = () => {
+    setIsFormOpen(false);
+    fetchAdmins();
   };
 
-  const filteredAdmins = admins.filter(admin => 
-    admin.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (admin.full_name && admin.full_name.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString();
+  };
 
   return (
     <AdminLayout>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <div className="flex items-center justify-between">
           <h2 className="text-3xl font-bold tracking-tight">Admin Management</h2>
-          <Button onClick={handleAddAdmin}>
-            <UserPlus className="mr-2 h-4 w-4" /> Add Admin
-          </Button>
+          <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <UserPlus className="mr-2 h-4 w-4" /> Add Admin
+              </Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add New Admin</DialogTitle>
+                <DialogDescription>
+                  Enter the email of the user you want to promote to admin. They must have an existing account.
+                </DialogDescription>
+              </DialogHeader>
+              <AdminForm onSuccess={handleAdminAdded} />
+            </DialogContent>
+          </Dialog>
         </div>
         
         <Card>
           <CardHeader>
-            <CardTitle>All Administrators</CardTitle>
+            <CardTitle>Administrators</CardTitle>
             <CardDescription>
-              View and manage administrator accounts
+              Manage all administrators in the platform
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search by name or email..."
-                  className="pl-8"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              
-              {/* Admin Table */}
-              <div className="rounded-md border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Name</TableHead>
-                      <TableHead>Email</TableHead>
-                      <TableHead>Role</TableHead>
-                      <TableHead>Joined</TableHead>
-                      <TableHead>Actions</TableHead>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Name</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Added</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {admins.map((admin) => (
+                    <TableRow key={admin.id}>
+                      <TableCell className="font-medium">{admin.full_name || 'No name provided'}</TableCell>
+                      <TableCell>{admin.email}</TableCell>
+                      <TableCell>{formatDate(admin.created_at)}</TableCell>
+                      <TableCell>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              size="icon" 
+                              className="h-8 w-8 text-red-600"
+                              onClick={() => setAdminToRemove(admin)}
+                              disabled={admin.id === user?.id}
+                            >
+                              <Trash className="h-4 w-4" />
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                            <DialogHeader>
+                              <DialogTitle>Remove Admin Role</DialogTitle>
+                              <DialogDescription>
+                                Are you sure you want to remove admin privileges from {admin.full_name || admin.email}?
+                                This action will downgrade them to a regular user.
+                              </DialogDescription>
+                            </DialogHeader>
+                            <DialogFooter>
+                              <Button
+                                variant="outline"
+                                onClick={() => setAdminToRemove(null)}
+                                disabled={isRemovingAdmin}
+                              >
+                                Cancel
+                              </Button>
+                              <Button 
+                                variant="destructive"
+                                onClick={handleRemoveAdmin}
+                                disabled={isRemovingAdmin}
+                              >
+                                {isRemovingAdmin ? 'Removing...' : 'Remove Admin'}
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
+                      </TableCell>
                     </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {filteredAdmins.map((admin) => (
-                      <TableRow key={admin.id}>
-                        <TableCell className="font-medium">{admin.full_name || 'No name provided'}</TableCell>
-                        <TableCell>{admin.email}</TableCell>
-                        <TableCell>
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                            Admin
-                          </span>
-                        </TableCell>
-                        <TableCell>{formatDate(admin.created_at)}</TableCell>
-                        <TableCell>
-                          <div className="flex space-x-2">
-                            <Button 
-                              variant="outline" 
-                              size="icon"
-                              onClick={() => handleEditAdmin(admin)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                            <Button 
-                              variant="outline" 
-                              size="icon"
-                              onClick={() => confirmDeleteAdmin(admin)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    
-                    {filteredAdmins.length === 0 && !loading && (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
-                          No administrators found
-                        </TableCell>
-                      </TableRow>
-                    )}
-                    
-                    {loading && (
-                      <TableRow>
-                        <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
-                          Loading administrators...
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
+                  ))}
+                  
+                  {admins.length === 0 && !loading && (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
+                        No administrators found
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  
+                  {loading && (
+                    <TableRow>
+                      <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
+                        Loading admins...
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
             </div>
           </CardContent>
         </Card>
       </div>
-      
-      {/* Add Admin Dialog */}
-      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add Administrator</DialogTitle>
-            <DialogDescription>
-              Add a new administrator to the system
-            </DialogDescription>
-          </DialogHeader>
-          
-          <AdminForm onSuccess={() => {
-            setIsAddDialogOpen(false);
-            fetchAdmins();
-          }} />
-        </DialogContent>
-      </Dialog>
-      
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={isDeleteConfirmOpen} onOpenChange={setIsDeleteConfirmOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Remove Admin Role</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to remove admin privileges from {adminToDelete?.full_name || adminToDelete?.email}? 
-              This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDeleteConfirmOpen(false)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDeleteAdmin}>
-              Remove Admin Role
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </AdminLayout>
   );
 };

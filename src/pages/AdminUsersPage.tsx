@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, UserPlus } from 'lucide-react';
+import { Search, UserPlus, Shield } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { 
@@ -50,7 +50,9 @@ const AdminUsersPage = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const [isPromotingUser, setIsPromotingUser] = useState<boolean>(false);
+  const [isDemotingUser, setIsDemotingUser] = useState<boolean>(false);
   const [userToPromote, setUserToPromote] = useState<User | null>(null);
+  const [userToDemote, setUserToDemote] = useState<User | null>(null);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const navigate = useNavigate();
 
@@ -157,6 +159,7 @@ const AdminUsersPage = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
         },
         body: JSON.stringify({ email }),
       });
@@ -184,6 +187,45 @@ const AdminUsersPage = () => {
     } finally {
       setIsPromotingUser(false);
       setUserToPromote(null);
+    }
+  };
+
+  const demoteAdminToUser = async (userId: string) => {
+    try {
+      setIsDemotingUser(true);
+      
+      const response = await fetch('https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/admin-role', {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+        body: JSON.stringify({ userId }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to remove admin role');
+      }
+
+      toast.success('Admin role removed successfully');
+      
+      // Update the local state
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          user.id === userId 
+            ? { ...user, role: 'user' } 
+            : user
+        )
+      );
+      
+    } catch (error: any) {
+      console.error("Error demoting user:", error);
+      toast.error(error.message || 'An error occurred while demoting user');
+    } finally {
+      setIsDemotingUser(false);
+      setUserToDemote(null);
     }
   };
 
@@ -273,42 +315,83 @@ const AdminUsersPage = () => {
                         <TableCell>{formatDate(user.created_at)}</TableCell>
                         <TableCell>
                           <div className="flex space-x-2">
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm"
-                                  disabled={user.role === 'admin'}
-                                  onClick={() => setUserToPromote(user)}
-                                >
-                                  Make Admin
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>Promote User to Admin</DialogTitle>
-                                  <DialogDescription>
-                                    Are you sure you want to promote {user.full_name || user.email} to admin? 
-                                    This will give them full access to all administration features.
-                                  </DialogDescription>
-                                </DialogHeader>
-                                <DialogFooter>
-                                  <Button
-                                    variant="outline"
-                                    onClick={() => setUserToPromote(null)}
-                                    disabled={isPromotingUser}
-                                  >
-                                    Cancel
-                                  </Button>
+                            {user.role !== 'admin' ? (
+                              <Dialog>
+                                <DialogTrigger asChild>
                                   <Button 
-                                    onClick={() => userToPromote && promoteUserToAdmin(userToPromote.id, userToPromote.email)}
-                                    disabled={isPromotingUser}
+                                    variant="outline" 
+                                    size="sm"
+                                    onClick={() => setUserToPromote(user)}
                                   >
-                                    {isPromotingUser ? 'Processing...' : 'Confirm'}
+                                    <Shield className="mr-1 h-3 w-3" />
+                                    Make Admin
                                   </Button>
-                                </DialogFooter>
-                              </DialogContent>
-                            </Dialog>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Promote User to Admin</DialogTitle>
+                                    <DialogDescription>
+                                      Are you sure you want to promote {user.full_name || user.email} to admin? 
+                                      This will give them full access to all administration features.
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <DialogFooter>
+                                    <Button
+                                      variant="outline"
+                                      onClick={() => setUserToPromote(null)}
+                                      disabled={isPromotingUser}
+                                    >
+                                      Cancel
+                                    </Button>
+                                    <Button 
+                                      onClick={() => userToPromote && promoteUserToAdmin(userToPromote.id, userToPromote.email)}
+                                      disabled={isPromotingUser}
+                                    >
+                                      {isPromotingUser ? 'Processing...' : 'Confirm'}
+                                    </Button>
+                                  </DialogFooter>
+                                </DialogContent>
+                              </Dialog>
+                            ) : (
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm"
+                                    className="text-amber-600 border-amber-200 hover:bg-amber-50"
+                                    onClick={() => setUserToDemote(user)}
+                                  >
+                                    <Shield className="mr-1 h-3 w-3" />
+                                    Remove Admin
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>Remove Admin Role</DialogTitle>
+                                    <DialogDescription>
+                                      Are you sure you want to remove admin privileges from {user.full_name || user.email}? 
+                                      They will be downgraded to a regular user.
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <DialogFooter>
+                                    <Button
+                                      variant="outline"
+                                      onClick={() => setUserToDemote(null)}
+                                      disabled={isDemotingUser}
+                                    >
+                                      Cancel
+                                    </Button>
+                                    <Button 
+                                      variant="destructive"
+                                      onClick={() => userToDemote && demoteAdminToUser(userToDemote.id)}
+                                      disabled={isDemotingUser}
+                                    >
+                                      {isDemotingUser ? 'Processing...' : 'Remove Admin'}
+                                    </Button>
+                                  </DialogFooter>
+                                </DialogContent>
+                              </Dialog>
+                            )}
                             <Button 
                               variant="outline" 
                               size="sm"
