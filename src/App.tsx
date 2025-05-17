@@ -22,6 +22,7 @@ import TestScriptPage from "./pages/TestScriptPage";
 import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminSettingsPage from "./pages/AdminSettingsPage";
 import AdminWebhooksPage from "./pages/AdminWebhooksPage";
+import AdminManagementPage from "./pages/AdminManagementPage";
 
 // Components
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -56,6 +57,7 @@ const App = () => {
           <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
           <Route path="/admin/settings" element={<AdminRoute><AdminSettingsPage /></AdminRoute>} />
           <Route path="/admin/webhooks" element={<AdminRoute><AdminWebhooksPage /></AdminRoute>} />
+          <Route path="/admin/admins" element={<AdminRoute><AdminManagementPage /></AdminRoute>} />
           
           <Route path="*" element={<NotFound />} />
         </Routes>
