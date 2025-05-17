@@ -50,13 +50,19 @@ const AdminManagementPage = () => {
       setLoading(true);
       
       // Get all users with admin role
-      const { data: users, error: userError } = await supabase.auth.admin.listUsers();
+      const { data, error: userError } = await supabase.auth.admin.listUsers();
       
       if (userError) throw userError;
       
-      const adminUsers = users.users.filter(user => 
-        user.app_metadata?.role === 'admin'
-      );
+      if (!data || !data.users) {
+        throw new Error('No user data returned');
+      }
+      
+      // Type assertion to ensure TypeScript knows what we're working with
+      const adminUsers = data.users.filter(user => {
+        // Fix: Check if app_metadata exists before accessing its properties
+        return user.app_metadata && user.app_metadata.role === 'admin';
+      });
       
       // Get more details for each admin from the profiles table
       const adminsWithDetails = await Promise.all(adminUsers.map(async (admin) => {
