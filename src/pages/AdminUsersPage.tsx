@@ -33,6 +33,14 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useNavigate } from 'react-router-dom';
+import { AuthUser } from '@supabase/supabase-js';
+
+// Define a type that includes app_metadata
+type SupabaseUser = AuthUser & {
+  app_metadata?: {
+    role?: string;
+  };
+};
 
 type User = {
   id: string;
@@ -76,51 +84,58 @@ const AdminUsersPage = () => {
       
       if (profilesError) throw profilesError;
       
-      // Then for each profile, get additional data
-      const enhancedUsers = await Promise.all(profiles.map(async (profile) => {
-        try {
-          // Get user auth data
-          const { data: userData, error: userDataError } = await supabase.auth.admin.getUserById(profile.id);
-          if (userDataError) throw userDataError;
-          
-          // Get website count
-          const { count: websiteCount, error: websiteError } = await supabase
-            .from('websites')
-            .select('id', { count: 'exact', head: true })
-            .eq('user_id', profile.id);
-          
-          if (websiteError) throw websiteError;
-          
-          // Get script count
-          const { count: scriptCount, error: scriptError } = await supabase
-            .from('consent_scripts')
-            .select('id', { count: 'exact', head: true })
-            .eq('user_id', profile.id);
-          
-          if (scriptError) throw scriptError;
-          
-          return {
-            id: profile.id,
-            email: userData?.user?.email || 'No email',
-            full_name: profile.full_name,
-            created_at: profile.created_at,
-            role: userData?.user?.app_metadata?.role || 'user',
-            websites: websiteCount || 0,
-            scripts: scriptCount || 0
-          };
-        } catch (error) {
-          console.error("Error fetching user details:", error);
-          return {
-            id: profile.id,
-            email: "Error fetching email",
-            full_name: profile.full_name,
-            created_at: profile.created_at,
-            role: 'unknown',
-            websites: 0,
-            scripts: 0
-          };
-        }
-      }));
+      // Get all users from auth to match up emails and roles
+      const { data: userData, error: authError } = await supabase.auth.admin.listUsers();
+      
+      if (authError) throw authError;
+      
+      const userMap = new Map();
+      userData?.users?.forEach((user: SupabaseUser) => {
+        userMap.set(user.id, {
+          email: user.email,
+          role: user.app_metadata?.role || 'user'
+        });
+      });
+      
+      // Get website counts for each user
+      const websiteCounts = new Map();
+      const { data: websites, error: websitesError } = await supabase
+        .from('websites')
+        .select('user_id, id');
+        
+      if (websitesError) throw websitesError;
+      
+      websites?.forEach(website => {
+        const count = websiteCounts.get(website.user_id) || 0;
+        websiteCounts.set(website.user_id, count + 1);
+      });
+      
+      // Get script counts for each user
+      const scriptCounts = new Map();
+      const { data: scripts, error: scriptsError } = await supabase
+        .from('consent_scripts')
+        .select('user_id, id');
+        
+      if (scriptsError) throw scriptsError;
+      
+      scripts?.forEach(script => {
+        const count = scriptCounts.get(script.user_id) || 0;
+        scriptCounts.set(script.user_id, count + 1);
+      });
+      
+      // Create enhanced users array
+      const enhancedUsers = profiles?.map(profile => {
+        const userInfo = userMap.get(profile.id) || { email: 'Unknown', role: 'user' };
+        return {
+          id: profile.id,
+          email: userInfo.email || 'Unknown email',
+          full_name: profile.full_name,
+          created_at: profile.created_at,
+          role: userInfo.role,
+          websites: websiteCounts.get(profile.id) || 0,
+          scripts: scriptCounts.get(profile.id) || 0
+        };
+      }) || [];
       
       setUsers(enhancedUsers);
     } catch (error: any) {
@@ -138,7 +153,7 @@ const AdminUsersPage = () => {
     if (searchTerm) {
       filtered = filtered.filter(
         user => 
-          user.email.toLowerCase().includes(searchTerm.toLowerCase()) || 
+          (user.email && user.email.toLowerCase().includes(searchTerm.toLowerCase())) || 
           (user.full_name && user.full_name.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
@@ -164,12 +179,12 @@ const AdminUsersPage = () => {
         body: JSON.stringify({ email }),
       });
 
-      const data = await response.json();
-      
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to promote user to admin');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to promote user to admin');
       }
-
+      
+      const data = await response.json();
       toast.success(data.message || 'User successfully promoted to admin!');
       
       // Update the local state
@@ -203,12 +218,12 @@ const AdminUsersPage = () => {
         body: JSON.stringify({ userId }),
       });
 
-      const data = await response.json();
-      
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to remove admin role');
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to remove admin role');
       }
-
+      
+      const data = await response.json();
       toast.success('Admin role removed successfully');
       
       // Update the local state

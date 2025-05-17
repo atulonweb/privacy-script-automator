@@ -49,47 +49,49 @@ const AdminWebhooksPage = () => {
       
       if (logsError) throw logsError;
       
+      if (!logs || logs.length === 0) {
+        setWebhookLogs([]);
+        return;
+      }
+      
+      // Get all webhooks to map webhook_id to url and website_id
+      const { data: webhooks, error: webhooksError } = await supabase
+        .from('webhooks')
+        .select('id, url, website_id');
+        
+      if (webhooksError) throw webhooksError;
+      
+      const webhookMap = new Map();
+      webhooks?.forEach(webhook => {
+        webhookMap.set(webhook.id, {
+          url: webhook.url,
+          website_id: webhook.website_id
+        });
+      });
+      
+      // Get all websites to map website_id to name
+      const { data: websites, error: websitesError } = await supabase
+        .from('websites')
+        .select('id, name');
+        
+      if (websitesError) throw websitesError;
+      
+      const websiteMap = new Map();
+      websites?.forEach(website => {
+        websiteMap.set(website.id, website.name);
+      });
+      
       // Enhance logs with webhook details
-      const enhancedLogs = await Promise.all((logs || []).map(async (log) => {
-        try {
-          // Get webhook data
-          const { data: webhookData, error: webhookError } = await supabase
-            .from('webhooks')
-            .select('url, website_id')
-            .eq('id', log.webhook_id)
-            .single();
-          
-          if (webhookError) throw webhookError;
-          
-          let websiteName = 'Unknown Website';
-          
-          // If we have a website_id, get the website name
-          if (webhookData?.website_id) {
-            const { data: websiteData, error: websiteError } = await supabase
-              .from('websites')
-              .select('name')
-              .eq('id', webhookData.website_id)
-              .single();
-              
-            if (!websiteError && websiteData) {
-              websiteName = websiteData.name;
-            }
-          }
-          
-          return {
-            ...log,
-            url: webhookData?.url || 'Unknown URL',
-            website_name: websiteName
-          };
-        } catch (error) {
-          console.error('Error fetching webhook details:', error);
-          return {
-            ...log,
-            url: 'Error fetching URL',
-            website_name: 'Error fetching website'
-          };
-        }
-      }));
+      const enhancedLogs = logs.map(log => {
+        const webhookInfo = webhookMap.get(log.webhook_id) || { url: 'Unknown URL', website_id: null };
+        const websiteName = webhookInfo.website_id ? (websiteMap.get(webhookInfo.website_id) || 'Unknown Website') : 'Unknown Website';
+        
+        return {
+          ...log,
+          url: webhookInfo.url,
+          website_name: websiteName
+        };
+      });
       
       setWebhookLogs(enhancedLogs);
     } catch (error: any) {

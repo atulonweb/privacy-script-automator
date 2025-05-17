@@ -34,13 +34,11 @@ const AdminSettingsPage = () => {
   
   // Load settings from the database or localStorage for demo
   useEffect(() => {
-    // In a real implementation, this would fetch from the database
-    // For now, let's just simulate loading from localStorage
-    const loadSettings = () => {
+    const loadSettings = async () => {
       try {
         setLoading(true);
         
-        // Load from localStorage if available
+        // Try to fetch settings from localStorage first
         const savedSettings = localStorage.getItem('adminSettings');
         if (savedSettings) {
           const settings = JSON.parse(savedSettings);
@@ -55,8 +53,18 @@ const AdminSettingsPage = () => {
           setDefaultButtonTextColor(settings.defaultButtonTextColor || '#ffffff');
           setShowPoweredBy(settings.showPoweredBy !== undefined ? settings.showPoweredBy : true);
         }
-      } catch (error) {
+        
+        // In a real implementation, you would fetch settings from Supabase
+        // const { data, error } = await supabase.from('admin_settings').select('*').single();
+        // if (error) throw error;
+        // if (data) {
+        //   setAppName(data.app_name);
+        //   setSupportEmail(data.support_email);
+        //   // ... set other settings from data
+        // }
+      } catch (error: any) {
         console.error('Error loading settings:', error);
+        toast.error(`Failed to load settings: ${error.message}`);
       } finally {
         setLoading(false);
       }
@@ -85,9 +93,16 @@ const AdminSettingsPage = () => {
       
       localStorage.setItem('adminSettings', JSON.stringify(settings));
       
-      // In a real implementation, you would save to the database
-      // For email verification settings, you would update Supabase auth settings
+      // In a real implementation, you would save to the Supabase database:
+      // const { error } = await supabase.from('admin_settings').upsert({
+      //   app_name: appName,
+      //   support_email: supportEmail,
+      //   // ... other settings
+      // });
+      // 
+      // if (error) throw error;
       
+      // Show success message
       toast.success('Settings saved successfully');
     } catch (error: any) {
       console.error('Error saving settings:', error);
