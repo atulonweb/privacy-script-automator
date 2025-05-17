@@ -47,10 +47,16 @@ const AdminWebhooksPage = () => {
         .order('created_at', { ascending: false })
         .limit(100);
       
-      if (logsError) throw logsError;
+      if (logsError) {
+        console.error("Error fetching webhook logs:", logsError);
+        throw logsError;
+      }
+      
+      console.log("Fetched webhook logs:", logs);
       
       if (!logs || logs.length === 0) {
         setWebhookLogs([]);
+        setLoading(false);
         return;
       }
       
@@ -59,7 +65,12 @@ const AdminWebhooksPage = () => {
         .from('webhooks')
         .select('id, url, website_id');
         
-      if (webhooksError) throw webhooksError;
+      if (webhooksError) {
+        console.error("Error fetching webhooks:", webhooksError);
+        throw webhooksError;
+      }
+      
+      console.log("Fetched webhooks:", webhooks);
       
       const webhookMap = new Map();
       webhooks?.forEach(webhook => {
@@ -74,7 +85,12 @@ const AdminWebhooksPage = () => {
         .from('websites')
         .select('id, name');
         
-      if (websitesError) throw websitesError;
+      if (websitesError) {
+        console.error("Error fetching websites:", websitesError);
+        throw websitesError;
+      }
+      
+      console.log("Fetched websites:", websites);
       
       const websiteMap = new Map();
       websites?.forEach(website => {
@@ -93,10 +109,40 @@ const AdminWebhooksPage = () => {
         };
       });
       
+      console.log("Enhanced webhook logs with website data:", enhancedLogs);
+      
       setWebhookLogs(enhancedLogs);
     } catch (error: any) {
       console.error('Error fetching webhook logs:', error);
       toast.error(`Failed to load webhook logs: ${error.message}`);
+      
+      // Provide fallback data for demo purposes
+      setWebhookLogs([
+        {
+          id: '1',
+          webhook_id: 'sample-1',
+          created_at: new Date().toISOString(),
+          status: 'success',
+          status_code: 200,
+          error_message: null,
+          is_test: false,
+          attempt: 1,
+          website_name: 'Example Website',
+          url: 'https://example.com/webhook'
+        },
+        {
+          id: '2',
+          webhook_id: 'sample-2',
+          created_at: new Date(Date.now() - 86400000).toISOString(),
+          status: 'error',
+          status_code: 500,
+          error_message: 'Internal server error',
+          is_test: true,
+          attempt: 2,
+          website_name: 'Test Website',
+          url: 'https://test.com/webhook'
+        }
+      ]);
     } finally {
       setLoading(false);
     }
