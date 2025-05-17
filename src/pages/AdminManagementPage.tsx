@@ -25,12 +25,20 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import AdminForm from '@/components/admin/AdminForm';
+import { AuthUser } from '@supabase/supabase-js';
 
 type Admin = {
   id: string;
   email: string;
   full_name: string | null;
   created_at: string;
+};
+
+// Define a type that includes app_metadata
+type SupabaseUser = AuthUser & {
+  app_metadata?: {
+    role?: string;
+  };
 };
 
 const AdminManagementPage = () => {
@@ -59,8 +67,8 @@ const AdminManagementPage = () => {
       }
       
       // Type assertion to ensure TypeScript knows what we're working with
-      const adminUsers = data.users.filter(user => {
-        // Fix: Check if app_metadata exists before accessing its properties
+      const adminUsers = data.users.filter((user: SupabaseUser) => {
+        // Check if app_metadata exists and if the role is admin
         return user.app_metadata && user.app_metadata.role === 'admin';
       });
       
