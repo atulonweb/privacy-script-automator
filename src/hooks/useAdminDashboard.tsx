@@ -31,6 +31,17 @@ export interface User {
   created_at: string;
 }
 
+// Define type for Supabase user data to fix TypeScript errors
+interface SupabaseUser {
+  id: string;
+  email?: string;
+  app_metadata?: {
+    role?: string;
+    [key: string]: any;
+  };
+  [key: string]: any;
+}
+
 export const useAdminDashboard = () => {
   const [statistics, setStatistics] = useState<DashboardStatistics>({
     totalUsers: 0,
@@ -88,7 +99,7 @@ export const useAdminDashboard = () => {
       if (authError) throw authError;
       
       const userMap = new Map();
-      userData?.users?.forEach(user => {
+      userData?.users?.forEach((user: SupabaseUser) => {
         userMap.set(user.id, {
           email: user.email,
           role: user.app_metadata?.role || 'user'
@@ -130,7 +141,7 @@ export const useAdminDashboard = () => {
         enterprise: 0
       };
       
-      userData?.users?.forEach(user => {
+      userData?.users?.forEach((user: SupabaseUser) => {
         const role = user.app_metadata?.role || 'user';
         if (role === 'admin') roleCounts.admin++;
         else roleCounts.user++;
