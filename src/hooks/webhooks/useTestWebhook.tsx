@@ -22,16 +22,15 @@ export function useTestWebhook() {
       
       console.log("Testing webhook:", id);
       
-      // Call the test-webhook function directly with proper headers
+      // Call the test-webhook function with improved error handling
       const response = await fetch("https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/test-webhook", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${userSession.session.access_token}`,
-          // Don't add custom headers that might trigger preflight without proper CORS support
         },
         body: JSON.stringify({ webhookId: id }),
-        credentials: 'omit' // Don't send cookies to avoid additional CORS complexity
+        credentials: 'omit' 
       });
       
       // Get the response as text first
@@ -51,7 +50,7 @@ export function useTestWebhook() {
       }
       
       if (!response.ok) {
-        throw new Error(result.error || 'Failed to test webhook');
+        throw new Error(result.error || result.message || 'Failed to test webhook');
       }
       
       // Fetch logs if callback is provided

@@ -2,6 +2,7 @@
 import React from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import ScriptSavingTest from '@/tests/ScriptSavingTest';
+import WebhookTester from '@/tests/WebhookTester';
 
 const TestingPage: React.FC = () => {
   return (
@@ -12,6 +13,7 @@ const TestingPage: React.FC = () => {
         </div>
         
         <div className="grid gap-4">
+          <WebhookTester />
           <ScriptSavingTest />
         </div>
       </div>

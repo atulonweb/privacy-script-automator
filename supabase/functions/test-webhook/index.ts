@@ -18,28 +18,32 @@ const supabaseAdmin = createClient(
 );
 
 // Utility for generating HMAC signatures for webhooks
-function generateHmacSignature(payload: object, secret: string): string {
-  const payloadString = JSON.stringify(payload);
-  const encoder = new TextEncoder();
-  const data = encoder.encode(payloadString);
-  const key = encoder.encode(secret);
-  
-  // Create HMAC using SHA-256
-  const hmacKey = crypto.subtle.importKey(
-    "raw",
-    key,
-    { name: "HMAC", hash: "SHA-256" },
-    false,
-    ["sign"]
-  );
-  
-  return crypto.subtle.sign("HMAC", hmacKey, data)
-    .then(signature => {
-      // Convert ArrayBuffer to hex string
-      return Array.from(new Uint8Array(signature))
-        .map(b => b.toString(16).padStart(2, '0'))
-        .join('');
-    });
+async function generateHmacSignature(payload: object, secret: string): Promise<string> {
+  try {
+    const payloadString = JSON.stringify(payload);
+    const encoder = new TextEncoder();
+    const data = encoder.encode(payloadString);
+    const key = encoder.encode(secret);
+    
+    // Create HMAC using SHA-256
+    const hmacKey = await crypto.subtle.importKey(
+      "raw",
+      key,
+      { name: "HMAC", hash: "SHA-256" },
+      false,
+      ["sign"]
+    );
+    
+    const signature = await crypto.subtle.sign("HMAC", hmacKey, data);
+    
+    // Convert ArrayBuffer to hex string
+    return Array.from(new Uint8Array(signature))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+  } catch (error) {
+    console.error("Error generating HMAC signature:", error);
+    throw new Error("Failed to generate signature");
+  }
 }
 
 // Function to deliver webhook
@@ -55,8 +59,13 @@ async function deliverWebhook(
     };
 
     if (secret) {
-      const signature = await generateHmacSignature(payload, secret);
-      headers["X-Signature"] = signature;
+      try {
+        const signature = await generateHmacSignature(payload, secret);
+        headers["X-Signature"] = signature;
+      } catch (sigError) {
+        console.error("Failed to generate signature:", sigError);
+        // Continue without signature if it fails
+      }
     }
 
     console.log(`Delivering test webhook to ${webhookUrl}`);
@@ -148,7 +157,20 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Parse the request body
-    const { webhookId } = await req.json();
+    let reqBody;
+    try {
+      reqBody = await req.json();
+    } catch (e) {
+      return new Response(
+        JSON.stringify({ error: "Invalid JSON in request body" }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
+    }
+
+    const { webhookId } = reqBody;
 
     if (!webhookId) {
       return new Response(
