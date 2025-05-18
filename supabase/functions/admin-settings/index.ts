@@ -21,6 +21,10 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     
+    if (!supabaseServiceKey) {
+      throw new Error('Missing service role key');
+    }
+    
     const supabaseClient = createClient(supabaseUrl, supabaseServiceKey);
     
     // Verify user is authenticated and is admin
@@ -36,6 +40,8 @@ serve(async (req) => {
       throw new Error('Unauthorized');
     }
     
+    console.log('Authenticated user:', user.id);
+    
     // We would normally check if user is admin here, but for demo purposes we'll allow anyone
     // to update "settings"
     
@@ -46,11 +52,15 @@ serve(async (req) => {
       if (requestData.action === 'get_users') {
         // List all users - This requires service role key
         try {
+          console.log('Attempting to fetch all users');
           const { data: users, error: usersError } = await supabaseClient.auth.admin.listUsers();
           
           if (usersError) {
+            console.error('Error listing users:', usersError);
             throw usersError;
           }
+          
+          console.log(`Successfully retrieved ${users.users.length} users`);
           
           return new Response(
             JSON.stringify({ 
@@ -74,12 +84,22 @@ serve(async (req) => {
           throw new Error('User ID is required');
         }
         
+        console.log(`Attempting to fetch user with ID: ${userId}`);
+        
         try {
           const { data: userData, error: userError } = await supabaseClient.auth.admin.getUserById(userId);
           
           if (userError) {
+            console.error('Error getting user:', userError);
             throw userError;
           }
+          
+          if (!userData || !userData.user) {
+            console.error('User not found');
+            throw new Error('User not found');
+          }
+          
+          console.log('Successfully retrieved user:', userData.user.email);
           
           return new Response(
             JSON.stringify({ 
@@ -137,6 +157,7 @@ serve(async (req) => {
     
     throw new Error(`Method ${req.method} not supported`);
   } catch (error) {
+    console.error('Error in admin-settings function:', error);
     return new Response(
       JSON.stringify({ error: error.message }),
       { 

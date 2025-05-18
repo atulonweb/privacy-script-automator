@@ -54,6 +54,7 @@ const AdminUserDetailPage = () => {
   const [scripts, setScripts] = useState<Script[]>([]);
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   
   useEffect(() => {
     fetchUserDetails();
@@ -63,6 +64,7 @@ const AdminUserDetailPage = () => {
     if (!userId) return;
     
     setLoading(true);
+    setFetchError(null);
     
     try {
       // Fetch user profile
@@ -74,8 +76,11 @@ const AdminUserDetailPage = () => {
       
       if (profileError) throw profileError;
 
+      console.log("Fetched profile data:", profileData);
+
       // Try to get user data via edge function (requires admin privileges)
       let userData = null;
+      let edgeFunctionError = null;
       
       try {
         // Attempt to get user data from edge function
@@ -88,21 +93,31 @@ const AdminUserDetailPage = () => {
           body: JSON.stringify({ action: 'get_user', userId }),
         });
         
-        if (response.ok) {
-          const data = await response.json();
-          if (data.user) {
-            userData = data.user;
-          }
+        const responseData = await response.json();
+        
+        if (response.ok && responseData.user) {
+          userData = responseData.user;
+          console.log("Edge function returned user data:", userData);
+        } else {
+          console.error("Edge function error response:", responseData);
+          edgeFunctionError = responseData.error || "Failed to get user data from edge function";
         }
       } catch (error) {
-        console.log('Edge function error or not available:', error);
+        console.error('Edge function error:', error);
+        edgeFunctionError = error instanceof Error ? error.message : "Unknown edge function error";
       }
       
       // If we couldn't get user data from edge function, fallback to the profile with placeholders
       if (!userData) {
         console.log('Using fallback user data');
+        const fallbackEmail = `user-${userId.substring(0, 6)}@example.com`;
+        
+        if (edgeFunctionError) {
+          console.warn(`Edge function failed: ${edgeFunctionError}. Using fallback email: ${fallbackEmail}`);
+        }
+        
         userData = {
-          email: `user-${userId.substring(0, 6)}@example.com`,
+          email: fallbackEmail,
           role: 'user',
           created_at: profileData.created_at
         };
@@ -125,6 +140,7 @@ const AdminUserDetailPage = () => {
         .eq('user_id', userId);
       
       if (websitesError) throw websitesError;
+      console.log("Fetched websites:", websitesData);
       setWebsites(websitesData || []);
       
       // Fetch user's scripts
@@ -134,6 +150,7 @@ const AdminUserDetailPage = () => {
         .eq('user_id', userId);
       
       if (scriptsError) throw scriptsError;
+      console.log("Fetched scripts:", scriptsData);
       setScripts(scriptsData || []);
       
       // Fetch user's webhooks
@@ -143,10 +160,18 @@ const AdminUserDetailPage = () => {
         .eq('user_id', userId);
       
       if (webhooksError) throw webhooksError;
+      console.log("Fetched webhooks:", webhooksData);
       setWebhooks(webhooksData || []);
+      
+      if (webhooksData && webhooksData.length > 0) {
+        console.log(`Found ${webhooksData.length} webhooks for user ${userId}`);
+      } else {
+        console.log(`No webhooks found for user ${userId}`);
+      }
       
     } catch (error: any) {
       console.error('Error fetching user details:', error);
+      setFetchError(error.message);
       toast.error(`Failed to load user details: ${error.message}`);
     } finally {
       setLoading(false);
@@ -180,6 +205,24 @@ const AdminUserDetailPage = () => {
             <h2 className="text-3xl font-bold tracking-tight">User Details</h2>
           </div>
         </div>
+
+        {fetchError && (
+          <Card className="bg-red-50">
+            <CardContent className="pt-6">
+              <div className="text-red-600">
+                <p className="font-semibold">Error loading data:</p>
+                <p>{fetchError}</p>
+              </div>
+              <Button 
+                variant="outline" 
+                className="mt-2" 
+                onClick={() => fetchUserDetails()}
+              >
+                Retry
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         {loading ? (
           <Card>
