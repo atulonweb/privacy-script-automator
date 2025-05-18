@@ -25,6 +25,7 @@ export function useUserDetails(userId: string | undefined) {
   const isMounted = useRef(true);
   const fetchingRef = useRef(false);
   const initialFetchDone = useRef(false);
+  const refreshTimeoutRef = useRef<number | null>(null);
 
   const { setUserProfile, fetchUserProfile } = useFetchUserProfile();
   const { websites, setWebsites, fetchUserWebsites } = useFetchUserWebsites();
@@ -37,6 +38,7 @@ export function useUserDetails(userId: string | undefined) {
     fetchingRef.current = true;
     setLoading(true);
     setFetchError(null);
+    
     if (!initialFetchDone.current) {
       initialFetchDone.current = true;
     } else {
@@ -53,13 +55,13 @@ export function useUserDetails(userId: string | undefined) {
       }
       
       // Fetch user's websites
-      const websitesData = await fetchUserWebsites(userId);
+      await fetchUserWebsites(userId);
       
       // Fetch user's scripts
-      const scriptsData = await fetchUserScripts(userId);
+      await fetchUserScripts(userId);
       
       // Fetch user's webhooks
-      const webhooksData = await fetchUserWebhooks(userId);
+      await fetchUserWebhooks(userId);
       
     } catch (error: any) {
       console.error('Error fetching user details:', error);
@@ -76,6 +78,14 @@ export function useUserDetails(userId: string | undefined) {
     }
   }, [userId, fetchUserProfile, fetchUserWebsites, fetchUserScripts, fetchUserWebhooks]);
 
+  // Clear any existing timeout on component unmount
+  const clearRefreshTimeout = useCallback(() => {
+    if (refreshTimeoutRef.current !== null) {
+      window.clearTimeout(refreshTimeoutRef.current);
+      refreshTimeoutRef.current = null;
+    }
+  }, []);
+
   useEffect(() => {
     isMounted.current = true;
     initialFetchDone.current = false;
@@ -86,14 +96,16 @@ export function useUserDetails(userId: string | undefined) {
     
     return () => {
       isMounted.current = false;
+      clearRefreshTimeout();
     };
-  }, [userId, fetchUserDetails]);
+  }, [userId, fetchUserDetails, clearRefreshTimeout]);
 
   const manualRefresh = useCallback(() => {
     if (userId && !isRefreshing && !fetchingRef.current) {
+      clearRefreshTimeout();
       fetchUserDetails();
     }
-  }, [userId, fetchUserDetails, isRefreshing]);
+  }, [userId, fetchUserDetails, isRefreshing, clearRefreshTimeout]);
 
   return {
     userDetails,

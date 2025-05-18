@@ -29,7 +29,6 @@ export function useFetchUserWebhooks() {
       if (webhooksError) {
         console.error("Error fetching webhooks:", webhooksError);
         setError(webhooksError.message);
-        toast.error(`Failed to fetch webhooks: ${webhooksError.message}`);
         setWebhooks([]);
         return [];
       }
@@ -63,7 +62,6 @@ export function useFetchUserWebhooks() {
     } catch (error: any) {
       console.error("Failed to fetch webhooks:", error);
       setError(error.message);
-      toast.error(`Failed to fetch webhooks: ${error.message}`);
       setWebhooks([]);
       return [];
     } finally {

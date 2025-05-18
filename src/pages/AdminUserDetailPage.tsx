@@ -30,12 +30,12 @@ const AdminUserDetailPage = () => {
   // Default to the "websites" tab
   const [activeTab, setActiveTab] = useState("websites");
 
-  // Log webhooks data for debugging - but only when it changes
+  // Log webhooks data only when webhooks array changes
+  const webhooksLength = webhooks?.length || 0;
   useEffect(() => {
     console.log("AdminUserDetailPage received webhooks:", webhooks);
-    console.log("Webhooks array length:", webhooks?.length || 0);
-    console.log("Webhooks array content:", JSON.stringify(webhooks, null, 2));
-  }, [webhooks]);
+    console.log("Webhooks array length:", webhooksLength);
+  }, [webhooks, webhooksLength]);
 
   const handleRefresh = () => {
     if (!isRefreshing) {
@@ -120,7 +120,7 @@ const AdminUserDetailPage = () => {
                     <TabsTrigger value="webhooks" className="flex items-center">
                       <Webhook className="mr-2 h-4 w-4" /> Webhooks
                       <span className="ml-2 bg-gray-100 text-gray-800 px-2 py-0.5 rounded-full text-xs">
-                        {Array.isArray(webhooks) ? webhooks.length : 0}
+                        {webhooksLength}
                       </span>
                     </TabsTrigger>
                   </TabsList>

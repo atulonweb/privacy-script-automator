@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, memo } from 'react';
 import { 
   Table, 
   TableBody, 
@@ -18,11 +18,15 @@ interface UserWebhooksTableProps {
 
 const UserWebhooksTable: React.FC<UserWebhooksTableProps> = ({ webhooks, websites }) => {
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString();
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString();
+    } catch (error) {
+      return 'Invalid date';
+    }
   };
 
-  // Only log on mount or when webhooks/websites actually change
+  // Only log once when component mounts or when webhooks/websites actually change
   useEffect(() => {
     console.log('UserWebhooksTable rendering with webhooks:', webhooks);
     console.log('Webhooks length:', webhooks?.length || 0);
@@ -31,6 +35,7 @@ const UserWebhooksTable: React.FC<UserWebhooksTableProps> = ({ webhooks, website
 
   // Safety check to ensure webhooks is an array
   const safeWebhooks = Array.isArray(webhooks) ? webhooks : [];
+  const safeWebsites = Array.isArray(websites) ? websites : [];
 
   return (
     <div className="rounded-md border">
@@ -47,7 +52,7 @@ const UserWebhooksTable: React.FC<UserWebhooksTableProps> = ({ webhooks, website
           {safeWebhooks.length > 0 ? (
             safeWebhooks.map((webhook) => {
               // Find the website name for this webhook
-              const website = websites.find(w => w.id === webhook.website_id);
+              const website = safeWebsites.find(w => w.id === webhook.website_id);
               
               return (
                 <TableRow key={webhook.id}>
@@ -83,5 +88,15 @@ const UserWebhooksTable: React.FC<UserWebhooksTableProps> = ({ webhooks, website
   );
 };
 
-// Memoizing the component to prevent unnecessary re-renders
-export default React.memo(UserWebhooksTable);
+// Use React.memo with a custom comparison function to prevent unnecessary re-renders
+export default memo(UserWebhooksTable, (prevProps, nextProps) => {
+  // Only re-render if webhooks or websites length has changed
+  // or if the IDs of the items have changed
+  const prevWebhooksIds = prevProps.webhooks?.map(w => w.id).join(',') || '';
+  const nextWebhooksIds = nextProps.webhooks?.map(w => w.id).join(',') || '';
+  
+  const prevWebsitesIds = prevProps.websites?.map(w => w.id).join(',') || '';
+  const nextWebsitesIds = nextProps.websites?.map(w => w.id).join(',') || '';
+  
+  return prevWebhooksIds === nextWebhooksIds && prevWebsitesIds === nextWebsitesIds;
+});
