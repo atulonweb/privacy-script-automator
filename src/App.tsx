@@ -1,3 +1,4 @@
+
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 
@@ -23,6 +24,7 @@ import AdminSettingsPage from "./pages/AdminSettingsPage";
 import AdminWebhooksPage from "./pages/AdminWebhooksPage";
 import AdminManagementPage from "./pages/AdminManagementPage";
 import AdminUserDetailPage from './pages/AdminUserDetailPage';
+import AdminScriptsPage from './pages/AdminScriptsPage';
 
 // Components
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -68,6 +70,12 @@ function App() {
             path="/admin/users/:userId" 
             element={
               <AdminRoute component={AdminUserDetailPage} />
+            } 
+          />
+          <Route 
+            path="/admin/scripts" 
+            element={
+              <AdminRoute component={AdminScriptsPage} />
             } 
           />
           <Route path="/admin/settings" element={<AdminRoute><AdminSettingsPage /></AdminRoute>} />
