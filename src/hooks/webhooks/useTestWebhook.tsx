@@ -22,8 +22,7 @@ export function useTestWebhook() {
       
       console.log("Testing webhook:", id);
       
-      // Access the test-webhook function directly with its own URL
-      // This is a completely separate edge function that doesn't require scriptId
+      // Call the test-webhook function directly
       const response = await fetch("https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/test-webhook", {
         method: 'POST',
         headers: {
