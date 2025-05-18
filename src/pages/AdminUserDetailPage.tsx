@@ -5,11 +5,10 @@ import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Globe, Code, Webhook, RefreshCw } from 'lucide-react';
+import { ArrowLeft, Globe, Code, RefreshCw } from 'lucide-react';
 import UserProfileHeader from '@/components/admin/UserProfileHeader';
 import UserWebsitesTable from '@/components/admin/UserWebsitesTable';
 import UserScriptsTable from '@/components/admin/UserScriptsTable';
-import UserWebhooksTable from '@/components/admin/UserWebhooksTable';
 import { useUserDetails } from '@/hooks/admin/useUserDetails';
 
 const AdminUserDetailPage = () => {
@@ -20,7 +19,6 @@ const AdminUserDetailPage = () => {
     userDetails,
     websites,
     scripts,
-    webhooks,
     loading,
     fetchError,
     isRefreshing,
@@ -33,7 +31,6 @@ const AdminUserDetailPage = () => {
   // Stabilize arrays to prevent re-renders
   const safeWebsites = useMemo(() => Array.isArray(websites) ? websites : [], [websites]);
   const safeScripts = useMemo(() => Array.isArray(scripts) ? scripts : [], [scripts]);
-  const safeWebhooks = useMemo(() => Array.isArray(webhooks) ? webhooks : [], [webhooks]);
 
   const handleRefresh = () => {
     if (!isRefreshing) {
@@ -43,9 +40,7 @@ const AdminUserDetailPage = () => {
 
   // Only log once when component mounts or when userId changes
   useEffect(() => {
-    if (webhooks) {
-      console.log("AdminUserDetailPage mounted with userId:", userId);
-    }
+    console.log("AdminUserDetailPage mounted with userId:", userId);
   }, [userId]);
 
   return (
@@ -122,12 +117,6 @@ const AdminUserDetailPage = () => {
                         {safeScripts.length}
                       </span>
                     </TabsTrigger>
-                    <TabsTrigger value="webhooks" className="flex items-center">
-                      <Webhook className="mr-2 h-4 w-4" /> Webhooks
-                      <span className="ml-2 bg-gray-100 text-gray-800 px-2 py-0.5 rounded-full text-xs">
-                        {safeWebhooks.length}
-                      </span>
-                    </TabsTrigger>
                   </TabsList>
                   
                   <TabsContent value="websites" className="mt-4 space-y-4">
@@ -136,10 +125,6 @@ const AdminUserDetailPage = () => {
                   
                   <TabsContent value="scripts" className="mt-4 space-y-4">
                     <UserScriptsTable scripts={safeScripts} websites={safeWebsites} />
-                  </TabsContent>
-                  
-                  <TabsContent value="webhooks" className="mt-4 space-y-4">
-                    <UserWebhooksTable webhooks={safeWebhooks} websites={safeWebsites} />
                   </TabsContent>
                 </Tabs>
               </CardContent>

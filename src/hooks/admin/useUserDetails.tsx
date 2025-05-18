@@ -3,11 +3,9 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { Website } from '@/components/admin/UserWebsitesTable';
 import { Script } from '@/components/admin/UserScriptsTable';
-import { Webhook } from '@/types/webhook.types';
 import { useFetchUserProfile } from './fetch/useFetchUserProfile';
 import { useFetchUserWebsites } from './fetch/useFetchUserWebsites';
 import { useFetchUserScripts } from './fetch/useFetchUserScripts';
-import { useFetchUserWebhooks } from './fetch/useFetchUserWebhooks';
 
 interface UserDetails {
   id: string;
@@ -30,7 +28,6 @@ export function useUserDetails(userId: string | undefined) {
   const { setUserProfile, fetchUserProfile } = useFetchUserProfile();
   const { websites, setWebsites, fetchUserWebsites } = useFetchUserWebsites();
   const { scripts, setScripts, fetchUserScripts } = useFetchUserScripts();
-  const { webhooks, setWebhooks, fetchUserWebhooks } = useFetchUserWebhooks();
 
   const fetchUserDetails = useCallback(async (manualRefresh = false) => {
     // Don't fetch if we're already fetching or if the userId is the same as the last fetched
@@ -61,9 +58,6 @@ export function useUserDetails(userId: string | undefined) {
       // Fetch user's scripts
       await fetchUserScripts(userId);
       
-      // Fetch user's webhooks
-      await fetchUserWebhooks(userId);
-      
       initialFetchDone.current = true;
     } catch (error: any) {
       console.error('Error fetching user details:', error);
@@ -78,7 +72,7 @@ export function useUserDetails(userId: string | undefined) {
       }
       fetchingRef.current = false;
     }
-  }, [userId, fetchUserProfile, fetchUserWebsites, fetchUserScripts, fetchUserWebhooks]);
+  }, [userId, fetchUserProfile, fetchUserWebsites, fetchUserScripts]);
 
   useEffect(() => {
     isMounted.current = true;
@@ -103,7 +97,6 @@ export function useUserDetails(userId: string | undefined) {
     userDetails,
     websites,
     scripts,
-    webhooks,
     loading,
     fetchError,
     isRefreshing,
