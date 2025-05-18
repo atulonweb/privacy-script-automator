@@ -1,6 +1,7 @@
+
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.4";
-import { hmac } from "https://deno.land/x/hmac@v2.0.1/mod.ts";
+import { createHmac } from "https://deno.land/std@0.177.0/node/crypto.ts";
 
 // CORS headers for public access
 const corsHeaders = {
@@ -17,8 +18,9 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 // Utility for generating HMAC signatures for webhooks
 function generateHmacSignature(payload: object, secret: string): string {
   const payloadString = JSON.stringify(payload);
-  const signature = hmac("sha256", secret, payloadString, "utf8", "hex");
-  return signature;
+  const hmac = createHmac('sha256', secret);
+  hmac.update(payloadString);
+  return hmac.digest('hex');
 }
 
 // Function to deliver webhook
