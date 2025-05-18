@@ -9,14 +9,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Website } from './UserWebsitesTable';
-
-export interface Webhook {
-  id: string;
-  url: string;
-  enabled: boolean;
-  website_id: string;
-  created_at: string;
-}
+import { Webhook } from '@/types/webhook.types';
 
 interface UserWebhooksTableProps {
   webhooks: Webhook[];

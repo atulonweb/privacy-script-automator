@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Website } from '@/components/admin/UserWebsitesTable';
 import { Script } from '@/components/admin/UserScriptsTable';
-import { Webhook } from '@/components/admin/UserWebhooksTable';
+import { Webhook } from '@/types/webhook.types';
 
 interface UserDetails {
   id: string;
@@ -168,12 +168,16 @@ export function useUserDetails(userId: string | undefined) {
       }
       
       console.log("Fetched webhooks data:", webhooksData);
-      setWebhooks(webhooksData || []);
       
       if (webhooksData && webhooksData.length > 0) {
-        console.log(`Found ${webhooksData.length} webhooks for user ${userId}`);
+        console.log(`Found ${webhooksData.length} webhooks for user ${userId}:`);
+        webhooksData.forEach(webhook => {
+          console.log(`- Webhook ID: ${webhook.id}, URL: ${webhook.url}, Enabled: ${webhook.enabled}`);
+        });
+        setWebhooks(webhooksData as Webhook[]);
       } else {
         console.log(`No webhooks found for user ${userId}`);
+        setWebhooks([]);
       }
       
     } catch (error: any) {
