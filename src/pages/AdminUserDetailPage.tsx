@@ -30,6 +30,8 @@ const AdminUserDetailPage = () => {
   // Log webhooks data for debugging
   useEffect(() => {
     console.log("AdminUserDetailPage received webhooks:", webhooks);
+    console.log("Webhooks array length:", webhooks?.length || 0);
+    console.log("Webhooks array content:", JSON.stringify(webhooks, null, 2));
   }, [webhooks]);
 
   return (
@@ -122,7 +124,7 @@ const AdminUserDetailPage = () => {
                   </TabsContent>
                   
                   <TabsContent value="webhooks" className="mt-4 space-y-4">
-                    <UserWebhooksTable webhooks={webhooks} websites={websites} />
+                    <UserWebhooksTable webhooks={webhooks || []} websites={websites} />
                   </TabsContent>
                 </Tabs>
               </CardContent>

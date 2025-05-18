@@ -23,6 +23,7 @@ const UserWebhooksTable: React.FC<UserWebhooksTableProps> = ({ webhooks, website
   };
 
   console.log('UserWebhooksTable rendering with webhooks:', webhooks);
+  console.log('UserWebhooksTable rendering with websites:', websites);
 
   return (
     <div className="rounded-md border">

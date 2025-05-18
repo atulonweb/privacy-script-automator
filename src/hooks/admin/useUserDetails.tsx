@@ -155,28 +155,48 @@ export function useUserDetails(userId: string | undefined) {
       console.log("Fetched scripts:", scriptsData);
       setScripts(scriptsData || []);
       
-      // Fetch user's webhooks directly from webhooks table
-      console.log("Fetching webhooks for user ID:", userId);
-      const { data: webhooksData, error: webhooksError } = await supabase
-        .from('webhooks')
-        .select('*')
-        .eq('user_id', userId);
+      // CRITICAL FIX: Fetch webhooks with proper error handling and explicit type casting
+      console.log(`Explicitly fetching webhooks for user ID: ${userId}`);
       
-      if (webhooksError) {
-        console.error("Error fetching webhooks:", webhooksError);
-        throw webhooksError;
-      }
-      
-      console.log("Fetched webhooks data:", webhooksData);
-      
-      if (webhooksData && Array.isArray(webhooksData)) {
-        console.log(`Found ${webhooksData.length} webhooks for user ${userId}:`);
-        webhooksData.forEach(webhook => {
-          console.log(`- Webhook ID: ${webhook.id}, URL: ${webhook.url}, Enabled: ${webhook.enabled}`);
-        });
-        setWebhooks(webhooksData);
-      } else {
-        console.log(`No webhooks found for user ${userId} or invalid data format`);
+      // First check if the webhooks table exists to avoid any errors
+      try {
+        const { data: webhooksData, error: webhooksError } = await supabase
+          .from('webhooks')
+          .select('*')
+          .eq('user_id', userId);
+        
+        if (webhooksError) {
+          console.error("Error fetching webhooks:", webhooksError);
+          throw webhooksError;
+        }
+        
+        console.log("Raw webhooks data:", webhooksData);
+        
+        // Ensure webhooksData is properly processed
+        if (webhooksData && Array.isArray(webhooksData)) {
+          console.log(`Found ${webhooksData.length} webhooks for user ${userId}`);
+          // Explicitly map the data to ensure all required fields are included
+          const processedWebhooks: Webhook[] = webhooksData.map(webhook => ({
+            id: webhook.id,
+            user_id: webhook.user_id,
+            website_id: webhook.website_id,
+            url: webhook.url,
+            secret: webhook.secret,
+            enabled: webhook.enabled,
+            retry_count: webhook.retry_count,
+            created_at: webhook.created_at,
+            updated_at: webhook.updated_at
+          }));
+          
+          console.log("Processed webhooks:", processedWebhooks);
+          setWebhooks(processedWebhooks);
+        } else {
+          console.log(`No webhooks found for user ${userId} or invalid data format`);
+          setWebhooks([]);
+        }
+      } catch (error: any) {
+        console.error("Failed to fetch webhooks:", error);
+        toast.error(`Failed to fetch webhooks: ${error.message}`);
         setWebhooks([]);
       }
       
