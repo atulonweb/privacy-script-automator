@@ -1,7 +1,7 @@
 
 import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
+import { toast } from 'sonner';
 
 export function useTestWebhook() {
   const [isTesting, setIsTesting] = useState(false);
@@ -9,10 +9,7 @@ export function useTestWebhook() {
   const testWebhook = async (id: string, fetchWebhookLogs?: (id: string) => Promise<void>) => {
     try {
       if (!id) {
-        toast({
-          title: "Error",
-          description: "Invalid webhook ID"
-        });
+        toast.error("Invalid webhook ID");
         throw new Error('Invalid webhook ID');
       }
       
@@ -23,11 +20,10 @@ export function useTestWebhook() {
         throw new Error('No active session');
       }
       
-      // Use the correct Supabase URL directly from the client configuration
-      const supabaseUrl = "https://rzmfwwkumniuwenammaj.supabase.co";
+      console.log("Testing webhook:", id);
       
-      // Call the test webhook endpoint with the correct URL
-      const response = await fetch(`${supabaseUrl}/functions/v1/consent-config/test-webhook`, {
+      // Use separate edge function for testing webhooks
+      const response = await fetch("https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/consent-config/test-webhook", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -61,20 +57,12 @@ export function useTestWebhook() {
         await fetchWebhookLogs(id);
       }
       
-      toast({
-        title: result.success ? "Success" : "Error",
-        description: result.success 
-          ? `Test webhook sent successfully: ${result.message || result.status || 'OK'}`
-          : `Failed to send test webhook: ${result.error || 'Unknown error'}`
-      });
+      toast.success(result.message || 'Test webhook sent successfully');
       
       return result;
     } catch (err: any) {
       console.error('Error testing webhook:', err);
-      toast({
-        title: "Error",
-        description: err.message || "Failed to test webhook"
-      });
+      toast.error(err.message || "Failed to test webhook");
       throw err;
     } finally {
       setIsTesting(false);
