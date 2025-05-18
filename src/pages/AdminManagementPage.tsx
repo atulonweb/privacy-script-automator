@@ -11,7 +11,7 @@ import {
   TableRow 
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { UserPlus, Trash } from 'lucide-react';
+import { UserPlus, Trash, RefreshCw } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
@@ -43,28 +43,13 @@ interface SupabaseUser {
   [key: string]: any;
 }
 
-// Sample mock admins for when the API fails
-const sampleAdmins: Admin[] = [
-  {
-    id: '1',
-    email: 'admin@example.com',
-    full_name: 'Primary Admin',
-    created_at: new Date().toISOString()
-  },
-  {
-    id: '2',
-    email: 'support@example.com',
-    full_name: 'Support Admin',
-    created_at: new Date(Date.now() - 86400000).toISOString()
-  }
-];
-
 const AdminManagementPage = () => {
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [loading, setLoading] = useState(true);
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [isRemovingAdmin, setIsRemovingAdmin] = useState(false);
   const [adminToRemove, setAdminToRemove] = useState<Admin | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -74,23 +59,68 @@ const AdminManagementPage = () => {
   const fetchAdmins = async () => {
     try {
       setLoading(true);
+      setRefreshing(true);
       
       // Try to get admin users
       try {
-        // Get all users with admin role (might fail with anon key)
-        const { data, error: userError } = await supabase.auth.admin.listUsers();
+        console.log("Attempting to fetch admin users");
+        // Get all users with admin role via edge function
+        const response = await fetch('https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/admin-settings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          },
+          body: JSON.stringify({ action: 'get_admins' }),
+        });
         
-        if (!userError && data && data.users) {
-          console.log("Successfully fetched users from admin API");
+        const data = await response.json();
+        
+        if (!response.ok || !data.admins) {
+          console.error("Edge function error:", data);
+          throw new Error(data.error || "Failed to get admin users");
+        }
+        
+        console.log("Successfully fetched admin users from edge function:", data);
+        
+        // Map admin users to our admin type
+        const adminUsers = data.admins.map(async (admin: any) => {
+          // Get profile data for each admin
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', admin.id)
+            .single();
           
-          // Type assertion to ensure TypeScript knows what we're working with
-          const adminUsers = data.users.filter((user: SupabaseUser) => {
-            // Check if app_metadata exists and if the role is admin
-            return user.app_metadata && user.app_metadata.role === 'admin';
-          });
+          return {
+            id: admin.id,
+            email: admin.email, // This should be the real email
+            full_name: profile?.full_name || null,
+            created_at: admin.created_at || new Date().toISOString(),
+          };
+        });
+        
+        const adminsWithDetails = await Promise.all(adminUsers);
+        console.log("Admin users with details:", adminsWithDetails);
+        
+        setAdmins(adminsWithDetails);
+        return;
+      } catch (error) {
+        console.error("Edge function access failed:", error);
+        // Continue with fallback approaches
+      }
+      
+      // Fallback: Try to get admin users from auth.users directly
+      try {
+        console.log("Attempting to identify admins from auth.users via RPC");
+        
+        // Try using RPC function if defined
+        const { data: rpcAdmins, error: rpcError } = await supabase.rpc('get_admin_users');
+        
+        if (!rpcError && rpcAdmins && rpcAdmins.length > 0) {
+          console.log("Successfully fetched admins via RPC:", rpcAdmins);
           
-          // Get more details for each admin from the profiles table
-          const adminsWithDetails = await Promise.all(adminUsers.map(async (admin) => {
+          const adminsWithDetails = await Promise.all(rpcAdmins.map(async (admin: any) => {
             const { data: profile } = await supabase
               .from('profiles')
               .select('*')
@@ -99,7 +129,7 @@ const AdminManagementPage = () => {
             
             return {
               id: admin.id,
-              email: admin.email || 'No email',
+              email: admin.email,
               full_name: profile?.full_name || null,
               created_at: admin.created_at || new Date().toISOString(),
             };
@@ -107,61 +137,52 @@ const AdminManagementPage = () => {
           
           setAdmins(adminsWithDetails);
           return;
-        } else {
-          console.log("Failed to get users from admin API, using profile data");
         }
       } catch (error) {
-        console.error("Admin API access failed:", error);
+        console.error("RPC approach failed:", error);
       }
       
-      // Fallback: Try to get profiles and simulate admin data
-      try {
-        console.log("Attempting to identify admins from profiles");
-        
-        // Get current logged in user to at least show them
-        const { data: { session } } = await supabase.auth.getSession();
-        const currentUserId = session?.user?.id;
-        
-        // Fetch some profiles to show as sample admins
-        const { data: profiles, error: profileError } = await supabase
+      // Last fallback: Show at least the current user if they are an admin
+      console.log("Using fallback approach to show current user");
+      
+      if (user) {
+        const { data: profile } = await supabase
           .from('profiles')
           .select('*')
-          .limit(3);
-          
-        if (!profileError && profiles && profiles.length > 0) {
-          // Show current user as admin, plus maybe 1 other
-          const adminProfiles = profiles.filter(profile => 
-            profile.id === currentUserId || Math.random() > 0.7
-          ).slice(0, 2);
-          
-          const enhancedAdmins = adminProfiles.map(profile => ({
-            id: profile.id,
-            email: `admin-${profile.id.substring(0, 6)}@example.com`,
-            full_name: profile.full_name,
-            created_at: profile.created_at || new Date().toISOString()
-          }));
-          
-          if (enhancedAdmins.length > 0) {
-            setAdmins(enhancedAdmins);
-            return;
-          }
-        }
-      } catch (error) {
-        console.error("Failed to get profiles:", error);
+          .eq('id', user.id)
+          .single();
+        
+        const currentAdmin = {
+          id: user.id,
+          email: user.email || 'admin@example.com',
+          full_name: profile?.full_name || user.user_metadata?.full_name || null,
+          created_at: profile?.created_at || new Date().toISOString()
+        };
+        
+        setAdmins([currentAdmin]);
+      } else {
+        // If all else fails, show empty list
+        setAdmins([]);
       }
-      
-      // Last fallback: use sample data
-      console.log("Using sample admin data");
-      setAdmins(sampleAdmins);
       
     } catch (error: any) {
       console.error("Error fetching admins:", error);
       toast.error('Failed to load admins');
       
-      // Use sample data as fallback
-      setAdmins(sampleAdmins);
+      // Last resort: Show current user only
+      if (user) {
+        setAdmins([{
+          id: user.id,
+          email: user.email || 'admin@example.com',
+          full_name: user.user_metadata?.full_name || null,
+          created_at: new Date().toISOString()
+        }]);
+      } else {
+        setAdmins([]);
+      }
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -216,14 +237,7 @@ const AdminManagementPage = () => {
 
   const handleAdminAdded = () => {
     setIsFormOpen(false);
-    // Simulate adding a new admin
-    const newAdmin = {
-      id: `new-${Date.now()}`,
-      email: 'new.admin@example.com',
-      full_name: 'Newly Added Admin',
-      created_at: new Date().toISOString()
-    };
-    setAdmins([newAdmin, ...admins]);
+    fetchAdmins(); // Refresh the list to get the new admin
     toast.success('Admin added successfully!');
   };
 
@@ -236,22 +250,33 @@ const AdminManagementPage = () => {
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <div className="flex items-center justify-between">
           <h2 className="text-3xl font-bold tracking-tight">Admin Management</h2>
-          <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
-            <DialogTrigger asChild>
-              <Button>
-                <UserPlus className="mr-2 h-4 w-4" /> Add Admin
-              </Button>
-            </DialogTrigger>
-            <DialogContent>
-              <DialogHeader>
-                <DialogTitle>Add New Admin</DialogTitle>
-                <DialogDescription>
-                  Enter the email of the user you want to promote to admin. They must have an existing account.
-                </DialogDescription>
-              </DialogHeader>
-              <AdminForm onSuccess={handleAdminAdded} />
-            </DialogContent>
-          </Dialog>
+          <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              onClick={fetchAdmins}
+              disabled={refreshing}
+              className="flex items-center gap-2"
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+              {refreshing ? 'Refreshing...' : 'Refresh'}
+            </Button>
+            <Dialog open={isFormOpen} onOpenChange={setIsFormOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  <UserPlus className="mr-2 h-4 w-4" /> Add Admin
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Add New Admin</DialogTitle>
+                  <DialogDescription>
+                    Enter the email of the user you want to promote to admin. They must have an existing account.
+                  </DialogDescription>
+                </DialogHeader>
+                <AdminForm onSuccess={handleAdminAdded} />
+              </DialogContent>
+            </Dialog>
+          </div>
         </div>
         
         <Card>

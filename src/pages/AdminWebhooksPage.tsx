@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { RefreshCw } from 'lucide-react';
 
 type WebhookLog = {
   id: string;
@@ -26,11 +27,14 @@ type WebhookLog = {
   attempt: number;
   website_name?: string;
   url?: string;
+  request_payload?: any;
+  response_body?: string;
 };
 
 const AdminWebhooksPage = () => {
   const [webhookLogs, setWebhookLogs] = useState<WebhookLog[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [refreshing, setRefreshing] = useState<boolean>(false);
 
   useEffect(() => {
     fetchWebhookLogs();
@@ -39,8 +43,11 @@ const AdminWebhooksPage = () => {
   const fetchWebhookLogs = async () => {
     try {
       setLoading(true);
+      setRefreshing(true);
       
-      // Get all webhook logs
+      console.log("Starting to fetch webhook logs");
+      
+      // Get all webhook logs with most recent first
       const { data: logs, error: logsError } = await supabase
         .from('webhook_logs')
         .select('*')
@@ -57,13 +64,18 @@ const AdminWebhooksPage = () => {
       if (!logs || logs.length === 0) {
         setWebhookLogs([]);
         setLoading(false);
+        setRefreshing(false);
         return;
       }
+      
+      // Extract all webhook IDs from logs to fetch webhook details
+      const webhookIds = [...new Set(logs.map(log => log.webhook_id))];
       
       // Get all webhooks to map webhook_id to url and website_id
       const { data: webhooks, error: webhooksError } = await supabase
         .from('webhooks')
-        .select('id, url, website_id');
+        .select('id, url, website_id')
+        .in('id', webhookIds);
         
       if (webhooksError) {
         console.error("Error fetching webhooks:", webhooksError);
@@ -80,22 +92,29 @@ const AdminWebhooksPage = () => {
         });
       });
       
+      // Get all website IDs from webhooks to fetch website names
+      const websiteIds = [...new Set(webhooks?.map(webhook => webhook.website_id).filter(id => id) || [])];
+      
       // Get all websites to map website_id to name
-      const { data: websites, error: websitesError } = await supabase
-        .from('websites')
-        .select('id, name');
+      let websiteMap = new Map();
+      
+      if (websiteIds.length > 0) {
+        const { data: websites, error: websitesError } = await supabase
+          .from('websites')
+          .select('id, name')
+          .in('id', websiteIds);
+          
+        if (websitesError) {
+          console.error("Error fetching websites:", websitesError);
+          throw websitesError;
+        }
         
-      if (websitesError) {
-        console.error("Error fetching websites:", websitesError);
-        throw websitesError;
+        console.log("Fetched websites:", websites);
+        
+        websites?.forEach(website => {
+          websiteMap.set(website.id, website.name);
+        });
       }
-      
-      console.log("Fetched websites:", websites);
-      
-      const websiteMap = new Map();
-      websites?.forEach(website => {
-        websiteMap.set(website.id, website.name);
-      });
       
       // Enhance logs with webhook details
       const enhancedLogs = logs.map(log => {
@@ -115,36 +134,9 @@ const AdminWebhooksPage = () => {
     } catch (error: any) {
       console.error('Error fetching webhook logs:', error);
       toast.error(`Failed to load webhook logs: ${error.message}`);
-      
-      // Provide fallback data for demo purposes
-      setWebhookLogs([
-        {
-          id: '1',
-          webhook_id: 'sample-1',
-          created_at: new Date().toISOString(),
-          status: 'success',
-          status_code: 200,
-          error_message: null,
-          is_test: false,
-          attempt: 1,
-          website_name: 'Example Website',
-          url: 'https://example.com/webhook'
-        },
-        {
-          id: '2',
-          webhook_id: 'sample-2',
-          created_at: new Date(Date.now() - 86400000).toISOString(),
-          status: 'error',
-          status_code: 500,
-          error_message: 'Internal server error',
-          is_test: true,
-          attempt: 2,
-          website_name: 'Test Website',
-          url: 'https://test.com/webhook'
-        }
-      ]);
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -165,8 +157,13 @@ const AdminWebhooksPage = () => {
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <div className="flex items-center justify-between">
           <h2 className="text-3xl font-bold tracking-tight">Webhook Monitoring</h2>
-          <Button onClick={fetchWebhookLogs} disabled={loading}>
-            {loading ? 'Refreshing...' : 'Refresh Logs'}
+          <Button 
+            onClick={fetchWebhookLogs} 
+            disabled={refreshing}
+            className="flex items-center gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${refreshing ? 'animate-spin' : ''}`} />
+            {refreshing ? 'Refreshing...' : 'Refresh Logs'}
           </Button>
         </div>
         
@@ -222,12 +219,12 @@ const AdminWebhooksPage = () => {
                   {webhookLogs.length === 0 && !loading && (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
-                        No webhook logs found
+                        No webhook logs found. Try sending test webhook calls from the Webhooks tab in user settings.
                       </TableCell>
                     </TableRow>
                   )}
                   
-                  {loading && (
+                  {loading && !refreshing && (
                     <TableRow>
                       <TableCell colSpan={7} className="text-center py-6 text-muted-foreground">
                         Loading webhook logs...

@@ -13,7 +13,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Switch } from '@/components/ui/switch';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -21,7 +20,6 @@ const AdminSettingsPage = () => {
   const [apiKey, setApiKey] = useState<string>('sk_live_XXXX-XXXX-XXXX-XXXX');
   const [webhookEnabled, setWebhookEnabled] = useState<boolean>(true);
   const [defaultLanguage, setDefaultLanguage] = useState<string>('en');
-  const [emailNotifications, setEmailNotifications] = useState<boolean>(true);
   const [submitting, setSubmitting] = useState<boolean>(false);
   
   const languages = [
@@ -93,7 +91,6 @@ const AdminSettingsPage = () => {
           <TabsList>
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="api">API & Integrations</TabsTrigger>
-            <TabsTrigger value="notifications">Notifications</TabsTrigger>
           </TabsList>
           
           <TabsContent value="general" className="space-y-4 mt-4">
@@ -150,61 +147,10 @@ const AdminSettingsPage = () => {
                     placeholder="Enter your API key"
                   />
                 </div>
-                
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="webhookToggle">Enable Webhooks</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Send webhook notifications for important events
-                    </p>
-                  </div>
-                  <Switch
-                    id="webhookToggle"
-                    checked={webhookEnabled}
-                    onCheckedChange={setWebhookEnabled}
-                  />
-                </div>
               </CardContent>
               <CardFooter>
                 <Button onClick={handleSaveAPISettings} disabled={submitting}>
                   {submitting ? 'Saving...' : 'Save API Settings'}
-                </Button>
-              </CardFooter>
-            </Card>
-          </TabsContent>
-          
-          <TabsContent value="notifications" className="space-y-4 mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Notification Settings</CardTitle>
-                <CardDescription>
-                  Manage how and when you receive notifications
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-0.5">
-                    <Label htmlFor="emailToggle">Email Notifications</Label>
-                    <p className="text-sm text-muted-foreground">
-                      Receive important notifications via email
-                    </p>
-                  </div>
-                  <Switch
-                    id="emailToggle"
-                    checked={emailNotifications}
-                    onCheckedChange={setEmailNotifications}
-                  />
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button onClick={() => {
-                  setSubmitting(true);
-                  setTimeout(() => {
-                    toast.success('Notification settings saved successfully!');
-                    setSubmitting(false);
-                  }, 500);
-                }} disabled={submitting}>
-                  {submitting ? 'Saving...' : 'Save Notification Settings'}
                 </Button>
               </CardFooter>
             </Card>

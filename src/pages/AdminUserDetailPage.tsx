@@ -8,7 +8,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
-import { ArrowLeft, Globe, Code, Webhook } from 'lucide-react';
+import { ArrowLeft, Globe, Code, Webhook, RefreshCw } from 'lucide-react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 
@@ -33,7 +33,7 @@ interface Webhook {
   id: string;
   url: string;
   enabled: boolean;
-  website_id: string; // Added website_id property to match database schema
+  website_id: string;
   created_at: string;
 }
 
@@ -55,6 +55,7 @@ const AdminUserDetailPage = () => {
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
   
   useEffect(() => {
     fetchUserDetails();
@@ -65,8 +66,11 @@ const AdminUserDetailPage = () => {
     
     setLoading(true);
     setFetchError(null);
+    setIsRefreshing(true);
     
     try {
+      console.log("Fetching details for user ID:", userId);
+      
       // Fetch user profile
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
@@ -80,7 +84,6 @@ const AdminUserDetailPage = () => {
 
       // Try to get user data via edge function (requires admin privileges)
       let userData = null;
-      let edgeFunctionError = null;
       
       try {
         // Attempt to get user data from edge function
@@ -100,24 +103,40 @@ const AdminUserDetailPage = () => {
           console.log("Edge function returned user data:", userData);
         } else {
           console.error("Edge function error response:", responseData);
-          edgeFunctionError = responseData.error || "Failed to get user data from edge function";
+          throw new Error(responseData.error || "Failed to get user data from edge function");
         }
       } catch (error) {
         console.error('Edge function error:', error);
-        edgeFunctionError = error instanceof Error ? error.message : "Unknown edge function error";
+        // Continue with fallback approach
       }
       
       // If we couldn't get user data from edge function, fallback to the profile with placeholders
       if (!userData) {
-        console.log('Using fallback user data');
-        const fallbackEmail = `user-${userId.substring(0, 6)}@example.com`;
+        console.log('Using fallback user data approach');
+        // Try to get email directly from auth.users if admin (this may or may not work depending on permissions)
+        let userEmail = '';
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          if (session) {
+            // Attempt direct query if admin (will only work if RLS allows it)
+            const { data: authData } = await supabase.rpc('get_user_email', { user_id: userId });
+            if (authData) {
+              userEmail = authData;
+              console.log("Retrieved email via RPC:", userEmail);
+            }
+          }
+        } catch (e) {
+          console.log("Could not get email via direct query:", e);
+        }
         
-        if (edgeFunctionError) {
-          console.warn(`Edge function failed: ${edgeFunctionError}. Using fallback email: ${fallbackEmail}`);
+        // Use fallback email if needed
+        if (!userEmail) {
+          userEmail = `user-${userId.substring(0, 6)}@example.com`;
+          console.log("Using fallback email:", userEmail);
         }
         
         userData = {
-          email: fallbackEmail,
+          email: userEmail,
           role: 'user',
           created_at: profileData.created_at
         };
@@ -125,7 +144,7 @@ const AdminUserDetailPage = () => {
       
       const userDetails: UserDetails = {
         id: userId,
-        email: userData.email || `user-${userId.substring(0, 6)}@example.com`,
+        email: userData.email,
         full_name: profileData.full_name,
         role: userData.role || 'user',
         created_at: profileData.created_at
@@ -153,14 +172,19 @@ const AdminUserDetailPage = () => {
       console.log("Fetched scripts:", scriptsData);
       setScripts(scriptsData || []);
       
-      // Fetch user's webhooks
+      // Fetch user's webhooks - making a dedicated call to ensure we get ALL webhooks
+      console.log("Fetching webhooks for user ID:", userId);
       const { data: webhooksData, error: webhooksError } = await supabase
         .from('webhooks')
         .select('*')
         .eq('user_id', userId);
       
-      if (webhooksError) throw webhooksError;
-      console.log("Fetched webhooks:", webhooksData);
+      if (webhooksError) {
+        console.error("Error fetching webhooks:", webhooksError);
+        throw webhooksError;
+      }
+      
+      console.log("Fetched webhooks data:", webhooksData);
       setWebhooks(webhooksData || []);
       
       if (webhooksData && webhooksData.length > 0) {
@@ -175,6 +199,7 @@ const AdminUserDetailPage = () => {
       toast.error(`Failed to load user details: ${error.message}`);
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
   };
 
@@ -204,6 +229,15 @@ const AdminUserDetailPage = () => {
             </Button>
             <h2 className="text-3xl font-bold tracking-tight">User Details</h2>
           </div>
+          <Button 
+            variant="outline"
+            className="flex items-center gap-2"
+            onClick={fetchUserDetails}
+            disabled={isRefreshing}
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            {isRefreshing ? 'Refreshing...' : 'Refresh'}
+          </Button>
         </div>
 
         {fetchError && (
@@ -263,7 +297,7 @@ const AdminUserDetailPage = () => {
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Tabs defaultValue="websites">
+                <Tabs defaultValue="webhooks">
                   <TabsList>
                     <TabsTrigger value="websites" className="flex items-center">
                       <Globe className="mr-2 h-4 w-4" /> Websites

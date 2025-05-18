@@ -27,6 +27,7 @@ export function useWebhooks(websiteId?: string) {
   // Initial fetch of webhooks
   useEffect(() => {
     if (user) {
+      console.log("Initial fetch of webhooks for user:", user.id, "and website:", websiteId);
       fetchWebhooks();
     } else {
       setWebhook(null);
@@ -36,13 +37,21 @@ export function useWebhooks(websiteId?: string) {
   // Fetch logs when webhook changes
   useEffect(() => {
     if (webhook) {
+      console.log("Fetching logs for webhook:", webhook.id);
       fetchWebhookLogs(webhook.id);
     }
   }, [webhook]);
 
   // Wrapper for testWebhook to provide fetchWebhookLogs
   const handleTestWebhook = async (id: string) => {
-    return testWebhook(id, fetchWebhookLogs);
+    console.log("Testing webhook:", id);
+    const result = await testWebhook(id, fetchWebhookLogs);
+    // Refresh webhook logs after testing
+    if (webhook && webhook.id === id) {
+      console.log("Refreshing logs after test for webhook:", id);
+      fetchWebhookLogs(id);
+    }
+    return result;
   };
 
   return {
