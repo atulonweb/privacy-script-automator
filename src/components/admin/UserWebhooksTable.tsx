@@ -22,6 +22,7 @@ const UserWebhooksTable: React.FC<UserWebhooksTableProps> = ({ webhooks, website
     return date.toLocaleDateString();
   };
 
+  // Only log on mount or when webhooks/websites actually change
   useEffect(() => {
     console.log('UserWebhooksTable rendering with webhooks:', webhooks);
     console.log('Webhooks length:', webhooks?.length || 0);
@@ -82,4 +83,4 @@ const UserWebhooksTable: React.FC<UserWebhooksTableProps> = ({ webhooks, website
   );
 };
 
-export default UserWebhooksTable;
+export default React.memo(UserWebhooksTable);

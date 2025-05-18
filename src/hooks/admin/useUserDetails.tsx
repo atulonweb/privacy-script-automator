@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import { Website } from '@/components/admin/UserWebsitesTable';
 import { Script } from '@/components/admin/UserScriptsTable';
@@ -22,6 +22,8 @@ export function useUserDetails(userId: string | undefined) {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const isMounted = useRef(true);
+  const fetchingRef = useRef(false);
 
   const { setUserProfile, fetchUserProfile } = useFetchUserProfile();
   const { websites, setWebsites, fetchUserWebsites } = useFetchUserWebsites();
@@ -29,8 +31,9 @@ export function useUserDetails(userId: string | undefined) {
   const { webhooks, setWebhooks, fetchUserWebhooks } = useFetchUserWebhooks();
 
   const fetchUserDetails = useCallback(async () => {
-    if (!userId) return;
+    if (!userId || fetchingRef.current) return;
     
+    fetchingRef.current = true;
     setLoading(true);
     setFetchError(null);
     setIsRefreshing(true);
@@ -40,7 +43,9 @@ export function useUserDetails(userId: string | undefined) {
       
       // Fetch user profile
       const profileData = await fetchUserProfile(userId);
-      setUserDetails(profileData);
+      if (isMounted.current) {
+        setUserDetails(profileData);
+      }
       
       // Fetch user's websites
       const websitesData = await fetchUserWebsites(userId);
@@ -51,28 +56,42 @@ export function useUserDetails(userId: string | undefined) {
       console.log("Fetched scripts:", scriptsData);
       
       // Fetch user's webhooks
-      console.log("About to fetch webhooks for user:", userId);
       const webhooksData = await fetchUserWebhooks(userId);
       console.log("Fetched webhooks data:", webhooksData);
-      console.log("Fetched webhooks data type:", typeof webhooksData);
-      console.log("Is webhooks array:", Array.isArray(webhooksData));
       console.log("Webhooks length:", webhooksData ? webhooksData.length : 0);
       
     } catch (error: any) {
       console.error('Error fetching user details:', error);
-      setFetchError(error.message);
-      toast.error(`Failed to load user details: ${error.message}`);
+      if (isMounted.current) {
+        setFetchError(error.message);
+        toast.error(`Failed to load user details: ${error.message}`);
+      }
     } finally {
-      setLoading(false);
-      setIsRefreshing(false);
+      if (isMounted.current) {
+        setLoading(false);
+        setIsRefreshing(false);
+      }
+      fetchingRef.current = false;
     }
   }, [userId, fetchUserProfile, fetchUserWebsites, fetchUserScripts, fetchUserWebhooks]);
 
   useEffect(() => {
+    isMounted.current = true;
+    
     if (userId) {
       fetchUserDetails();
     }
+    
+    return () => {
+      isMounted.current = false;
+    };
   }, [userId, fetchUserDetails]);
+
+  const manualRefresh = useCallback(() => {
+    if (userId && !isRefreshing && !fetchingRef.current) {
+      fetchUserDetails();
+    }
+  }, [userId, fetchUserDetails, isRefreshing]);
 
   return {
     userDetails,
@@ -82,6 +101,6 @@ export function useUserDetails(userId: string | undefined) {
     loading,
     fetchError,
     isRefreshing,
-    fetchUserDetails
+    refreshUserDetails: manualRefresh
   };
 }

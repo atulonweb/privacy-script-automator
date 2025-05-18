@@ -6,10 +6,20 @@ import { Webhook } from '@/types/webhook.types';
 
 export function useFetchUserWebhooks() {
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   
   const fetchUserWebhooks = async (userId: string) => {
+    if (!userId) {
+      console.error("No user ID provided to fetchUserWebhooks");
+      return [];
+    }
+    
     try {
-      console.log(`Explicitly fetching webhooks for user ID: ${userId}`);
+      setIsLoading(true);
+      setError(null);
+      
+      console.log(`Fetching webhooks for user ID: ${userId}`);
       
       const { data: webhooksData, error: webhooksError } = await supabase
         .from('webhooks')
@@ -18,7 +28,10 @@ export function useFetchUserWebhooks() {
       
       if (webhooksError) {
         console.error("Error fetching webhooks:", webhooksError);
-        throw webhooksError;
+        setError(webhooksError.message);
+        toast.error(`Failed to fetch webhooks: ${webhooksError.message}`);
+        setWebhooks([]);
+        return [];
       }
       
       console.log("Raw webhooks data:", webhooksData);
@@ -49,15 +62,20 @@ export function useFetchUserWebhooks() {
       }
     } catch (error: any) {
       console.error("Failed to fetch webhooks:", error);
+      setError(error.message);
       toast.error(`Failed to fetch webhooks: ${error.message}`);
       setWebhooks([]);
-      throw error;
+      return [];
+    } finally {
+      setIsLoading(false);
     }
   };
   
   return {
     webhooks,
     setWebhooks,
-    fetchUserWebhooks
+    fetchUserWebhooks,
+    isLoading,
+    error
   };
 }

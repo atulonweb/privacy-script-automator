@@ -24,7 +24,7 @@ const AdminUserDetailPage = () => {
     loading,
     fetchError,
     isRefreshing,
-    fetchUserDetails
+    refreshUserDetails
   } = useUserDetails(userId);
 
   // Log webhooks data for debugging
@@ -34,8 +34,12 @@ const AdminUserDetailPage = () => {
     console.log("Webhooks array content:", JSON.stringify(webhooks, null, 2));
   }, [webhooks]);
 
-  // Default to the "webhooks" tab for testing
-  const [activeTab, setActiveTab] = React.useState("webhooks");
+  // Default to the "websites" tab
+  const [activeTab, setActiveTab] = React.useState("websites");
+
+  const handleRefresh = () => {
+    refreshUserDetails();
+  };
 
   return (
     <AdminLayout>
@@ -50,7 +54,7 @@ const AdminUserDetailPage = () => {
           <Button 
             variant="outline"
             className="flex items-center gap-2"
-            onClick={fetchUserDetails}
+            onClick={handleRefresh}
             disabled={isRefreshing}
           >
             <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
@@ -68,7 +72,7 @@ const AdminUserDetailPage = () => {
               <Button 
                 variant="outline" 
                 className="mt-2" 
-                onClick={() => fetchUserDetails()}
+                onClick={handleRefresh}
               >
                 Retry
               </Button>
@@ -76,7 +80,7 @@ const AdminUserDetailPage = () => {
           </Card>
         )}
 
-        {loading ? (
+        {loading && !userDetails ? (
           <Card>
             <CardContent className="pt-6">
               <div className="flex justify-center items-center h-40">
