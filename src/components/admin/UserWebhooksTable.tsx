@@ -81,13 +81,16 @@ const UserWebhooksTable: React.FC<UserWebhooksTableProps> = ({ webhooks, website
   );
 };
 
-// Memoize the component with a proper comparison function
+// Use React.memo with a proper comparison function to prevent unnecessary rerenders
 export default React.memo(UserWebhooksTable, (prevProps, nextProps) => {
-  // Only re-render if the arrays changed in length or content
+  // If the arrays have different lengths, they're definitely different
   if (prevProps.webhooks?.length !== nextProps.webhooks?.length) return false;
   if (prevProps.websites?.length !== nextProps.websites?.length) return false;
   
-  // Check if webhook IDs are the same
+  // If both arrays are empty or null/undefined, they're equal
+  if (!prevProps.webhooks?.length && !nextProps.webhooks?.length) return true;
+  
+  // Compare webhook IDs as a final check
   const prevIds = prevProps.webhooks?.map(w => w.id).join(',') || '';
   const nextIds = nextProps.webhooks?.map(w => w.id).join(',') || '';
   

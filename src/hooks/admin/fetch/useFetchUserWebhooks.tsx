@@ -10,6 +10,7 @@ export function useFetchUserWebhooks() {
   const [error, setError] = useState<string | null>(null);
   const fetchingRef = useRef(false);
   
+  // Use a stable reference for the fetchUserWebhooks function
   const fetchUserWebhooks = useCallback(async (userId: string) => {
     if (!userId) {
       console.error("No user ID provided to fetchUserWebhooks");
@@ -27,8 +28,6 @@ export function useFetchUserWebhooks() {
       setIsLoading(true);
       setError(null);
       
-      console.log(`Fetching webhooks for user ID: ${userId}`);
-      
       const { data: webhooksData, error: webhooksError } = await supabase
         .from('webhooks')
         .select('*')
@@ -41,12 +40,8 @@ export function useFetchUserWebhooks() {
         return [];
       }
       
-      console.log("Raw webhooks data:", webhooksData);
-      
       // Ensure webhooksData is properly processed
       if (webhooksData && Array.isArray(webhooksData)) {
-        console.log(`Found ${webhooksData.length} webhooks for user ${userId}`);
-        
         const processedWebhooks: Webhook[] = webhooksData.map(webhook => ({
           id: webhook.id,
           user_id: webhook.user_id,
@@ -59,11 +54,9 @@ export function useFetchUserWebhooks() {
           updated_at: webhook.updated_at
         }));
         
-        console.log("Processed webhooks:", processedWebhooks);
         setWebhooks(processedWebhooks);
         return processedWebhooks;
       } else {
-        console.log(`No webhooks found for user ${userId} or invalid data format`);
         setWebhooks([]);
         return [];
       }
@@ -76,7 +69,7 @@ export function useFetchUserWebhooks() {
       setIsLoading(false);
       fetchingRef.current = false;
     }
-  }, [webhooks]);
+  }, []); // Empty dependency array to ensure stability
   
   return {
     webhooks,

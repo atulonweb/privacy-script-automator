@@ -41,12 +41,12 @@ const AdminUserDetailPage = () => {
     }
   };
 
-  // Log webhooks data only once when initially loaded or when actually changed
+  // Only log once when component mounts or when userId changes
   useEffect(() => {
-    console.log("AdminUserDetailPage received webhooks:", webhooks);
-    console.log("Webhooks array length:", webhooks?.length || 0);
-    console.log("Webhooks array content:", webhooks);
-  }, [webhooks?.length]);
+    if (webhooks) {
+      console.log("AdminUserDetailPage mounted with userId:", userId);
+    }
+  }, [userId]);
 
   return (
     <AdminLayout>

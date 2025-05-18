@@ -25,6 +25,7 @@ export function useUserDetails(userId: string | undefined) {
   const isMounted = useRef(true);
   const fetchingRef = useRef(false);
   const initialFetchDone = useRef(false);
+  const lastFetchedUserId = useRef<string | undefined>(undefined);
 
   const { setUserProfile, fetchUserProfile } = useFetchUserProfile();
   const { websites, setWebsites, fetchUserWebsites } = useFetchUserWebsites();
@@ -32,9 +33,13 @@ export function useUserDetails(userId: string | undefined) {
   const { webhooks, setWebhooks, fetchUserWebhooks } = useFetchUserWebhooks();
 
   const fetchUserDetails = useCallback(async (manualRefresh = false) => {
+    // Don't fetch if we're already fetching or if the userId is the same as the last fetched
     if (!userId || fetchingRef.current) return;
+    if (lastFetchedUserId.current === userId && initialFetchDone.current && !manualRefresh) return;
     
     fetchingRef.current = true;
+    lastFetchedUserId.current = userId;
+    
     if (manualRefresh) {
       setIsRefreshing(true);
     } else if (!initialFetchDone.current) {
@@ -44,26 +49,22 @@ export function useUserDetails(userId: string | undefined) {
     setFetchError(null);
     
     try {
-      if (manualRefresh || !initialFetchDone.current) {
-        console.log("Fetching details for user ID:", userId);
-        
-        // Fetch user profile
-        const profileData = await fetchUserProfile(userId);
-        if (isMounted.current) {
-          setUserDetails(profileData);
-        }
-        
-        // Fetch user's websites
-        await fetchUserWebsites(userId);
-        
-        // Fetch user's scripts
-        await fetchUserScripts(userId);
-        
-        // Fetch user's webhooks
-        await fetchUserWebhooks(userId);
-        
-        initialFetchDone.current = true;
+      // Fetch user profile
+      const profileData = await fetchUserProfile(userId);
+      if (isMounted.current) {
+        setUserDetails(profileData);
       }
+      
+      // Fetch user's websites
+      await fetchUserWebsites(userId);
+      
+      // Fetch user's scripts
+      await fetchUserScripts(userId);
+      
+      // Fetch user's webhooks
+      await fetchUserWebhooks(userId);
+      
+      initialFetchDone.current = true;
     } catch (error: any) {
       console.error('Error fetching user details:', error);
       if (isMounted.current) {
@@ -81,17 +82,16 @@ export function useUserDetails(userId: string | undefined) {
 
   useEffect(() => {
     isMounted.current = true;
-    initialFetchDone.current = false;
-    fetchingRef.current = false;
     
-    if (userId) {
+    // Only fetch if the userId changes or this is the first render
+    if (userId && (lastFetchedUserId.current !== userId || !initialFetchDone.current)) {
       fetchUserDetails();
     }
     
     return () => {
       isMounted.current = false;
     };
-  }, [userId]); // Only re-run when userId changes
+  }, [userId, fetchUserDetails]); // Include fetchUserDetails here to ensure it runs when userId changes
 
   const manualRefresh = useCallback(() => {
     if (userId && !isRefreshing && !fetchingRef.current) {
