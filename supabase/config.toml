@@ -1,19 +1,42 @@
 
 project_id = "rzmfwwkumniuwenammaj"
 
-[functions.consent-config]
-verify_jwt = false
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "storage"]
 
-[functions.admin-setup]
-verify_jwt = false
+[db]
+port = 54322
 
-[functions.admin-settings]
-verify_jwt = true
+[studio]
+enabled = true
+port = 54323
+
+[inbucket]
+enabled = true
+port = 54324
+
+[storage]
+enabled = true
+
+[auth]
+enabled = true
+
+[realtime]
+enabled = true
 
 [functions.admin-role]
 verify_jwt = true
 
-[http.cors]
-allow_origins = ["*"]
-exposed_headers = ["Content-Length", "Content-Type", "Authorization"]
-max_age = 600
+[functions.admin-setup]
+verify_jwt = true
+
+[functions.admin-settings]
+verify_jwt = true
+
+[functions.consent-config]
+verify_jwt = true
+
+[functions.test-webhook]
+verify_jwt = true

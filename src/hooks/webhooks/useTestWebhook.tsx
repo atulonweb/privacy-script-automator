@@ -22,9 +22,9 @@ export function useTestWebhook() {
       
       console.log("Testing webhook:", id);
       
-      // Use the correct path directly to the test-webhook edge function
-      // This ensures we don't hit the main consent-config endpoint that requires scriptId
-      const response = await fetch("https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/consent-config/test-webhook", {
+      // Access the test-webhook function directly with its own URL
+      // This is a completely separate edge function that doesn't require scriptId
+      const response = await fetch("https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/test-webhook", {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
