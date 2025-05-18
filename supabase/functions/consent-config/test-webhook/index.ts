@@ -28,7 +28,7 @@ async function deliverWebhook(
   webhookUrl: string,
   payload: object,
   secret?: string
-): Promise<{ status: string; statusCode: number | null; error?: string }> {
+): Promise<{ status: string; statusCode: number | null; error?: string; responseBody?: string }> {
   try {
     // Generate HMAC signature if secret is provided
     const headers: Record<string, string> = {
@@ -62,14 +62,14 @@ async function deliverWebhook(
       return { 
         status: "success", 
         statusCode: response.status, 
-        responseBody
+        responseBody: responseBody || undefined
       };
     } else {
       return {
         status: "error",
         statusCode: response.status,
         error: `HTTP error: ${response.status} ${response.statusText}`,
-        responseBody
+        responseBody: responseBody || undefined
       };
     }
   } catch (error: any) {
@@ -169,7 +169,7 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Create a test payload
+    // Create a test payload - NO SCRIPT ID REQUIRED FOR TEST
     const payload = {
       event: "test_webhook",
       timestamp: new Date().toISOString(),
