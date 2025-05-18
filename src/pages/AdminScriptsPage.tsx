@@ -16,6 +16,15 @@ import { Search, Filter } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import {
   Select,
   SelectContent,
   SelectGroup,
@@ -126,6 +135,12 @@ const AdminScriptsPage = () => {
   const [domains, setDomains] = useState<string[]>([]);
   const [categories, setCategories] = useState<string[]>(['analytics', 'advertising', 'social', 'functional', 'custom']);
   const [updatingScript, setUpdatingScript] = useState<string | null>(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number>(10);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [paginatedScripts, setPaginatedScripts] = useState<Script[]>([]);
 
   useEffect(() => {
     fetchScripts();
@@ -134,6 +149,10 @@ const AdminScriptsPage = () => {
   useEffect(() => {
     filterScripts();
   }, [searchTerm, selectedCategory, selectedDomain, scripts]);
+
+  useEffect(() => {
+    paginateScripts();
+  }, [filteredScripts, currentPage, itemsPerPage]);
 
   const fetchScripts = async () => {
     try {
@@ -273,6 +292,14 @@ const AdminScriptsPage = () => {
     }
     
     setFilteredScripts(filtered);
+    setTotalPages(Math.ceil(filtered.length / itemsPerPage));
+    setCurrentPage(1); // Reset to first page when filters change
+  };
+
+  const paginateScripts = () => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    setPaginatedScripts(filteredScripts.slice(startIndex, endIndex));
   };
 
   const toggleScriptStatus = async (scriptId: string, websiteId: string, currentActiveState: boolean) => {
@@ -308,6 +335,80 @@ const AdminScriptsPage = () => {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString();
+  };
+
+  const changePage = (page: number) => {
+    if (page > 0 && page <= totalPages) {
+      setCurrentPage(page);
+    }
+  };
+
+  const renderPagination = () => {
+    const pages = [];
+    
+    // Always show first page
+    pages.push(
+      <PaginationItem key="first">
+        <PaginationLink 
+          isActive={currentPage === 1} 
+          onClick={() => changePage(1)}>
+          1
+        </PaginationLink>
+      </PaginationItem>
+    );
+
+    // Show ellipsis if necessary
+    if (currentPage > 3) {
+      pages.push(
+        <PaginationItem key="ellipsis-1">
+          <PaginationEllipsis />
+        </PaginationItem>
+      );
+    }
+
+    // Show current page and surrounding pages
+    for (let i = Math.max(2, currentPage - 1); i <= Math.min(totalPages - 1, currentPage + 1); i++) {
+      if (i < totalPages) {
+        pages.push(
+          <PaginationItem key={i}>
+            <PaginationLink 
+              isActive={currentPage === i} 
+              onClick={() => changePage(i)}>
+              {i}
+            </PaginationLink>
+          </PaginationItem>
+        );
+      }
+    }
+
+    // Show ellipsis if necessary
+    if (currentPage < totalPages - 2) {
+      pages.push(
+        <PaginationItem key="ellipsis-2">
+          <PaginationEllipsis />
+        </PaginationItem>
+      );
+    }
+
+    // Always show last page if there is more than one page
+    if (totalPages > 1) {
+      pages.push(
+        <PaginationItem key="last">
+          <PaginationLink 
+            isActive={currentPage === totalPages} 
+            onClick={() => changePage(totalPages)}>
+            {totalPages}
+          </PaginationLink>
+        </PaginationItem>
+      );
+    }
+
+    return pages;
+  };
+
+  const handleItemsPerPageChange = (value: string) => {
+    setItemsPerPage(parseInt(value));
+    setCurrentPage(1); // Reset to first page when changing items per page
   };
 
   return (
@@ -388,7 +489,7 @@ const AdminScriptsPage = () => {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredScripts.map((script) => (
+                    {paginatedScripts.map((script) => (
                       <TableRow key={script.id} className={!script.active ? "bg-red-50" : ""}>
                         <TableCell className="font-medium">{script.script_id}</TableCell>
                         <TableCell>
@@ -463,6 +564,53 @@ const AdminScriptsPage = () => {
                     )}
                   </TableBody>
                 </Table>
+              </div>
+              
+              {/* Pagination */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Items per page:</span>
+                  <Select 
+                    value={itemsPerPage.toString()}
+                    onValueChange={handleItemsPerPageChange}
+                  >
+                    <SelectTrigger className="w-[70px]">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="5">5</SelectItem>
+                        <SelectItem value="10">10</SelectItem>
+                        <SelectItem value="25">25</SelectItem>
+                        <SelectItem value="50">50</SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  
+                  <span className="text-sm text-muted-foreground">
+                    Showing {Math.min((currentPage - 1) * itemsPerPage + 1, filteredScripts.length)} - {Math.min(currentPage * itemsPerPage, filteredScripts.length)} of {filteredScripts.length}
+                  </span>
+                </div>
+                
+                <Pagination>
+                  <PaginationContent>
+                    <PaginationItem>
+                      <PaginationPrevious 
+                        onClick={() => changePage(currentPage - 1)}
+                        className={`${currentPage === 1 ? 'pointer-events-none opacity-50' : ''}`}
+                      />
+                    </PaginationItem>
+                    
+                    {renderPagination()}
+                    
+                    <PaginationItem>
+                      <PaginationNext 
+                        onClick={() => changePage(currentPage + 1)}
+                        className={`${currentPage === totalPages ? 'pointer-events-none opacity-50' : ''}`}
+                      />
+                    </PaginationItem>
+                  </PaginationContent>
+                </Pagination>
               </div>
             </div>
           </CardContent>

@@ -25,6 +25,7 @@ import AdminWebhooksPage from "./pages/AdminWebhooksPage";
 import AdminManagementPage from "./pages/AdminManagementPage";
 import AdminUserDetailPage from './pages/AdminUserDetailPage';
 import AdminScriptsPage from './pages/AdminScriptsPage';
+import AdminDomainsPage from './pages/AdminDomainsPage';
 
 // Components
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -76,6 +77,12 @@ function App() {
             path="/admin/scripts" 
             element={
               <AdminRoute component={AdminScriptsPage} />
+            } 
+          />
+          <Route 
+            path="/admin/domains" 
+            element={
+              <AdminRoute component={AdminDomainsPage} />
             } 
           />
           <Route path="/admin/settings" element={<AdminRoute><AdminSettingsPage /></AdminRoute>} />
