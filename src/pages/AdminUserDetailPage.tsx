@@ -116,17 +116,32 @@ const AdminUserDetailPage = () => {
         // Try to get email directly from auth.users if admin (this may or may not work depending on permissions)
         let userEmail = '';
         try {
-          const { data: { session } } = await supabase.auth.getSession();
-          if (session) {
-            // Attempt direct query if admin (will only work if RLS allows it)
-            const { data: authData } = await supabase.rpc('get_user_email', { user_id: userId });
-            if (authData) {
-              userEmail = authData;
-              console.log("Retrieved email via RPC:", userEmail);
+          // Modified: Check if user is admin before attempting to get email
+          const { data: isAdmin } = await supabase.rpc('is_admin');
+          
+          if (isAdmin) {
+            try {
+              // Make a direct API call to get the user's email
+              const response = await fetch(`https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/admin-settings`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+                },
+                body: JSON.stringify({ action: 'get_user_email', userId }),
+              });
+              
+              const data = await response.json();
+              if (data && data.email) {
+                userEmail = data.email;
+                console.log("Retrieved email via API call:", userEmail);
+              }
+            } catch (e) {
+              console.log("Could not get email via API call:", e);
             }
           }
         } catch (e) {
-          console.log("Could not get email via direct query:", e);
+          console.log("Could not verify admin status:", e);
         }
         
         // Use fallback email if needed
