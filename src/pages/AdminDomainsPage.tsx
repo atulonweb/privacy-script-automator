@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '@/components/AdminLayout';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { 
   Table, 
   TableBody, 
@@ -12,7 +11,8 @@ import {
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Search, Filter, AlertTriangle, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { Badge } from "@/components/ui/badge";
+import { Search, Filter, AlertTriangle, CheckCircle, XCircle, Clock, InfoIcon } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import {
@@ -38,6 +38,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  HoverCard,
+  HoverCardContent,
+  HoverCardTrigger,
+} from "@/components/ui/hover-card";
+import { useWebsites } from '@/hooks/useWebsites';
+import { formatDistance } from 'date-fns';
 
 interface Domain {
   id: string;
@@ -62,100 +69,6 @@ interface Domain {
   };
 }
 
-// Mock data for initial development
-const mockDomains: Domain[] = [
-  {
-    id: '1',
-    domain: 'example.com',
-    name: 'Example Website',
-    status: 'active',
-    last_seen: new Date().toISOString(),
-    total_consent_events: 15243,
-    users_seen: 8764,
-    script_status: 'configured',
-    connected_user_id: 'user1',
-    connected_user_email: 'user1@example.com',
-    connected_user_name: 'John Doe',
-    created_at: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString(), // 90 days ago
-    last_script_update: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days ago
-    plan_type: 'pro',
-    usage_warnings: [],
-    geo_distribution: { eu: 40, us: 35, other: 25 }
-  },
-  {
-    id: '2',
-    domain: 'store.example.com',
-    name: 'Example Store',
-    status: 'active',
-    last_seen: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
-    total_consent_events: 7821,
-    users_seen: 4312,
-    script_status: 'partial',
-    connected_user_id: 'user1',
-    connected_user_email: 'user1@example.com',
-    connected_user_name: 'John Doe',
-    created_at: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000).toISOString(), // 60 days ago
-    last_script_update: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000).toISOString(), // 15 days ago
-    plan_type: 'pro',
-    usage_warnings: ['Missing analytics script'],
-    geo_distribution: { eu: 30, us: 50, other: 20 }
-  },
-  {
-    id: '3',
-    domain: 'blog.example.org',
-    name: 'Example Blog',
-    status: 'inactive',
-    last_seen: new Date(Date.now() - 45 * 24 * 60 * 60 * 1000).toISOString(), // 45 days ago
-    total_consent_events: 2134,
-    users_seen: 1852,
-    script_status: 'missing',
-    connected_user_id: 'user2',
-    connected_user_email: 'user2@example.org',
-    connected_user_name: 'Jane Smith',
-    created_at: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString(), // 120 days ago
-    last_script_update: null,
-    plan_type: 'free',
-    usage_warnings: ['No consent events in 30+ days', 'Scripts not configured'],
-    geo_distribution: { eu: 60, us: 25, other: 15 }
-  },
-  {
-    id: '4',
-    domain: 'app.example.io',
-    name: 'Example Application',
-    status: 'pending',
-    last_seen: null,
-    total_consent_events: 0,
-    users_seen: 0,
-    script_status: 'missing',
-    connected_user_id: 'user3',
-    connected_user_email: 'user3@example.io',
-    connected_user_name: 'Bob Johnson',
-    created_at: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000).toISOString(), // 2 days ago
-    last_script_update: null,
-    plan_type: 'free',
-    usage_warnings: ['Domain verification pending', 'Scripts not configured'],
-    geo_distribution: { eu: 0, us: 0, other: 0 }
-  },
-  {
-    id: '5',
-    domain: 'enterprise.example.com',
-    name: 'Enterprise Portal',
-    status: 'active',
-    last_seen: new Date().toISOString(),
-    total_consent_events: 53421,
-    users_seen: 24689,
-    script_status: 'configured',
-    connected_user_id: 'user4',
-    connected_user_email: 'user4@enterprise.com',
-    connected_user_name: 'Alice Williams',
-    created_at: new Date(Date.now() - 180 * 24 * 60 * 60 * 1000).toISOString(), // 180 days ago
-    last_script_update: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(), // 1 day ago
-    plan_type: 'enterprise',
-    usage_warnings: [],
-    geo_distribution: { eu: 35, us: 40, other: 25 }
-  }
-];
-
 const AdminDomainsPage: React.FC = () => {
   const [domains, setDomains] = useState<Domain[]>([]);
   const [filteredDomains, setFilteredDomains] = useState<Domain[]>([]);
@@ -163,6 +76,7 @@ const AdminDomainsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [scriptFilter, setScriptFilter] = useState<string | null>(null);
+  const [showDataSourceInfo, setShowDataSourceInfo] = useState<boolean>(false);
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -186,7 +100,7 @@ const AdminDomainsPage: React.FC = () => {
     try {
       setLoading(true);
       
-      // Attempt to fetch real data from Supabase
+      // Fetch websites from Supabase
       const { data: websites, error: websitesError } = await supabase
         .from('websites')
         .select('*');
@@ -216,7 +130,18 @@ const AdminDomainsPage: React.FC = () => {
         throw profilesError;
       }
       
-      // Try to fetch emails from admin function
+      // Try to fetch analytics data if available
+      const { data: analytics, error: analyticsError } = await supabase
+        .from('analytics')
+        .select('*')
+        .order('date', { ascending: false });
+      
+      if (analyticsError) {
+        console.error("Error fetching analytics:", analyticsError);
+        // Non-fatal error, continue with what we have
+      }
+
+      // Try to fetch user emails from admin function
       let userEmailMap = new Map();
       try {
         const response = await fetch('https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/admin-settings', {
@@ -240,14 +165,18 @@ const AdminDomainsPage: React.FC = () => {
         console.error("Error fetching user emails:", error);
       }
       
-      // TODO: Fetch analytics data if available
-      // This would be real data from your analytics table
-      
       if (websites && websites.length > 0) {
         // Transform website data to domain format
         const transformedDomains: Domain[] = websites.map(website => {
           // Find all scripts for this website
           const websiteScripts = scripts?.filter(script => script.website_id === website.id) || [];
+          
+          // Find analytics data for this website's scripts
+          let websiteAnalytics = [];
+          if (analytics) {
+            const scriptIds = websiteScripts.map(script => script.id);
+            websiteAnalytics = analytics.filter(a => scriptIds.includes(a.script_id));
+          }
           
           // Determine script status
           let scriptStatus: 'configured' | 'missing' | 'partial' = 'missing';
@@ -258,13 +187,31 @@ const AdminDomainsPage: React.FC = () => {
           // Find user profile
           const profile = profiles?.find(p => p.id === website.user_id);
           
-          // Generate some mock statistics based on available data
-          // In a real app, you'd get this from your analytics table
-          const daysSinceCreation = Math.floor((Date.now() - new Date(website.created_at).getTime()) / (1000 * 60 * 60 * 24));
-          const mockConsentEvents = Math.floor(Math.random() * 100) * daysSinceCreation;
-          const mockUsersSeen = Math.floor(mockConsentEvents * 0.7);
+          // Generate actual or mock consent event data
+          let totalConsentEvents = 0;
+          let acceptCount = 0;
+          let rejectCount = 0;
+          let partialCount = 0;
           
-          // Generate warnings
+          if (websiteAnalytics.length > 0) {
+            // We have real analytics data
+            websiteAnalytics.forEach(a => {
+              totalConsentEvents += (a.accept_count || 0) + (a.reject_count || 0) + (a.partial_count || 0);
+              acceptCount += a.accept_count || 0;
+              rejectCount += a.reject_count || 0;
+              partialCount += a.partial_count || 0;
+            });
+          } else {
+            // Generate mock data since we don't have real analytics
+            const daysSinceCreation = Math.floor((Date.now() - new Date(website.created_at).getTime()) / (1000 * 60 * 60 * 24));
+            totalConsentEvents = Math.floor(Math.random() * 100) * (daysSinceCreation || 1);
+          }
+          
+          // Calculate or estimate users seen
+          // In a real system, this would come from unique visitor tracking
+          const mockUsersSeen = Math.floor(totalConsentEvents * 0.7);
+          
+          // Generate warnings based on actual data
           const warnings: string[] = [];
           if (scriptStatus === 'missing') {
             warnings.push('Scripts not configured');
@@ -276,15 +223,39 @@ const AdminDomainsPage: React.FC = () => {
             warnings.push('Website is inactive');
           }
           
+          // In a real system, check for last activity
+          if (websiteScripts.length > 0 && !websiteAnalytics.length) {
+            warnings.push('No consent events recorded');
+          }
+          
+          // Get last seen timestamp
+          let lastSeen = null;
+          if (websiteAnalytics.length > 0) {
+            // Use the most recent analytics entry date
+            lastSeen = new Date(Math.max(...websiteAnalytics.map(a => new Date(a.created_at).getTime()))).toISOString();
+          } else if (websiteScripts.length > 0) {
+            // Fallback to most recent script update time
+            lastSeen = new Date(Math.max(...websiteScripts.map(s => new Date(s.updated_at).getTime()))).toISOString();
+          }
+          
+          // Mock geo distribution - in real system would come from analytics with IP geolocation
+          const geoDistribution = { 
+            eu: Math.floor(Math.random() * 40) + 20, 
+            us: Math.floor(Math.random() * 40) + 20,
+            other: 0 // Will calculate below
+          };
+          
+          // Calculate the "other" percentage
+          geoDistribution.other = 100 - geoDistribution.eu - geoDistribution.us;
+          if (geoDistribution.other < 0) geoDistribution.other = 0;
+          
           return {
             id: website.id,
             domain: website.domain,
             name: website.name,
             status: website.active ? 'active' : 'inactive' as any,
-            last_seen: websiteScripts.length > 0 
-              ? new Date(Math.max(...websiteScripts.map(s => new Date(s.updated_at).getTime()))).toISOString()
-              : null,
-            total_consent_events: mockConsentEvents,
+            last_seen: lastSeen,
+            total_consent_events: totalConsentEvents,
             users_seen: mockUsersSeen,
             script_status: scriptStatus,
             connected_user_id: website.user_id,
@@ -294,33 +265,23 @@ const AdminDomainsPage: React.FC = () => {
             last_script_update: websiteScripts.length > 0
               ? new Date(Math.max(...websiteScripts.map(s => new Date(s.updated_at).getTime()))).toISOString()
               : null,
-            plan_type: 'free' as any,  // Assuming default plan
+            plan_type: 'free' as any,  // Would come from user's subscription plan in real system
             usage_warnings: warnings,
-            geo_distribution: { 
-              eu: Math.floor(Math.random() * 40) + 20, 
-              us: Math.floor(Math.random() * 40) + 20,
-              other: 0 // Will calculate below
-            }
+            geo_distribution: geoDistribution
           };
-        });
-        
-        // Calculate the "other" percentage for geo distribution
-        transformedDomains.forEach(domain => {
-          domain.geo_distribution.other = 100 - domain.geo_distribution.eu - domain.geo_distribution.us;
-          if (domain.geo_distribution.other < 0) domain.geo_distribution.other = 0;
         });
         
         console.log("Transformed domains:", transformedDomains);
         setDomains(transformedDomains);
       } else {
-        console.log("No websites found, using mock data");
-        setDomains(mockDomains);
+        console.log("No websites found");
+        setDomains([]);
       }
       
     } catch (error: any) {
       console.error("Error in fetchDomains:", error);
       toast.error(`Failed to load domains: ${error.message}`);
-      setDomains(mockDomains);
+      setDomains([]);
     } finally {
       setLoading(false);
     }
@@ -370,16 +331,13 @@ const AdminDomainsPage: React.FC = () => {
   const formatTimeAgo = (dateString: string | null) => {
     if (!dateString) return 'Never';
     
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
-    
-    if (diffSeconds < 60) return `${diffSeconds} seconds ago`;
-    if (diffSeconds < 3600) return `${Math.floor(diffSeconds / 60)} minutes ago`;
-    if (diffSeconds < 86400) return `${Math.floor(diffSeconds / 3600)} hours ago`;
-    if (diffSeconds < 2592000) return `${Math.floor(diffSeconds / 86400)} days ago`;
-    if (diffSeconds < 31536000) return `${Math.floor(diffSeconds / 2592000)} months ago`;
-    return `${Math.floor(diffSeconds / 31536000)} years ago`;
+    try {
+      const date = new Date(dateString);
+      const now = new Date();
+      return formatDistance(date, now, { addSuffix: true });
+    } catch (err) {
+      return 'Invalid date';
+    }
   };
 
   const getStatusBadgeClass = (status: string) => {
@@ -502,7 +460,61 @@ const AdminDomainsPage: React.FC = () => {
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <div className="flex items-center justify-between">
           <h2 className="text-3xl font-bold tracking-tight">Domain Analytics</h2>
+          <Button 
+            variant="outline" 
+            onClick={() => setShowDataSourceInfo(!showDataSourceInfo)}
+            className="flex items-center gap-2"
+          >
+            <InfoIcon className="h-4 w-4" />
+            {showDataSourceInfo ? 'Hide Data Source Info' : 'Show Data Source Info'}
+          </Button>
         </div>
+        
+        {showDataSourceInfo && (
+          <Card className="bg-blue-50">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-blue-900">Data Source Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4 text-blue-800">
+                <div>
+                  <h3 className="font-semibold mb-2">Real Data (Currently Available):</h3>
+                  <ul className="list-disc pl-6 space-y-1">
+                    <li>Domain Name & Website Info (from websites table)</li>
+                    <li>Active/Inactive Status (from websites table)</li>
+                    <li>Created At Date (from websites table)</li>
+                    <li>Connected User (from users and profiles tables)</li>
+                    <li>Script Status (from consent_scripts table)</li>
+                    <li>Last Script Update (from consent_scripts table)</li>
+                  </ul>
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-2">Simulated Data (Needs Implementation):</h3>
+                  <ul className="list-disc pl-6 space-y-1">
+                    <li><Badge className="bg-yellow-200 text-yellow-900">Simulated</Badge> Last Seen/Ping - Needs cg.js to log timestamps when loaded</li>
+                    <li><Badge className="bg-yellow-200 text-yellow-900">Simulated</Badge> Consent Events - Needs analytics table with script_id reference</li>
+                    <li><Badge className="bg-yellow-200 text-yellow-900">Simulated</Badge> Users Seen - Needs unique visitor tracking in analytics</li>
+                    <li><Badge className="bg-yellow-200 text-yellow-900">Simulated</Badge> Geo Distribution - Needs IP geolocation in analytics</li>
+                    <li><Badge className="bg-yellow-200 text-yellow-900">Simulated</Badge> Plan Type - Needs subscription/plan data in user or website metadata</li>
+                  </ul>
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-2">How to Implement Missing Data:</h3>
+                  <ul className="list-disc pl-6 space-y-1">
+                    <li>Last Seen/Ping: Modify CDN module data.js to log timestamps when loaded</li>
+                    <li>Consent Events: Enhance analytics logging in CDN module</li>
+                    <li>Users Seen: Add unique visitor tracking using anonymous IDs or fingerprinting</li>
+                    <li>Geo Distribution: Add IP geolocation to analytics logging</li>
+                    <li>Plan Type: Add subscription management to user accounts</li>
+                  </ul>
+                </div>
+              </div>
+            </CardContent>
+            <CardFooter className="pt-0">
+              <Button variant="outline" onClick={() => setShowDataSourceInfo(false)}>Close</Button>
+            </CardFooter>
+          </Card>
+        )}
         
         <Card>
           <CardHeader>
@@ -555,6 +567,7 @@ const AdminDomainsPage: React.FC = () => {
                     </SelectGroup>
                   </SelectContent>
                 </Select>
+                <Button onClick={fetchDomains} variant="outline">Refresh Data</Button>
               </div>
               
               {/* Domains Table */}
@@ -564,11 +577,47 @@ const AdminDomainsPage: React.FC = () => {
                     <TableRow>
                       <TableHead>Domain</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead>Last Activity</TableHead>
-                      <TableHead>Consent Events</TableHead>
+                      <TableHead>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger className="flex items-center gap-1">
+                              Last Activity
+                              {showDataSourceInfo && <Badge className="bg-yellow-200 text-yellow-900 ml-1">Partial</Badge>}
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="max-w-xs">Currently based on script update time or analytics if available. Should be updated each time cg.js loads.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableHead>
+                      <TableHead>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger className="flex items-center gap-1">
+                              Consent Events
+                              {showDataSourceInfo && <Badge className="bg-yellow-200 text-yellow-900 ml-1">Simulated</Badge>}
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="max-w-xs">Currently simulated. Will come from actual analytics table in production.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableHead>
                       <TableHead>Script Status</TableHead>
                       <TableHead>Connected User</TableHead>
-                      <TableHead>Geo Distribution</TableHead>
+                      <TableHead>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger className="flex items-center gap-1">
+                              Geo Distribution
+                              {showDataSourceInfo && <Badge className="bg-yellow-200 text-yellow-900 ml-1">Simulated</Badge>}
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p className="max-w-xs">Currently randomized. Will need IP geolocation added to analytics.</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </TableHead>
                       <TableHead>Warnings</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -589,13 +638,44 @@ const AdminDomainsPage: React.FC = () => {
                         </TableCell>
                         <TableCell>
                           {domain.last_seen 
-                            ? <span className="text-sm">{formatTimeAgo(domain.last_seen)}</span>
+                            ? (
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger className="text-sm">{formatTimeAgo(domain.last_seen)}</TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>{new Date(domain.last_seen).toLocaleString()}</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                            )
                             : <span className="text-sm text-muted-foreground">No activity</span>
                           }
                         </TableCell>
                         <TableCell>
-                          <div className="text-sm">{domain.total_consent_events.toLocaleString()}</div>
-                          <div className="text-xs text-muted-foreground">{domain.users_seen.toLocaleString()} users</div>
+                          <HoverCard>
+                            <HoverCardTrigger asChild>
+                              <div className="cursor-help">
+                                <div className="text-sm">{domain.total_consent_events.toLocaleString()}</div>
+                                <div className="text-xs text-muted-foreground">{domain.users_seen.toLocaleString()} users</div>
+                              </div>
+                            </HoverCardTrigger>
+                            <HoverCardContent className="w-80">
+                              <div className="space-y-2">
+                                <h4 className="text-sm font-semibold">Consent Event Details</h4>
+                                {showDataSourceInfo && (
+                                  <div className="text-xs text-amber-600">
+                                    This data is currently simulated. It will come from the actual analytics table in production.
+                                  </div>
+                                )}
+                                <div className="grid grid-cols-2 gap-1 text-sm">
+                                  <div className="text-muted-foreground">Total Events:</div>
+                                  <div className="font-medium">{domain.total_consent_events.toLocaleString()}</div>
+                                  <div className="text-muted-foreground">Estimated Users:</div>
+                                  <div className="font-medium">{domain.users_seen.toLocaleString()}</div>
+                                </div>
+                              </div>
+                            </HoverCardContent>
+                          </HoverCard>
                         </TableCell>
                         <TableCell>
                           <TooltipProvider>
@@ -626,20 +706,59 @@ const AdminDomainsPage: React.FC = () => {
                           <div className="text-xs text-muted-foreground">{domain.connected_user_email}</div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex flex-col gap-1">
-                            <div className="flex items-center justify-between text-xs">
-                              <span>EU:</span>
-                              <span className="font-medium">{domain.geo_distribution.eu}%</span>
-                            </div>
-                            <div className="flex items-center justify-between text-xs">
-                              <span>US:</span>
-                              <span className="font-medium">{domain.geo_distribution.us}%</span>
-                            </div>
-                            <div className="flex items-center justify-between text-xs">
-                              <span>Other:</span>
-                              <span className="font-medium">{domain.geo_distribution.other}%</span>
-                            </div>
-                          </div>
+                          <HoverCard>
+                            <HoverCardTrigger asChild>
+                              <div className="flex flex-col gap-1 cursor-help">
+                                <div className="flex items-center justify-between text-xs">
+                                  <span>EU:</span>
+                                  <span className="font-medium">{domain.geo_distribution.eu}%</span>
+                                </div>
+                                <div className="flex items-center justify-between text-xs">
+                                  <span>US:</span>
+                                  <span className="font-medium">{domain.geo_distribution.us}%</span>
+                                </div>
+                                <div className="flex items-center justify-between text-xs">
+                                  <span>Other:</span>
+                                  <span className="font-medium">{domain.geo_distribution.other}%</span>
+                                </div>
+                              </div>
+                            </HoverCardTrigger>
+                            <HoverCardContent className="w-80">
+                              <div className="space-y-2">
+                                <h4 className="text-sm font-semibold">Geographic Distribution</h4>
+                                {showDataSourceInfo && (
+                                  <div className="text-xs text-amber-600">
+                                    This data is currently randomized. IP geolocation tracking needs to be added to analytics.
+                                  </div>
+                                )}
+                                <div className="space-y-2">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-sm">European Union</span>
+                                    <span className="font-medium">{domain.geo_distribution.eu}%</span>
+                                  </div>
+                                  <div className="w-full h-2 bg-gray-200 rounded-full">
+                                    <div className="h-2 bg-blue-500 rounded-full" style={{ width: `${domain.geo_distribution.eu}%` }}></div>
+                                  </div>
+                                  
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-sm">United States</span>
+                                    <span className="font-medium">{domain.geo_distribution.us}%</span>
+                                  </div>
+                                  <div className="w-full h-2 bg-gray-200 rounded-full">
+                                    <div className="h-2 bg-green-500 rounded-full" style={{ width: `${domain.geo_distribution.us}%` }}></div>
+                                  </div>
+                                  
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-sm">Other Regions</span>
+                                    <span className="font-medium">{domain.geo_distribution.other}%</span>
+                                  </div>
+                                  <div className="w-full h-2 bg-gray-200 rounded-full">
+                                    <div className="h-2 bg-purple-500 rounded-full" style={{ width: `${domain.geo_distribution.other}%` }}></div>
+                                  </div>
+                                </div>
+                              </div>
+                            </HoverCardContent>
+                          </HoverCard>
                         </TableCell>
                         <TableCell>
                           {domain.usage_warnings.length > 0 ? (
@@ -725,6 +844,120 @@ const AdminDomainsPage: React.FC = () => {
                     </PaginationItem>
                   </PaginationContent>
                 </Pagination>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Data Implementation Guide</CardTitle>
+            <CardDescription>
+              How to collect real data for this dashboard
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Core Data Collection Methods</h3>
+                  <ul className="space-y-3">
+                    <li className="flex gap-2">
+                      <div className="flex-shrink-0 h-6 w-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-700">1</div>
+                      <div>
+                        <span className="font-medium">Last Seen / Ping</span>
+                        <p className="text-sm text-gray-600">Modify lib/cdn/modules/data.js to log a timestamp each time cg.js is loaded from a domain</p>
+                      </div>
+                    </li>
+                    <li className="flex gap-2">
+                      <div className="flex-shrink-0 h-6 w-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-700">2</div>
+                      <div>
+                        <span className="font-medium">Consent Events</span>
+                        <p className="text-sm text-gray-600">Enhance analytics.js to log user actions into your analytics table with script_id reference</p>
+                      </div>
+                    </li>
+                    <li className="flex gap-2">
+                      <div className="flex-shrink-0 h-6 w-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-700">3</div>
+                      <div>
+                        <span className="font-medium">Script Status</span>
+                        <p className="text-sm text-gray-600">Create logic to check if all required categories have at least one script configured</p>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold">Advanced Data Collection</h3>
+                  <ul className="space-y-3">
+                    <li className="flex gap-2">
+                      <div className="flex-shrink-0 h-6 w-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-700">4</div>
+                      <div>
+                        <span className="font-medium">Unique Visitors</span>
+                        <p className="text-sm text-gray-600">Add anonymous ID fingerprinting to track unique users in the analytics library</p>
+                      </div>
+                    </li>
+                    <li className="flex gap-2">
+                      <div className="flex-shrink-0 h-6 w-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-700">5</div>
+                      <div>
+                        <span className="font-medium">Geo Distribution</span>
+                        <p className="text-sm text-gray-600">Add IP geolocation lookup when logging analytics events</p>
+                      </div>
+                    </li>
+                    <li className="flex gap-2">
+                      <div className="flex-shrink-0 h-6 w-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-700">6</div>
+                      <div>
+                        <span className="font-medium">Usage Warnings</span>
+                        <p className="text-sm text-gray-600">Implement background jobs to run checks on domains and identify issues</p>
+                      </div>
+                    </li>
+                  </ul>
+                </div>
+              </div>
+
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold mb-4">Next Steps for Implementation</h3>
+                <div className="bg-gray-50 p-4 rounded-md border text-sm">
+                  <pre className="whitespace-pre-wrap">
+{`// Example modifications to lib/cdn/modules/data.js to log activity
+export async function fetchConfig() {
+  try {
+    // ... existing code ...
+    
+    // Add activity logging
+    await logDomainActivity();
+    
+    return config;
+  } catch (error) {
+    console.error('ConsentGuard: Error fetching configuration', error);
+    return config; // Return default config on error
+  }
+}
+
+// New function to log domain activity
+async function logDomainActivity() {
+  try {
+    const domain = window.location.hostname;
+    const scriptId = getScriptId();
+    
+    await fetch(\`\${API_ENDPOINT}/activity\`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        domain,
+        scriptId,
+        timestamp: new Date().toISOString(),
+        // Use navigator.language for rough locale data
+        locale: navigator.language,
+        // Could use a geolocation service here
+        country: 'unknown' // To be determined server-side
+      })
+    });
+  } catch (error) {
+    // Silent fail - don't block page load for analytics
+    console.error('ConsentGuard: Error logging domain activity', error);
+  }
+}`}
+                  </pre>
+                </div>
               </div>
             </div>
           </CardContent>
