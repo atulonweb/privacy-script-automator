@@ -33,6 +33,7 @@ interface Webhook {
   id: string;
   url: string;
   enabled: boolean;
+  website_id: string; // Added website_id property to match database schema
   created_at: string;
 }
 
