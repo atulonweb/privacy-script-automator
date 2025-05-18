@@ -1,5 +1,5 @@
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -27,18 +27,20 @@ const AdminUserDetailPage = () => {
     refreshUserDetails
   } = useUserDetails(userId);
 
-  // Log webhooks data for debugging
+  // Default to the "websites" tab
+  const [activeTab, setActiveTab] = useState("websites");
+
+  // Log webhooks data for debugging - but only when it changes
   useEffect(() => {
     console.log("AdminUserDetailPage received webhooks:", webhooks);
     console.log("Webhooks array length:", webhooks?.length || 0);
     console.log("Webhooks array content:", JSON.stringify(webhooks, null, 2));
   }, [webhooks]);
 
-  // Default to the "websites" tab
-  const [activeTab, setActiveTab] = React.useState("websites");
-
   const handleRefresh = () => {
-    refreshUserDetails();
+    if (!isRefreshing) {
+      refreshUserDetails();
+    }
   };
 
   return (
@@ -73,6 +75,7 @@ const AdminUserDetailPage = () => {
                 variant="outline" 
                 className="mt-2" 
                 onClick={handleRefresh}
+                disabled={isRefreshing}
               >
                 Retry
               </Button>

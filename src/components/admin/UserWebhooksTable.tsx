@@ -83,4 +83,5 @@ const UserWebhooksTable: React.FC<UserWebhooksTableProps> = ({ webhooks, website
   );
 };
 
+// Memoizing the component to prevent unnecessary re-renders
 export default React.memo(UserWebhooksTable);

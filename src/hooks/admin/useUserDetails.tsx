@@ -24,6 +24,7 @@ export function useUserDetails(userId: string | undefined) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const isMounted = useRef(true);
   const fetchingRef = useRef(false);
+  const initialFetchDone = useRef(false);
 
   const { setUserProfile, fetchUserProfile } = useFetchUserProfile();
   const { websites, setWebsites, fetchUserWebsites } = useFetchUserWebsites();
@@ -36,7 +37,11 @@ export function useUserDetails(userId: string | undefined) {
     fetchingRef.current = true;
     setLoading(true);
     setFetchError(null);
-    setIsRefreshing(true);
+    if (!initialFetchDone.current) {
+      initialFetchDone.current = true;
+    } else {
+      setIsRefreshing(true);
+    }
     
     try {
       console.log("Fetching details for user ID:", userId);
@@ -49,16 +54,12 @@ export function useUserDetails(userId: string | undefined) {
       
       // Fetch user's websites
       const websitesData = await fetchUserWebsites(userId);
-      console.log("Fetched websites:", websitesData);
       
       // Fetch user's scripts
       const scriptsData = await fetchUserScripts(userId);
-      console.log("Fetched scripts:", scriptsData);
       
       // Fetch user's webhooks
       const webhooksData = await fetchUserWebhooks(userId);
-      console.log("Fetched webhooks data:", webhooksData);
-      console.log("Webhooks length:", webhooksData ? webhooksData.length : 0);
       
     } catch (error: any) {
       console.error('Error fetching user details:', error);
@@ -77,6 +78,7 @@ export function useUserDetails(userId: string | undefined) {
 
   useEffect(() => {
     isMounted.current = true;
+    initialFetchDone.current = false;
     
     if (userId) {
       fetchUserDetails();
