@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,18 +30,23 @@ const AdminUserDetailPage = () => {
   // Default to the "websites" tab
   const [activeTab, setActiveTab] = useState("websites");
 
-  // Log webhooks data only when webhooks array changes
-  const webhooksLength = webhooks?.length || 0;
-  useEffect(() => {
-    console.log("AdminUserDetailPage received webhooks:", webhooks);
-    console.log("Webhooks array length:", webhooksLength);
-  }, [webhooks, webhooksLength]);
+  // Stabilize arrays to prevent re-renders
+  const safeWebsites = useMemo(() => Array.isArray(websites) ? websites : [], [websites]);
+  const safeScripts = useMemo(() => Array.isArray(scripts) ? scripts : [], [scripts]);
+  const safeWebhooks = useMemo(() => Array.isArray(webhooks) ? webhooks : [], [webhooks]);
 
   const handleRefresh = () => {
     if (!isRefreshing) {
       refreshUserDetails();
     }
   };
+
+  // Log webhooks data only once when initially loaded or when actually changed
+  useEffect(() => {
+    console.log("AdminUserDetailPage received webhooks:", webhooks);
+    console.log("Webhooks array length:", webhooks?.length || 0);
+    console.log("Webhooks array content:", webhooks);
+  }, [webhooks?.length]);
 
   return (
     <AdminLayout>
@@ -108,33 +113,33 @@ const AdminUserDetailPage = () => {
                     <TabsTrigger value="websites" className="flex items-center">
                       <Globe className="mr-2 h-4 w-4" /> Websites
                       <span className="ml-2 bg-gray-100 text-gray-800 px-2 py-0.5 rounded-full text-xs">
-                        {websites.length}
+                        {safeWebsites.length}
                       </span>
                     </TabsTrigger>
                     <TabsTrigger value="scripts" className="flex items-center">
                       <Code className="mr-2 h-4 w-4" /> Scripts
                       <span className="ml-2 bg-gray-100 text-gray-800 px-2 py-0.5 rounded-full text-xs">
-                        {scripts.length}
+                        {safeScripts.length}
                       </span>
                     </TabsTrigger>
                     <TabsTrigger value="webhooks" className="flex items-center">
                       <Webhook className="mr-2 h-4 w-4" /> Webhooks
                       <span className="ml-2 bg-gray-100 text-gray-800 px-2 py-0.5 rounded-full text-xs">
-                        {webhooksLength}
+                        {safeWebhooks.length}
                       </span>
                     </TabsTrigger>
                   </TabsList>
                   
                   <TabsContent value="websites" className="mt-4 space-y-4">
-                    <UserWebsitesTable websites={websites} />
+                    <UserWebsitesTable websites={safeWebsites} />
                   </TabsContent>
                   
                   <TabsContent value="scripts" className="mt-4 space-y-4">
-                    <UserScriptsTable scripts={scripts} websites={websites} />
+                    <UserScriptsTable scripts={safeScripts} websites={safeWebsites} />
                   </TabsContent>
                   
                   <TabsContent value="webhooks" className="mt-4 space-y-4">
-                    <UserWebhooksTable webhooks={Array.isArray(webhooks) ? webhooks : []} websites={websites} />
+                    <UserWebhooksTable webhooks={safeWebhooks} websites={safeWebsites} />
                   </TabsContent>
                 </Tabs>
               </CardContent>

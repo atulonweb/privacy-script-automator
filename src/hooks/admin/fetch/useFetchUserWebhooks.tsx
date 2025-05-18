@@ -1,5 +1,5 @@
 
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Webhook } from '@/types/webhook.types';
@@ -8,14 +8,22 @@ export function useFetchUserWebhooks() {
   const [webhooks, setWebhooks] = useState<Webhook[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const fetchingRef = useRef(false);
   
-  const fetchUserWebhooks = async (userId: string) => {
+  const fetchUserWebhooks = useCallback(async (userId: string) => {
     if (!userId) {
       console.error("No user ID provided to fetchUserWebhooks");
       return [];
     }
     
+    // Prevent multiple simultaneous fetches
+    if (fetchingRef.current) {
+      console.log("Already fetching webhooks, skipping redundant call");
+      return webhooks;
+    }
+    
     try {
+      fetchingRef.current = true;
       setIsLoading(true);
       setError(null);
       
@@ -66,8 +74,9 @@ export function useFetchUserWebhooks() {
       return [];
     } finally {
       setIsLoading(false);
+      fetchingRef.current = false;
     }
-  };
+  }, [webhooks]);
   
   return {
     webhooks,

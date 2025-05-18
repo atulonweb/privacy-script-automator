@@ -1,5 +1,5 @@
 
-import React, { useEffect, memo } from 'react';
+import React, { useMemo } from 'react';
 import { 
   Table, 
   TableBody, 
@@ -26,16 +26,9 @@ const UserWebhooksTable: React.FC<UserWebhooksTableProps> = ({ webhooks, website
     }
   };
 
-  // Only log once when component mounts or when webhooks/websites actually change
-  useEffect(() => {
-    console.log('UserWebhooksTable rendering with webhooks:', webhooks);
-    console.log('Webhooks length:', webhooks?.length || 0);
-    console.log('UserWebhooksTable rendering with websites:', websites);
-  }, [webhooks, websites]);
-
   // Safety check to ensure webhooks is an array
-  const safeWebhooks = Array.isArray(webhooks) ? webhooks : [];
-  const safeWebsites = Array.isArray(websites) ? websites : [];
+  const safeWebhooks = useMemo(() => Array.isArray(webhooks) ? webhooks : [], [webhooks]);
+  const safeWebsites = useMemo(() => Array.isArray(websites) ? websites : [], [websites]);
 
   return (
     <div className="rounded-md border">
@@ -88,15 +81,15 @@ const UserWebhooksTable: React.FC<UserWebhooksTableProps> = ({ webhooks, website
   );
 };
 
-// Use React.memo with a custom comparison function to prevent unnecessary re-renders
-export default memo(UserWebhooksTable, (prevProps, nextProps) => {
-  // Only re-render if webhooks or websites length has changed
-  // or if the IDs of the items have changed
-  const prevWebhooksIds = prevProps.webhooks?.map(w => w.id).join(',') || '';
-  const nextWebhooksIds = nextProps.webhooks?.map(w => w.id).join(',') || '';
+// Memoize the component with a proper comparison function
+export default React.memo(UserWebhooksTable, (prevProps, nextProps) => {
+  // Only re-render if the arrays changed in length or content
+  if (prevProps.webhooks?.length !== nextProps.webhooks?.length) return false;
+  if (prevProps.websites?.length !== nextProps.websites?.length) return false;
   
-  const prevWebsitesIds = prevProps.websites?.map(w => w.id).join(',') || '';
-  const nextWebsitesIds = nextProps.websites?.map(w => w.id).join(',') || '';
+  // Check if webhook IDs are the same
+  const prevIds = prevProps.webhooks?.map(w => w.id).join(',') || '';
+  const nextIds = nextProps.webhooks?.map(w => w.id).join(',') || '';
   
-  return prevWebhooksIds === nextWebhooksIds && prevWebsitesIds === nextWebsitesIds;
+  return prevIds === nextIds;
 });

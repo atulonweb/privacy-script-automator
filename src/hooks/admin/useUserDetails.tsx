@@ -25,44 +25,45 @@ export function useUserDetails(userId: string | undefined) {
   const isMounted = useRef(true);
   const fetchingRef = useRef(false);
   const initialFetchDone = useRef(false);
-  const refreshTimeoutRef = useRef<number | null>(null);
 
   const { setUserProfile, fetchUserProfile } = useFetchUserProfile();
   const { websites, setWebsites, fetchUserWebsites } = useFetchUserWebsites();
   const { scripts, setScripts, fetchUserScripts } = useFetchUserScripts();
   const { webhooks, setWebhooks, fetchUserWebhooks } = useFetchUserWebhooks();
 
-  const fetchUserDetails = useCallback(async () => {
+  const fetchUserDetails = useCallback(async (manualRefresh = false) => {
     if (!userId || fetchingRef.current) return;
     
     fetchingRef.current = true;
-    setLoading(true);
-    setFetchError(null);
-    
-    if (!initialFetchDone.current) {
-      initialFetchDone.current = true;
-    } else {
+    if (manualRefresh) {
       setIsRefreshing(true);
+    } else if (!initialFetchDone.current) {
+      setLoading(true);
     }
     
+    setFetchError(null);
+    
     try {
-      console.log("Fetching details for user ID:", userId);
-      
-      // Fetch user profile
-      const profileData = await fetchUserProfile(userId);
-      if (isMounted.current) {
-        setUserDetails(profileData);
+      if (manualRefresh || !initialFetchDone.current) {
+        console.log("Fetching details for user ID:", userId);
+        
+        // Fetch user profile
+        const profileData = await fetchUserProfile(userId);
+        if (isMounted.current) {
+          setUserDetails(profileData);
+        }
+        
+        // Fetch user's websites
+        await fetchUserWebsites(userId);
+        
+        // Fetch user's scripts
+        await fetchUserScripts(userId);
+        
+        // Fetch user's webhooks
+        await fetchUserWebhooks(userId);
+        
+        initialFetchDone.current = true;
       }
-      
-      // Fetch user's websites
-      await fetchUserWebsites(userId);
-      
-      // Fetch user's scripts
-      await fetchUserScripts(userId);
-      
-      // Fetch user's webhooks
-      await fetchUserWebhooks(userId);
-      
     } catch (error: any) {
       console.error('Error fetching user details:', error);
       if (isMounted.current) {
@@ -78,17 +79,10 @@ export function useUserDetails(userId: string | undefined) {
     }
   }, [userId, fetchUserProfile, fetchUserWebsites, fetchUserScripts, fetchUserWebhooks]);
 
-  // Clear any existing timeout on component unmount
-  const clearRefreshTimeout = useCallback(() => {
-    if (refreshTimeoutRef.current !== null) {
-      window.clearTimeout(refreshTimeoutRef.current);
-      refreshTimeoutRef.current = null;
-    }
-  }, []);
-
   useEffect(() => {
     isMounted.current = true;
     initialFetchDone.current = false;
+    fetchingRef.current = false;
     
     if (userId) {
       fetchUserDetails();
@@ -96,16 +90,14 @@ export function useUserDetails(userId: string | undefined) {
     
     return () => {
       isMounted.current = false;
-      clearRefreshTimeout();
     };
-  }, [userId, fetchUserDetails, clearRefreshTimeout]);
+  }, [userId]); // Only re-run when userId changes
 
   const manualRefresh = useCallback(() => {
     if (userId && !isRefreshing && !fetchingRef.current) {
-      clearRefreshTimeout();
-      fetchUserDetails();
+      fetchUserDetails(true);
     }
-  }, [userId, fetchUserDetails, isRefreshing, clearRefreshTimeout]);
+  }, [userId, isRefreshing, fetchUserDetails]);
 
   return {
     userDetails,
