@@ -177,6 +177,31 @@ const WebhookTester: React.FC = () => {
           />
         </div>
 
+        <div className="space-y-2">
+          <p className="text-sm text-muted-foreground">
+            Test payload will contain the following consent data structure:
+          </p>
+          <pre className="bg-gray-100 p-3 rounded text-xs overflow-auto max-h-32">
+{`{
+  "event": "consent.test",
+  "timestamp": "2025-05-18T10:00:00Z",
+  "ip": "192.0.2.1",
+  "siteId": "test_site_id",
+  "userId": "test_user_id",
+  "sessionId": "test_session_id",
+  "userAgent": "ConsentGuard Test Webhook",
+  "webhook_id": "[webhook-id]",
+  "consent": {
+    "necessary": true,
+    "analytics": true,
+    "functional": true,
+    "ads": false,
+    "social": false
+  }
+}`}
+          </pre>
+        </div>
+
         <Button 
           onClick={handleTest} 
           disabled={isTesting || !webhookUrl || !userId}

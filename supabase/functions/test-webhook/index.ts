@@ -212,15 +212,23 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Create a test payload - NO SCRIPT ID REQUIRED FOR TEST
+    // Create a test payload with the original comprehensive structure
     const payload = {
-      event: "test_webhook",
+      event: "consent.test",
       timestamp: new Date().toISOString(),
-      test: true,
+      ip: "192.0.2.1",
+      siteId: webhook.website_id || "test_site_id",
+      userId: "test_user_id",
+      sessionId: "test_session_id",
+      userAgent: "ConsentGuard Test Webhook",
       webhook_id: webhookId,
-      data: {
-        message: "This is a test webhook",
-      },
+      consent: {
+        necessary: true,
+        analytics: true,
+        functional: true,
+        ads: false,
+        social: false
+      }
     };
 
     // Send the test webhook
