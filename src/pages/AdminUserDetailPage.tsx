@@ -73,14 +73,13 @@ const AdminUserDetailPage = () => {
       
       if (profileError) throw profileError;
 
-      // Since we can't directly query auth.users with the anon key,
-      // we'll try to get user info via an edge function or fallback to simulated data
+      // Try to get user data via edge function (requires admin privileges)
       let userData = null;
       
       try {
-        // Attempt to get user data from edge function (requires admin privileges)
-        const response = await fetch('https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/admin-settings', {
-          method: 'GET',
+        // Attempt to get user data from edge function
+        const response = await fetch(`https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/admin-settings`, {
+          method: 'POST',
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
@@ -98,25 +97,19 @@ const AdminUserDetailPage = () => {
         console.log('Edge function error or not available:', error);
       }
       
-      // If we couldn't get user data from edge function, create simulated data
+      // If we couldn't get user data from edge function, fallback to the profile with placeholders
       if (!userData) {
-        // Generate consistent simulated email based on userId
-        const userIdPrefix = userId.substring(0, 6);
-        const emailType = ['free', 'pro', 'enterprise'][Math.floor(Math.random() * 3)];
-        const email = `${emailType}-user-${userIdPrefix}@example.com`;
-        
-        const role = Math.random() > 0.8 ? 'admin' : 'user';
-        
+        console.log('Using fallback user data');
         userData = {
-          email,
-          role,
+          email: `user-${userId.substring(0, 6)}@example.com`,
+          role: 'user',
           created_at: profileData.created_at
         };
       }
       
       const userDetails: UserDetails = {
         id: userId,
-        email: userData.email,
+        email: userData.email || `user-${userId.substring(0, 6)}@example.com`,
         full_name: profileData.full_name,
         role: userData.role || 'user',
         created_at: profileData.created_at
@@ -297,6 +290,7 @@ const AdminUserDetailPage = () => {
                         <TableHeader>
                           <TableRow>
                             <TableHead>Script ID</TableHead>
+                            <TableHead>Website</TableHead>
                             <TableHead>Position</TableHead>
                             <TableHead>Color</TableHead>
                             <TableHead>Created</TableHead>
@@ -304,25 +298,31 @@ const AdminUserDetailPage = () => {
                         </TableHeader>
                         <TableBody>
                           {scripts.length > 0 ? (
-                            scripts.map((script) => (
-                              <TableRow key={script.id}>
-                                <TableCell className="font-medium">{script.script_id}</TableCell>
-                                <TableCell>{script.banner_position || 'Default'}</TableCell>
-                                <TableCell>
-                                  <div className="flex items-center space-x-2">
-                                    <div 
-                                      className="w-4 h-4 rounded-full" 
-                                      style={{ backgroundColor: script.banner_color || '#4F46E5' }}
-                                    ></div>
-                                    <span>{script.banner_color || 'Default'}</span>
-                                  </div>
-                                </TableCell>
-                                <TableCell>{formatDate(script.created_at)}</TableCell>
-                              </TableRow>
-                            ))
+                            scripts.map((script) => {
+                              // Find the website name for this script
+                              const website = websites.find(w => w.id === script.website_id);
+                              
+                              return (
+                                <TableRow key={script.id}>
+                                  <TableCell className="font-medium">{script.script_id}</TableCell>
+                                  <TableCell>{website ? website.name : 'Unknown website'}</TableCell>
+                                  <TableCell>{script.banner_position || 'Default'}</TableCell>
+                                  <TableCell>
+                                    <div className="flex items-center space-x-2">
+                                      <div 
+                                        className="w-4 h-4 rounded-full" 
+                                        style={{ backgroundColor: script.banner_color || '#4F46E5' }}
+                                      ></div>
+                                      <span>{script.banner_color || 'Default'}</span>
+                                    </div>
+                                  </TableCell>
+                                  <TableCell>{formatDate(script.created_at)}</TableCell>
+                                </TableRow>
+                              );
+                            })
                           ) : (
                             <TableRow>
-                              <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
+                              <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
                                 No scripts found
                               </TableCell>
                             </TableRow>
@@ -338,34 +338,41 @@ const AdminUserDetailPage = () => {
                         <TableHeader>
                           <TableRow>
                             <TableHead>URL</TableHead>
+                            <TableHead>Website</TableHead>
                             <TableHead>Status</TableHead>
                             <TableHead>Created</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
                           {webhooks.length > 0 ? (
-                            webhooks.map((webhook) => (
-                              <TableRow key={webhook.id}>
-                                <TableCell className="font-medium truncate max-w-[300px]">
-                                  {webhook.url}
-                                </TableCell>
-                                <TableCell>
-                                  <span 
-                                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                                      ${webhook.enabled 
-                                        ? 'bg-green-100 text-green-800' 
-                                        : 'bg-gray-100 text-gray-800'
-                                      }`}
-                                  >
-                                    {webhook.enabled ? 'Enabled' : 'Disabled'}
-                                  </span>
-                                </TableCell>
-                                <TableCell>{formatDate(webhook.created_at)}</TableCell>
-                              </TableRow>
-                            ))
+                            webhooks.map((webhook) => {
+                              // Find the website name for this webhook
+                              const website = websites.find(w => w.id === webhook.website_id);
+                              
+                              return (
+                                <TableRow key={webhook.id}>
+                                  <TableCell className="font-medium truncate max-w-[300px]">
+                                    {webhook.url}
+                                  </TableCell>
+                                  <TableCell>{website ? website.name : 'All websites'}</TableCell>
+                                  <TableCell>
+                                    <span 
+                                      className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                        ${webhook.enabled 
+                                          ? 'bg-green-100 text-green-800' 
+                                          : 'bg-gray-100 text-gray-800'
+                                        }`}
+                                    >
+                                      {webhook.enabled ? 'Enabled' : 'Disabled'}
+                                    </span>
+                                  </TableCell>
+                                  <TableCell>{formatDate(webhook.created_at)}</TableCell>
+                                </TableRow>
+                              );
+                            })
                           ) : (
                             <TableRow>
-                              <TableCell colSpan={3} className="text-center py-6 text-muted-foreground">
+                              <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
                                 No webhooks found
                               </TableCell>
                             </TableRow>
