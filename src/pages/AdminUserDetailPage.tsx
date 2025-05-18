@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,6 +26,11 @@ const AdminUserDetailPage = () => {
     isRefreshing,
     fetchUserDetails
   } = useUserDetails(userId);
+
+  // Log webhooks data for debugging
+  useEffect(() => {
+    console.log("AdminUserDetailPage received webhooks:", webhooks);
+  }, [webhooks]);
 
   return (
     <AdminLayout>
@@ -103,7 +108,7 @@ const AdminUserDetailPage = () => {
                     <TabsTrigger value="webhooks" className="flex items-center">
                       <Webhook className="mr-2 h-4 w-4" /> Webhooks
                       <span className="ml-2 bg-gray-100 text-gray-800 px-2 py-0.5 rounded-full text-xs">
-                        {webhooks.length}
+                        {webhooks ? webhooks.length : 0}
                       </span>
                     </TabsTrigger>
                   </TabsList>

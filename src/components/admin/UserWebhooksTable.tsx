@@ -22,6 +22,8 @@ const UserWebhooksTable: React.FC<UserWebhooksTableProps> = ({ webhooks, website
     return date.toLocaleDateString();
   };
 
+  console.log('UserWebhooksTable rendering with webhooks:', webhooks);
+
   return (
     <div className="rounded-md border">
       <Table>
@@ -34,7 +36,7 @@ const UserWebhooksTable: React.FC<UserWebhooksTableProps> = ({ webhooks, website
           </TableRow>
         </TableHeader>
         <TableBody>
-          {webhooks.length > 0 ? (
+          {webhooks && webhooks.length > 0 ? (
             webhooks.map((webhook) => {
               // Find the website name for this webhook
               const website = websites.find(w => w.id === webhook.website_id);

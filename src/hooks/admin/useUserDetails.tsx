@@ -155,7 +155,7 @@ export function useUserDetails(userId: string | undefined) {
       console.log("Fetched scripts:", scriptsData);
       setScripts(scriptsData || []);
       
-      // Fetch user's webhooks - making a dedicated call to ensure we get ALL webhooks
+      // Fetch user's webhooks directly from webhooks table
       console.log("Fetching webhooks for user ID:", userId);
       const { data: webhooksData, error: webhooksError } = await supabase
         .from('webhooks')
@@ -169,14 +169,14 @@ export function useUserDetails(userId: string | undefined) {
       
       console.log("Fetched webhooks data:", webhooksData);
       
-      if (webhooksData && webhooksData.length > 0) {
+      if (webhooksData && Array.isArray(webhooksData)) {
         console.log(`Found ${webhooksData.length} webhooks for user ${userId}:`);
         webhooksData.forEach(webhook => {
           console.log(`- Webhook ID: ${webhook.id}, URL: ${webhook.url}, Enabled: ${webhook.enabled}`);
         });
-        setWebhooks(webhooksData as Webhook[]);
+        setWebhooks(webhooksData);
       } else {
-        console.log(`No webhooks found for user ${userId}`);
+        console.log(`No webhooks found for user ${userId} or invalid data format`);
         setWebhooks([]);
       }
       
