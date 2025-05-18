@@ -1,5 +1,4 @@
-
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 
 // Pages
@@ -23,6 +22,7 @@ import AdminUsersPage from "./pages/AdminUsersPage";
 import AdminSettingsPage from "./pages/AdminSettingsPage";
 import AdminWebhooksPage from "./pages/AdminWebhooksPage";
 import AdminManagementPage from "./pages/AdminManagementPage";
+import AdminUserDetailPage from './pages/AdminUserDetailPage';
 
 // Components
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -30,9 +30,9 @@ import AdminRoute from "./components/AdminRoute";
 import { Toaster } from "./components/ui/toaster";
 
 // Define App as a React functional component
-const App = () => {
+function App() {
   return (
-    <BrowserRouter>
+    <Router>
       <AuthProvider>
         <Routes>
           <Route path="/" element={<HomePage />} />
@@ -52,9 +52,24 @@ const App = () => {
           <Route path="/dashboard/testing" element={<ProtectedRoute><TestingPage /></ProtectedRoute>} />
           
           {/* Admin Routes */}
-          <Route path="/admin" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
-          <Route path="/admin/dashboard" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
-          <Route path="/admin/users" element={<AdminRoute><AdminUsersPage /></AdminRoute>} />
+          <Route 
+            path="/admin" 
+            element={
+              <AdminRoute component={AdminDashboardPage} />
+            } 
+          />
+          <Route 
+            path="/admin/users" 
+            element={
+              <AdminRoute component={AdminUsersPage} />
+            } 
+          />
+          <Route 
+            path="/admin/users/:userId" 
+            element={
+              <AdminRoute component={AdminUserDetailPage} />
+            } 
+          />
           <Route path="/admin/settings" element={<AdminRoute><AdminSettingsPage /></AdminRoute>} />
           <Route path="/admin/webhooks" element={<AdminRoute><AdminWebhooksPage /></AdminRoute>} />
           <Route path="/admin/admins" element={<AdminRoute><AdminManagementPage /></AdminRoute>} />
@@ -63,8 +78,8 @@ const App = () => {
         </Routes>
         <Toaster />
       </AuthProvider>
-    </BrowserRouter>
+    </Router>
   );
-};
+}
 
 export default App;
