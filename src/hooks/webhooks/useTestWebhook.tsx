@@ -17,6 +17,7 @@ export function useTestWebhook() {
       const { data: userSession } = await supabase.auth.getSession();
       
       if (!userSession.session) {
+        toast.error("No active session");
         throw new Error('No active session');
       }
       

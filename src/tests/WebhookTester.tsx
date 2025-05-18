@@ -38,12 +38,16 @@ const WebhookTester: React.FC = () => {
     }
 
     try {
+      // For testing purposes, we'll create a temporary webhook with a fixed website_id
+      const testWebsiteId = '00000000-0000-0000-0000-000000000000';
+
       // Check if we already have a test webhook
       const { data: existingWebhooks, error: fetchError } = await supabase
         .from('webhooks')
         .select('*')
         .eq('user_id', userId)
         .eq('url', webhookUrl)
+        .eq('website_id', testWebsiteId)
         .limit(1);
 
       if (fetchError) {
@@ -70,7 +74,8 @@ const WebhookTester: React.FC = () => {
             url: webhookUrl,
             secret: secret || null,
             enabled: true,
-            retry_count: 3
+            retry_count: 3,
+            website_id: testWebsiteId // Adding the required website_id field
           })
           .select()
           .single();
