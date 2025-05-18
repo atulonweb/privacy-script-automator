@@ -3,6 +3,7 @@ import React from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import ScriptSavingTest from '@/tests/ScriptSavingTest';
 import WebhookTester from '@/tests/WebhookTester';
+import UserWebhooksTest from '@/tests/UserWebhooksTest';
 
 const TestingPage: React.FC = () => {
   return (
@@ -13,6 +14,7 @@ const TestingPage: React.FC = () => {
         </div>
         
         <div className="grid gap-4">
+          <UserWebhooksTest />
           <WebhookTester />
           <ScriptSavingTest />
         </div>

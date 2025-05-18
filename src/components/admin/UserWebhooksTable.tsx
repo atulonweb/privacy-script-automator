@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { 
   Table, 
   TableBody, 
@@ -22,8 +22,14 @@ const UserWebhooksTable: React.FC<UserWebhooksTableProps> = ({ webhooks, website
     return date.toLocaleDateString();
   };
 
-  console.log('UserWebhooksTable rendering with webhooks:', webhooks);
-  console.log('UserWebhooksTable rendering with websites:', websites);
+  useEffect(() => {
+    console.log('UserWebhooksTable rendering with webhooks:', webhooks);
+    console.log('Webhooks length:', webhooks?.length || 0);
+    console.log('UserWebhooksTable rendering with websites:', websites);
+  }, [webhooks, websites]);
+
+  // Safety check to ensure webhooks is an array
+  const safeWebhooks = Array.isArray(webhooks) ? webhooks : [];
 
   return (
     <div className="rounded-md border">
@@ -37,8 +43,8 @@ const UserWebhooksTable: React.FC<UserWebhooksTableProps> = ({ webhooks, website
           </TableRow>
         </TableHeader>
         <TableBody>
-          {webhooks && webhooks.length > 0 ? (
-            webhooks.map((webhook) => {
+          {safeWebhooks.length > 0 ? (
+            safeWebhooks.map((webhook) => {
               // Find the website name for this webhook
               const website = websites.find(w => w.id === webhook.website_id);
               

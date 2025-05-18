@@ -43,13 +43,20 @@ export function useUserDetails(userId: string | undefined) {
       setUserDetails(profileData);
       
       // Fetch user's websites
-      await fetchUserWebsites(userId);
+      const websitesData = await fetchUserWebsites(userId);
+      console.log("Fetched websites:", websitesData);
       
       // Fetch user's scripts
-      await fetchUserScripts(userId);
+      const scriptsData = await fetchUserScripts(userId);
+      console.log("Fetched scripts:", scriptsData);
       
       // Fetch user's webhooks
-      await fetchUserWebhooks(userId);
+      console.log("About to fetch webhooks for user:", userId);
+      const webhooksData = await fetchUserWebhooks(userId);
+      console.log("Fetched webhooks data:", webhooksData);
+      console.log("Fetched webhooks data type:", typeof webhooksData);
+      console.log("Is webhooks array:", Array.isArray(webhooksData));
+      console.log("Webhooks length:", webhooksData ? webhooksData.length : 0);
       
     } catch (error: any) {
       console.error('Error fetching user details:', error);

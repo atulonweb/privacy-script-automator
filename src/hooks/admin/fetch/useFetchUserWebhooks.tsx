@@ -26,7 +26,7 @@ export function useFetchUserWebhooks() {
       // Ensure webhooksData is properly processed
       if (webhooksData && Array.isArray(webhooksData)) {
         console.log(`Found ${webhooksData.length} webhooks for user ${userId}`);
-        // Explicitly map the data to ensure all required fields are included
+        
         const processedWebhooks: Webhook[] = webhooksData.map(webhook => ({
           id: webhook.id,
           user_id: webhook.user_id,

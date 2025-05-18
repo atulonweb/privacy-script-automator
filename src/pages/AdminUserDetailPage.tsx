@@ -34,6 +34,9 @@ const AdminUserDetailPage = () => {
     console.log("Webhooks array content:", JSON.stringify(webhooks, null, 2));
   }, [webhooks]);
 
+  // Default to the "webhooks" tab for testing
+  const [activeTab, setActiveTab] = React.useState("webhooks");
+
   return (
     <AdminLayout>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -93,7 +96,7 @@ const AdminUserDetailPage = () => {
                 />
               </CardHeader>
               <CardContent className="space-y-4">
-                <Tabs defaultValue="webhooks">
+                <Tabs value={activeTab} onValueChange={setActiveTab}>
                   <TabsList>
                     <TabsTrigger value="websites" className="flex items-center">
                       <Globe className="mr-2 h-4 w-4" /> Websites
@@ -110,7 +113,7 @@ const AdminUserDetailPage = () => {
                     <TabsTrigger value="webhooks" className="flex items-center">
                       <Webhook className="mr-2 h-4 w-4" /> Webhooks
                       <span className="ml-2 bg-gray-100 text-gray-800 px-2 py-0.5 rounded-full text-xs">
-                        {webhooks ? webhooks.length : 0}
+                        {Array.isArray(webhooks) ? webhooks.length : 0}
                       </span>
                     </TabsTrigger>
                   </TabsList>
@@ -124,7 +127,7 @@ const AdminUserDetailPage = () => {
                   </TabsContent>
                   
                   <TabsContent value="webhooks" className="mt-4 space-y-4">
-                    <UserWebhooksTable webhooks={webhooks || []} websites={websites} />
+                    <UserWebhooksTable webhooks={Array.isArray(webhooks) ? webhooks : []} websites={websites} />
                   </TabsContent>
                 </Tabs>
               </CardContent>
