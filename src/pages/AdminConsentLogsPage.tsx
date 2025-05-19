@@ -5,9 +5,10 @@ import { useConsentLogs } from "@/hooks/admin/useConsentLogs";
 import ConsentLogsTable from "@/components/admin/ConsentLogsTable";
 import ConsentLogsFilterBar from "@/components/admin/ConsentLogsFilterBar";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader } from "lucide-react";
+import { Loader, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { exportToCSV, exportToJSON } from "@/lib/export";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 const AdminConsentLogsPage = () => {
   const [dateRange, setDateRange] = useState<[Date | undefined, Date | undefined]>([undefined, undefined]);
@@ -56,6 +57,15 @@ const AdminConsentLogsPage = () => {
           </div>
         </div>
 
+        {error && error.includes("admin privileges") && (
+          <Alert variant="destructive" className="mb-4">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {error} - Please contact your system administrator.
+            </AlertDescription>
+          </Alert>
+        )}
+
         <Card>
           <CardHeader className="pb-3">
             <CardTitle>Filter Logs</CardTitle>
@@ -65,7 +75,7 @@ const AdminConsentLogsPage = () => {
           </CardHeader>
           <CardContent>
             <ConsentLogsFilterBar 
-              domains={domains}
+              domains={domains || []}
               dateRange={dateRange}
               selectedDomain={domain}
               selectedEventType={eventType}

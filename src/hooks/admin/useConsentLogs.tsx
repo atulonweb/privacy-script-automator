@@ -2,6 +2,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
+import { useToast } from '@/components/ui/use-toast';
 
 export type ConsentLog = {
   id: string;
@@ -33,6 +34,7 @@ export const useConsentLogs = ({
   const [domains, setDomains] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { toast } = useToast();
 
   // Fetch all consent logs and apply filters
   useEffect(() => {
@@ -41,6 +43,19 @@ export const useConsentLogs = ({
       setError(null);
 
       try {
+        // Check if we have admin access
+        const { data: isAdminData, error: isAdminError } = await supabase.rpc('is_admin');
+        
+        if (isAdminError) {
+          console.error('Error checking admin status:', isAdminError);
+        }
+        
+        if (!isAdminData && !isAdminError) {
+          setError('You need admin privileges to view consent logs');
+          setIsLoading(false);
+          return;
+        }
+
         let query = supabase
           .from('domain_activity')
           .select('*')
@@ -73,21 +88,35 @@ export const useConsentLogs = ({
 
         setLogs(data || []);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred while fetching logs');
+        const errorMessage = err instanceof Error ? err.message : 'An error occurred while fetching logs';
+        setError(errorMessage);
         console.error('Error fetching consent logs:', err);
+        
+        toast({
+          title: "Error loading consent logs",
+          description: errorMessage,
+          variant: "destructive",
+        });
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchLogs();
-  }, [dateRange, domain, eventType, region]);
+  }, [dateRange, domain, eventType, region, toast]);
 
   // Fetch unique domains for filter dropdown
   useEffect(() => {
     const fetchDomains = async () => {
       try {
-        // Fix: Use a different approach to get distinct domains since `.distinct()` is not available
+        // Check if we have admin access first
+        const { data: isAdminData, error: isAdminError } = await supabase.rpc('is_admin');
+        
+        if (isAdminError || !isAdminData) {
+          console.error('Error checking admin status or not an admin:', isAdminError);
+          return;
+        }
+        
         const { data, error: domainError } = await supabase
           .from('domain_activity')
           .select('domain');
@@ -101,6 +130,7 @@ export const useConsentLogs = ({
         setDomains(uniqueDomains);
       } catch (err) {
         console.error('Error fetching domains:', err);
+        // Don't set error state here as it would override the main error message
       }
     };
 

@@ -113,11 +113,15 @@ const ConsentLogsFilterBar: React.FC<ConsentLogsFilterBarProps> = ({
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All domains</SelectItem>
-            {domains.map((domain) => (
-              <SelectItem key={domain} value={domain}>
-                {domain}
-              </SelectItem>
-            ))}
+            {domains && domains.length > 0 ? (
+              domains.map((domain) => (
+                <SelectItem key={domain} value={domain}>
+                  {domain}
+                </SelectItem>
+              ))
+            ) : (
+              <SelectItem value="no-domains" disabled>No domains available</SelectItem>
+            )}
           </SelectContent>
         </Select>
       </div>
