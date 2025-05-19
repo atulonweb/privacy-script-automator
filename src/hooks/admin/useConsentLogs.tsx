@@ -118,7 +118,7 @@ export const useConsentLogs = ({
     fetchLogs();
   }, [dateRange, domain, eventType, region, toast]);
 
-  // Fetch unique domains for filter dropdown
+  // Fetch unique domains for filter dropdown - FIX: Changed approach to match other admin pages
   useEffect(() => {
     const fetchDomains = async () => {
       try {
@@ -130,17 +130,22 @@ export const useConsentLogs = ({
           return;
         }
         
+        // Get distinct domains directly from domain_activity table rather than using a join
         const { data, error: domainError } = await supabase
           .from('domain_activity')
-          .select('domain');
+          .select('domain')
+          .order('domain')
+          .limit(100); // Limit to avoid performance issues
 
         if (domainError) {
           throw new Error(domainError.message);
         }
 
         // Extract unique domains manually using Set
-        const uniqueDomains = Array.from(new Set(data?.map(item => item.domain) || [])).filter(Boolean);
-        setDomains(uniqueDomains);
+        if (data && data.length > 0) {
+          const uniqueDomains = Array.from(new Set(data.map(item => item.domain))).filter(Boolean);
+          setDomains(uniqueDomains);
+        }
       } catch (err) {
         console.error('Error fetching domains:', err);
         // We don't set the main error state here to avoid overriding the logs error message
