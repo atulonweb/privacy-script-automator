@@ -3,6 +3,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { useToast } from '@/components/ui/use-toast';
+import { useAuth } from '@/context/AuthContext';
 
 export type ConsentLog = {
   id: string;
@@ -35,23 +36,7 @@ export const useConsentLogs = ({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
-
-  // Check if the current user is an admin
-  const checkAdminStatus = async () => {
-    try {
-      // Use the function we created to check admin status
-      const { data, error } = await supabase.rpc('is_admin');
-      
-      if (error) {
-        throw new Error('Error checking admin status: ' + error.message);
-      }
-      
-      return data === true;
-    } catch (err) {
-      console.error('Admin check error:', err);
-      return false;
-    }
-  };
+  const { isAdmin } = useAuth();
 
   // Fetch all consent logs and apply filters
   useEffect(() => {
@@ -60,15 +45,9 @@ export const useConsentLogs = ({
       setError(null);
 
       try {
-        // Check if user is admin first
-        const isAdmin = await checkAdminStatus();
+        // We don't need to check admin status here - AdminRoute already handles this
+        // The page is only accessible to admins
         
-        if (!isAdmin) {
-          setError('You need admin privileges to view consent logs');
-          setIsLoading(false);
-          return;
-        }
-
         let query = supabase
           .from('domain_activity')
           .select('*')
@@ -118,21 +97,15 @@ export const useConsentLogs = ({
     fetchLogs();
   }, [dateRange, domain, eventType, region, toast]);
 
-  // Fetch unique domains for filter dropdown - FIX: Changed approach to match other admin pages
+  // Fetch domains from websites table instead, like other admin pages
   useEffect(() => {
     const fetchDomains = async () => {
       try {
-        // Check if user is admin first
-        const isAdmin = await checkAdminStatus();
+        // No need to check admin status here
         
-        if (!isAdmin) {
-          console.error('Admin privileges required to fetch domains');
-          return;
-        }
-        
-        // Get distinct domains directly from domain_activity table rather than using a join
+        // Get domains from websites table like other admin pages
         const { data, error: domainError } = await supabase
-          .from('domain_activity')
+          .from('websites')
           .select('domain')
           .order('domain')
           .limit(100); // Limit to avoid performance issues
@@ -141,7 +114,7 @@ export const useConsentLogs = ({
           throw new Error(domainError.message);
         }
 
-        // Extract unique domains manually using Set
+        // Extract unique domains
         if (data && data.length > 0) {
           const uniqueDomains = Array.from(new Set(data.map(item => item.domain))).filter(Boolean);
           setDomains(uniqueDomains);
