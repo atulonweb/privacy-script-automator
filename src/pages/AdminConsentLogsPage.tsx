@@ -18,13 +18,13 @@ const AdminConsentLogsPage = () => {
   const { logs, isLoading, domains, error } = useConsentLogs({ dateRange, domain, eventType, region });
 
   const handleExportCSV = () => {
-    if (logs) {
+    if (logs?.length) {
       exportToCSV(logs, 'consent-logs');
     }
   };
 
   const handleExportJSON = () => {
-    if (logs) {
+    if (logs?.length) {
       exportToJSON(logs, 'consent-logs');
     }
   };
@@ -57,11 +57,13 @@ const AdminConsentLogsPage = () => {
           </div>
         </div>
 
-        {error && error.includes("admin privileges") && (
+        {/* Show error message if there's an error */}
+        {error && (
           <Alert variant="destructive" className="mb-4">
             <AlertCircle className="h-4 w-4" />
             <AlertDescription>
-              {error} - Please contact your system administrator.
+              {error}
+              {error.includes("admin privileges") && " - Please contact your system administrator."}
             </AlertDescription>
           </Alert>
         )}
@@ -102,7 +104,12 @@ const AdminConsentLogsPage = () => {
               </div>
             ) : error ? (
               <div className="py-8 text-center text-red-500">
-                Error: {error}
+                <p>Error: {error}</p>
+                {error.includes("permission denied") && (
+                  <p className="mt-2 text-sm">
+                    This may be caused by missing database permissions. Please contact your administrator.
+                  </p>
+                )}
               </div>
             ) : logs && logs.length > 0 ? (
               <ConsentLogsTable logs={logs} />

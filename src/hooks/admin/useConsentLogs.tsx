@@ -36,6 +36,22 @@ export const useConsentLogs = ({
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
+  // Check if the current user is an admin
+  const checkAdminStatus = async () => {
+    try {
+      const { data, error } = await supabase.rpc('is_admin');
+      
+      if (error) {
+        throw new Error('Error checking admin status: ' + error.message);
+      }
+      
+      return data === true;
+    } catch (err) {
+      console.error('Admin check error:', err);
+      return false;
+    }
+  };
+
   // Fetch all consent logs and apply filters
   useEffect(() => {
     const fetchLogs = async () => {
@@ -43,14 +59,10 @@ export const useConsentLogs = ({
       setError(null);
 
       try {
-        // Check if we have admin access
-        const { data: isAdminData, error: isAdminError } = await supabase.rpc('is_admin');
+        // Check if user is admin
+        const isAdmin = await checkAdminStatus();
         
-        if (isAdminError) {
-          console.error('Error checking admin status:', isAdminError);
-        }
-        
-        if (!isAdminData && !isAdminError) {
+        if (!isAdmin) {
           setError('You need admin privileges to view consent logs');
           setIsLoading(false);
           return;
@@ -109,11 +121,11 @@ export const useConsentLogs = ({
   useEffect(() => {
     const fetchDomains = async () => {
       try {
-        // Check if we have admin access first
-        const { data: isAdminData, error: isAdminError } = await supabase.rpc('is_admin');
+        // Check if user is admin first
+        const isAdmin = await checkAdminStatus();
         
-        if (isAdminError || !isAdminData) {
-          console.error('Error checking admin status or not an admin:', isAdminError);
+        if (!isAdmin) {
+          console.error('Admin privileges required to fetch domains');
           return;
         }
         
@@ -126,11 +138,11 @@ export const useConsentLogs = ({
         }
 
         // Extract unique domains manually using Set
-        const uniqueDomains = Array.from(new Set(data?.map(item => item.domain) || []));
+        const uniqueDomains = Array.from(new Set(data?.map(item => item.domain) || [])).filter(Boolean);
         setDomains(uniqueDomains);
       } catch (err) {
         console.error('Error fetching domains:', err);
-        // Don't set error state here as it would override the main error message
+        // We don't set the main error state here to avoid overriding the logs error message
       }
     };
 

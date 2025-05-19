@@ -5,14 +5,15 @@
 DROP POLICY IF EXISTS "Admins can view all domain activities" ON public.domain_activity;
 DROP POLICY IF EXISTS "Users can view their own domain activities" ON public.domain_activity;
 
--- Create a policy for admins to view all domain activities using the is_admin() function
--- This uses the is_admin() function which is already defined in the database
+-- Create a policy for admins to view all domain activities
 CREATE POLICY "Admins can view all domain activities" 
   ON public.domain_activity 
   FOR SELECT 
-  USING (public.is_admin());
+  USING (
+    auth.jwt() ? 'role' AND auth.jwt()->>'role' = 'admin'
+  );
 
--- Create a policy for users to view their own domain activities
+-- Create a policy for website owners to view activities for their domains
 CREATE POLICY "Users can view their own domain activities" 
   ON public.domain_activity 
   FOR SELECT 
@@ -23,3 +24,6 @@ CREATE POLICY "Users can view their own domain activities"
       WHERE cs.id = domain_activity.script_id AND w.user_id = auth.uid()
     )
   );
+
+-- Enable RLS on the domain_activity table if not already enabled
+ALTER TABLE public.domain_activity ENABLE ROW LEVEL SECURITY;
