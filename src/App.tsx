@@ -26,6 +26,7 @@ import AdminManagementPage from "./pages/AdminManagementPage";
 import AdminUserDetailPage from './pages/AdminUserDetailPage';
 import AdminScriptsPage from './pages/AdminScriptsPage';
 import AdminDomainsPage from './pages/AdminDomainsPage';
+import AdminConsentLogsPage from './pages/AdminConsentLogsPage';
 
 // Components
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -83,6 +84,12 @@ function App() {
             path="/admin/domains" 
             element={
               <AdminRoute component={AdminDomainsPage} />
+            } 
+          />
+          <Route 
+            path="/admin/consent-logs" 
+            element={
+              <AdminRoute component={AdminConsentLogsPage} />
             } 
           />
           <Route path="/admin/settings" element={<AdminRoute><AdminSettingsPage /></AdminRoute>} />

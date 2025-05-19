@@ -12,7 +12,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useMediaQuery } from '@/hooks/use-media-query';
-import { Menu, X, Users, Settings, Activity, Database, UserPlus, FileCode, Globe } from 'lucide-react';
+import { Menu, X, Users, Settings, Activity, Database, UserPlus, FileCode, Globe, Calendar } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
 interface AdminLayoutProps {
@@ -31,6 +31,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
     { name: 'Users', path: '/admin/users', icon: <Users className="h-5 w-5 mr-2" /> },
     { name: 'Scripts', path: '/admin/scripts', icon: <FileCode className="h-5 w-5 mr-2" /> },
     { name: 'Domains', path: '/admin/domains', icon: <Globe className="h-5 w-5 mr-2" /> },
+    { name: 'Consent Logs', path: '/admin/consent-logs', icon: <Calendar className="h-5 w-5 mr-2" /> },
     { name: 'Admins', path: '/admin/admins', icon: <UserPlus className="h-5 w-5 mr-2" /> },
     { name: 'Webhooks', path: '/admin/webhooks', icon: <Database className="h-5 w-5 mr-2" /> },
     { name: 'Settings', path: '/admin/settings', icon: <Settings className="h-5 w-5 mr-2" /> },
