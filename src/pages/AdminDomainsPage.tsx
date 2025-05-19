@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -51,8 +52,8 @@ interface Domain {
   name: string;
   status: 'active' | 'inactive' | 'blocked' | 'pending';
   last_seen: string | null;
-  total_consent_events: number;
-  users_seen: number;
+  total_consent_events: number | null;
+  users_seen: number | null;
   script_status: 'configured' | 'missing' | 'partial';
   connected_user_id: string;
   connected_user_email: string;
@@ -62,9 +63,9 @@ interface Domain {
   plan_type: 'free' | 'pro' | 'enterprise';
   usage_warnings: string[];
   geo_distribution: {
-    eu: number;
-    us: number;
-    other: number;
+    eu: number | null;
+    us: number | null;
+    other: number | null;
   };
 }
 
@@ -140,6 +141,27 @@ const AdminDomainsPage: React.FC = () => {
         // Non-fatal error, continue with what we have
       }
 
+      // Fetch domain_activity data for geo distribution
+      const { data: domainGeoData, error: domainGeoError } = await supabase
+        .from('domain_geo_distribution')
+        .select('*');
+        
+      if (domainGeoError) {
+        console.error("Error fetching domain geo distribution:", domainGeoError);
+        // Non-fatal error, continue with what we have
+      }
+
+      // Fetch domain activity data for last seen timestamps
+      const { data: domainActivity, error: domainActivityError } = await supabase
+        .from('domain_activity')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (domainActivityError) {
+        console.error("Error fetching domain activity:", domainActivityError);
+        // Non-fatal error, continue with what we have
+      }
+
       // Try to fetch user emails from admin function
       let userEmailMap = new Map();
       try {
@@ -186,35 +208,57 @@ const AdminDomainsPage: React.FC = () => {
           // Find user profile
           const profile = profiles?.find(p => p.id === website.user_id);
           
-          // Calculate consent events from analytics data
-          let totalConsentEvents = 0;
-          let acceptCount = 0;
-          let rejectCount = 0;
-          let partialCount = 0;
+          // Calculate consent events from analytics data - only use real data
+          let totalConsentEvents = null;
+          let usersSeen = null;
           
-          // Use real analytics data if available
           if (websiteAnalytics && websiteAnalytics.length > 0) {
-            websiteAnalytics.forEach(a => {
-              totalConsentEvents += (a.accept_count || 0) + (a.reject_count || 0) + (a.partial_count || 0);
-              acceptCount += a.accept_count || 0;
-              rejectCount += a.reject_count || 0;
-              partialCount += a.partial_count || 0;
-            });
-          } else {
-            // Generate placeholder data for demonstration if no analytics
-            const daysSinceCreation = Math.floor((Date.now() - new Date(website.created_at).getTime()) / (1000 * 60 * 60 * 24));
-            totalConsentEvents = Math.floor(Math.random() * 100) * (daysSinceCreation || 1);
+            totalConsentEvents = websiteAnalytics.reduce((sum, a) => 
+              sum + (a.accept_count || 0) + (a.reject_count || 0) + (a.partial_count || 0), 0);
+            usersSeen = websiteAnalytics.reduce((sum, a) => sum + (a.visitor_count || 0), 0);
           }
           
-          // Calculate users seen (unique visitors)
-          let usersSeen = 0;
+          // Get geo distribution from domain_activity table - only use real data
+          const geoDistribution = { eu: null, us: null, other: null };
           
-          // Use real visitor count if available
-          if (websiteAnalytics && websiteAnalytics.length > 0) {
-            usersSeen = websiteAnalytics.reduce((sum, a) => sum + (a.visitor_count || 0), 0);
-          } else {
-            // Placeholder: Estimate unique users as ~70% of total events
-            usersSeen = Math.floor(totalConsentEvents * 0.7);
+          if (domainGeoData && domainGeoData.length > 0) {
+            // Find geo data for this website's scripts
+            const scriptIds = websiteScripts.map(script => script.id);
+            const websiteGeoData = domainGeoData.filter(g => scriptIds.includes(g.script_id));
+            
+            if (websiteGeoData.length > 0) {
+              let totalVisitors = 0;
+              let euVisitors = 0;
+              let usVisitors = 0;
+              let otherVisitors = 0;
+              
+              websiteGeoData.forEach(geo => {
+                totalVisitors += geo.total_unique_visitors || 0;
+                euVisitors += geo.eu_visitors || 0;
+                usVisitors += geo.us_visitors || 0;
+                otherVisitors += geo.other_visitors || 0;
+              });
+              
+              if (totalVisitors > 0) {
+                geoDistribution.eu = Math.round((euVisitors / totalVisitors) * 100);
+                geoDistribution.us = Math.round((usVisitors / totalVisitors) * 100);
+                geoDistribution.other = Math.round((otherVisitors / totalVisitors) * 100);
+                
+                // Adjust to ensure they sum to 100%
+                const sum = (geoDistribution.eu || 0) + (geoDistribution.us || 0) + (geoDistribution.other || 0);
+                if (sum !== 100 && sum > 0) {
+                  // Add/subtract the difference to/from the largest percentage
+                  const diff = 100 - sum;
+                  if (geoDistribution.eu >= geoDistribution.us && geoDistribution.eu >= geoDistribution.other) {
+                    geoDistribution.eu += diff;
+                  } else if (geoDistribution.us >= geoDistribution.eu && geoDistribution.us >= geoDistribution.other) {
+                    geoDistribution.us += diff;
+                  } else {
+                    geoDistribution.other += diff;
+                  }
+                }
+              }
+            }
           }
           
           // Generate usage warnings based on real data
@@ -234,35 +278,32 @@ const AdminDomainsPage: React.FC = () => {
             warnings.push('No consent events recorded');
           }
           
-          // Get last seen timestamp - this would come from domain pings in production
-          let lastSeen = website.updated_at;
+          // Get last seen timestamp - only use real data
+          let lastSeen = null;
           
-          // If we have analytics data, use the most recent entry
-          if (websiteAnalytics && websiteAnalytics.length > 0) {
+          // Check domain activity first for the most recent timestamp
+          if (domainActivity && domainActivity.length > 0) {
+            const scriptIds = websiteScripts.map(script => script.id);
+            const websiteDomainActivity = domainActivity.filter(a => scriptIds.includes(a.script_id));
+            
+            if (websiteDomainActivity.length > 0) {
+              // Find the most recent activity
+              const mostRecentActivity = websiteDomainActivity.reduce((latest, current) => {
+                return new Date(latest.created_at) > new Date(current.created_at) ? latest : current;
+              }, websiteDomainActivity[0]);
+              
+              lastSeen = mostRecentActivity.created_at;
+            }
+          }
+          
+          // If no domain activity, check analytics data
+          if (!lastSeen && websiteAnalytics && websiteAnalytics.length > 0) {
             // Use the most recent analytics entry date
             const mostRecentAnalytics = websiteAnalytics.reduce((latest, current) => {
               return new Date(latest.created_at) > new Date(current.created_at) ? latest : current;
             }, websiteAnalytics[0]);
             
             lastSeen = mostRecentAnalytics.created_at;
-          }
-          
-          // Determine geo distribution from analytics or browser languages
-          // In real system this would come from IP geolocation in the analytics data
-          const geoDistribution = { eu: 0, us: 0, other: 0 };
-          
-          if (websiteAnalytics && websiteAnalytics.length > 0) {
-            // Placeholder: In a real system, we would aggregate geo data from analytics
-            // For now, generate semi-realistic numbers
-            geoDistribution.eu = Math.floor(Math.random() * 40) + 20;
-            geoDistribution.us = Math.floor(Math.random() * 40) + 20;
-            geoDistribution.other = 100 - geoDistribution.eu - geoDistribution.us;
-            if (geoDistribution.other < 0) geoDistribution.other = 0;
-          } else {
-            // Default distribution
-            geoDistribution.eu = 33;
-            geoDistribution.us = 33;
-            geoDistribution.other = 34;
           }
           
           return {
@@ -471,6 +512,16 @@ const AdminDomainsPage: React.FC = () => {
     setCurrentPage(1); // Reset to first page when changing items per page
   };
 
+  const formatDataValue = (value: number | null): string => {
+    if (value === null) return 'N/A';
+    return value.toLocaleString();
+  };
+
+  const formatPercentage = (value: number | null): string => {
+    if (value === null) return 'N/A';
+    return `${value}%`;
+  };
+
   return (
     <AdminLayout>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -494,7 +545,7 @@ const AdminDomainsPage: React.FC = () => {
             <CardContent>
               <div className="space-y-4 text-blue-800">
                 <div>
-                  <h3 className="font-semibold mb-2">Real Data Sources:</h3>
+                  <h3 className="font-semibold mb-2">Data Sources:</h3>
                   <ul className="list-disc pl-6 space-y-1">
                     <li>Domain Name & Website Info (from websites table)</li>
                     <li>Active/Inactive Status (from websites table)</li>
@@ -502,15 +553,16 @@ const AdminDomainsPage: React.FC = () => {
                     <li>Connected User (from users and profiles tables)</li>
                     <li>Script Status (from consent_scripts table)</li>
                     <li>Last Script Update (from consent_scripts table)</li>
-                    <li>Last Seen (from most recent analytics entry or website updated_at)</li>
-                    <li>Consent Events (from analytics table when available)</li>
+                    <li>Last Seen (from domain_activity table)</li>
+                    <li>Consent Events (from analytics table)</li>
+                    <li>Geo Distribution (from domain_activity table)</li>
                   </ul>
                 </div>
                 <div>
-                  <h3 className="font-semibold mb-2">Placeholder Data (Until All Clients Send Data):</h3>
+                  <h3 className="font-semibold mb-2">Missing Data Display:</h3>
                   <ul className="list-disc pl-6 space-y-1">
-                    <li><Badge className="bg-yellow-200 text-yellow-900">Temporary</Badge> Geo Distribution - Will be populated from client data</li>
-                    <li><Badge className="bg-yellow-200 text-yellow-900">Temporary</Badge> Users Seen - Partially derived from analytics, will improve with more data</li>
+                    <li>When data is unavailable for a field, it will show 'N/A' or '0'</li>
+                    <li>No mock data or placeholder values are used</li>
                   </ul>
                 </div>
               </div>
@@ -621,8 +673,10 @@ const AdminDomainsPage: React.FC = () => {
                           <HoverCard>
                             <HoverCardTrigger asChild>
                               <div className="cursor-help">
-                                <div className="text-sm">{domain.total_consent_events.toLocaleString()}</div>
-                                <div className="text-xs text-muted-foreground">{domain.users_seen.toLocaleString()} users</div>
+                                <div className="text-sm">{formatDataValue(domain.total_consent_events)}</div>
+                                <div className="text-xs text-muted-foreground">
+                                  {domain.users_seen !== null ? `${domain.users_seen.toLocaleString()} users` : 'No users'}
+                                </div>
                               </div>
                             </HoverCardTrigger>
                             <HoverCardContent className="w-80">
@@ -630,9 +684,9 @@ const AdminDomainsPage: React.FC = () => {
                                 <h4 className="text-sm font-semibold">Consent Event Details</h4>
                                 <div className="grid grid-cols-2 gap-1 text-sm">
                                   <div className="text-muted-foreground">Total Events:</div>
-                                  <div className="font-medium">{domain.total_consent_events.toLocaleString()}</div>
+                                  <div className="font-medium">{formatDataValue(domain.total_consent_events)}</div>
                                   <div className="text-muted-foreground">Unique Users:</div>
-                                  <div className="font-medium">{domain.users_seen.toLocaleString()}</div>
+                                  <div className="font-medium">{formatDataValue(domain.users_seen)}</div>
                                 </div>
                               </div>
                             </HoverCardContent>
@@ -672,51 +726,50 @@ const AdminDomainsPage: React.FC = () => {
                               <div className="flex flex-col gap-1 cursor-help">
                                 <div className="flex items-center justify-between text-xs">
                                   <span>EU:</span>
-                                  <span className="font-medium">{domain.geo_distribution.eu}%</span>
+                                  <span className="font-medium">{formatPercentage(domain.geo_distribution.eu)}</span>
                                 </div>
                                 <div className="flex items-center justify-between text-xs">
                                   <span>US:</span>
-                                  <span className="font-medium">{domain.geo_distribution.us}%</span>
+                                  <span className="font-medium">{formatPercentage(domain.geo_distribution.us)}</span>
                                 </div>
                                 <div className="flex items-center justify-between text-xs">
                                   <span>Other:</span>
-                                  <span className="font-medium">{domain.geo_distribution.other}%</span>
+                                  <span className="font-medium">{formatPercentage(domain.geo_distribution.other)}</span>
                                 </div>
                               </div>
                             </HoverCardTrigger>
                             <HoverCardContent className="w-80">
                               <div className="space-y-2">
                                 <h4 className="text-sm font-semibold">Geographic Distribution</h4>
-                                {showDataSourceInfo && (
-                                  <div className="text-xs text-amber-600">
-                                    This data is currently approximate based on browser language. IP geolocation will be added to analytics for more accuracy.
+                                {domain.geo_distribution.eu === null ? (
+                                  <div className="text-sm text-muted-foreground">No geographic data available</div>
+                                ) : (
+                                  <div className="space-y-2">
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-sm">European Union</span>
+                                      <span className="font-medium">{formatPercentage(domain.geo_distribution.eu)}</span>
+                                    </div>
+                                    <div className="w-full h-2 bg-gray-200 rounded-full">
+                                      <div className="h-2 bg-blue-500 rounded-full" style={{ width: `${domain.geo_distribution.eu || 0}%` }}></div>
+                                    </div>
+                                    
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-sm">United States</span>
+                                      <span className="font-medium">{formatPercentage(domain.geo_distribution.us)}</span>
+                                    </div>
+                                    <div className="w-full h-2 bg-gray-200 rounded-full">
+                                      <div className="h-2 bg-green-500 rounded-full" style={{ width: `${domain.geo_distribution.us || 0}%` }}></div>
+                                    </div>
+                                    
+                                    <div className="flex justify-between items-center">
+                                      <span className="text-sm">Other Regions</span>
+                                      <span className="font-medium">{formatPercentage(domain.geo_distribution.other)}</span>
+                                    </div>
+                                    <div className="w-full h-2 bg-gray-200 rounded-full">
+                                      <div className="h-2 bg-purple-500 rounded-full" style={{ width: `${domain.geo_distribution.other || 0}%` }}></div>
+                                    </div>
                                   </div>
                                 )}
-                                <div className="space-y-2">
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-sm">European Union</span>
-                                    <span className="font-medium">{domain.geo_distribution.eu}%</span>
-                                  </div>
-                                  <div className="w-full h-2 bg-gray-200 rounded-full">
-                                    <div className="h-2 bg-blue-500 rounded-full" style={{ width: `${domain.geo_distribution.eu}%` }}></div>
-                                  </div>
-                                  
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-sm">United States</span>
-                                    <span className="font-medium">{domain.geo_distribution.us}%</span>
-                                  </div>
-                                  <div className="w-full h-2 bg-gray-200 rounded-full">
-                                    <div className="h-2 bg-green-500 rounded-full" style={{ width: `${domain.geo_distribution.us}%` }}></div>
-                                  </div>
-                                  
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-sm">Other Regions</span>
-                                    <span className="font-medium">{domain.geo_distribution.other}%</span>
-                                  </div>
-                                  <div className="w-full h-2 bg-gray-200 rounded-full">
-                                    <div className="h-2 bg-purple-500 rounded-full" style={{ width: `${domain.geo_distribution.other}%` }}></div>
-                                  </div>
-                                </div>
                               </div>
                             </HoverCardContent>
                           </HoverCard>

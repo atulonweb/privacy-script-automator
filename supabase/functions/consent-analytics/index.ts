@@ -1,182 +1,284 @@
 
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.13.1'
+import { serve } from "https://deno.land/std@0.131.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.8";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-}
-
-// Create a Supabase client
-const supabaseUrl = Deno.env.get('SUPABASE_URL') || ''
-const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') || ''
-const supabase = createClient(supabaseUrl, supabaseKey)
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 serve(async (req) => {
-  // Handle CORS preflight request
-  if (req.method === 'OPTIONS') {
-    return new Response(null, { headers: corsHeaders })
+  // Handle CORS preflight requests
+  if (req.method === "OPTIONS") {
+    return new Response(null, {
+      headers: corsHeaders,
+      status: 204,
+    });
   }
+
+  // Get the Supabase URL and key from environment variables
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    return new Response(
+      JSON.stringify({
+        error: "Missing environment variables",
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      }
+    );
+  }
+
+  // Create a Supabase client with the admin key
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
   try {
-    const url = new URL(req.url)
-    const path = url.pathname.split('/').pop()
-    
-    // Parse the request body
-    const body = await req.json()
-    
-    if (path === 'analytics') {
-      // Record consent event (accept/reject/partial)
-      const { scriptId, action, domain, timestamp, region, visitorId, sessionId } = body
-      
-      if (!scriptId) {
+    // Handle domain activity recording
+    if (req.url.includes("/domain-activity")) {
+      const { scriptId, eventType, domain, url, visitorId, sessionId, userAgent, region, language } = await req.json();
+
+      if (!scriptId || !eventType || !domain) {
         return new Response(
-          JSON.stringify({ error: 'Missing script ID' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
+          JSON.stringify({
+            error: "Missing required fields",
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 400,
+          }
+        );
       }
 
-      // Get the script to find the website_id
-      const { data: script, error: scriptError } = await supabase
-        .from('consent_scripts')
-        .select('website_id')
-        .eq('script_id', scriptId)
-        .single()
+      // Insert domain activity record
+      const { data, error } = await supabase.from("domain_activity").insert({
+        script_id: scriptId,
+        event_type: eventType,
+        domain,
+        url,
+        visitor_id: visitorId,
+        session_id: sessionId,
+        user_agent: userAgent,
+        region,
+        language,
+      });
 
-      if (scriptError || !script) {
-        console.error('Error finding script:', scriptError)
+      if (error) {
+        console.error("Error inserting domain activity:", error);
         return new Response(
-          JSON.stringify({ error: 'Script not found' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
+          JSON.stringify({
+            error: "Failed to record domain activity",
+            details: error.message,
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 500,
+          }
+        );
       }
 
-      // Get today's date in YYYY-MM-DD format for analytics entry
-      const today = new Date().toISOString().split('T')[0]
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Domain activity recorded",
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
+    }
+    
+    // Handle analytics recording (update the existing analytics logic)
+    else if (req.url.includes("/analytics")) {
+      const { scriptId, action, domain, visitorId } = await req.json();
 
-      // Try to get existing analytics record for today
-      const { data: existingAnalytics, error: analyticsError } = await supabase
-        .from('analytics')
-        .select('*')
-        .eq('script_id', scriptId)
-        .eq('date', today)
-        .maybeSingle()
-
-      if (analyticsError) {
-        console.error('Error checking analytics:', analyticsError)
+      if (!scriptId || !action) {
+        return new Response(
+          JSON.stringify({
+            error: "Missing required fields",
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 400,
+          }
+        );
       }
 
-      if (existingAnalytics) {
-        // Update existing analytics record
-        const updateData: any = {
-          updated_at: new Date().toISOString(),
-        }
-        
-        // Increment the appropriate counter based on action
-        if (action === 'accept') {
-          updateData.accept_count = existingAnalytics.accept_count + 1
-        } else if (action === 'reject') {
-          updateData.reject_count = existingAnalytics.reject_count + 1
-        } else if (action === 'partial') {
-          updateData.partial_count = existingAnalytics.partial_count + 1
-        }
-        
-        // Increment visitor count if this is a new visitor
-        // In a real system, we would check if this visitor was already counted today
-        updateData.visitor_count = existingAnalytics.visitor_count + 1
-        
+      // Get today's date in ISO format (YYYY-MM-DD)
+      const today = new Date().toISOString().split("T")[0];
+
+      // Check if an entry for today already exists for this script
+      const { data: existingEntries, error: queryError } = await supabase
+        .from("analytics")
+        .select("*")
+        .eq("script_id", scriptId)
+        .eq("date", today);
+
+      if (queryError) {
+        console.error("Error querying analytics:", queryError);
+        return new Response(
+          JSON.stringify({
+            error: "Failed to check existing analytics",
+            details: queryError.message,
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 500,
+          }
+        );
+      }
+
+      // Track the unique visitors by checking if this visitor has been counted today
+      const visitorAlreadyCounted = existingEntries?.some(entry => {
+        // This is a simplified check; in a production system, you would store visitor IDs
+        // in a separate table and check against that
+        return entry.visitor_ids && entry.visitor_ids.includes(visitorId);
+      });
+
+      // Prepare increment values based on action
+      let incrementValues: any = {};
+      switch (action) {
+        case "accept":
+          incrementValues.accept_count = 1;
+          break;
+        case "reject":
+          incrementValues.reject_count = 1;
+          break;
+        case "partial":
+          incrementValues.partial_count = 1;
+          break;
+        // 'view' doesn't increment any specific counter but is tracked in domain_activity
+      }
+
+      // If this is a unique visitor for today, increment the visitor count
+      if (!visitorAlreadyCounted) {
+        incrementValues.visitor_count = 1;
+      }
+
+      if (existingEntries && existingEntries.length > 0) {
+        // Update existing entry
         const { error: updateError } = await supabase
-          .from('analytics')
-          .update(updateData)
-          .eq('id', existingAnalytics.id)
+          .from("analytics")
+          .update(incrementValues)
+          .eq("id", existingEntries[0].id);
 
         if (updateError) {
-          console.error('Error updating analytics:', updateError)
+          console.error("Error updating analytics:", updateError);
+          return new Response(
+            JSON.stringify({
+              error: "Failed to update analytics",
+              details: updateError.message,
+            }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 500,
+            }
+          );
         }
       } else {
-        // Create new analytics record for today
-        const analyticsData: any = {
+        // Create new entry for today
+        const newEntry = {
           script_id: scriptId,
           date: today,
-          visitor_count: 1,
-          accept_count: action === 'accept' ? 1 : 0,
-          reject_count: action === 'reject' ? 1 : 0,
-          partial_count: action === 'partial' ? 1 : 0
-        }
+          accept_count: action === "accept" ? 1 : 0,
+          reject_count: action === "reject" ? 1 : 0,
+          partial_count: action === "partial" ? 1 : 0,
+          visitor_count: 1, // First visitor of the day
+        };
 
-        const { error: insertError } = await supabase
-          .from('analytics')
-          .insert(analyticsData)
+        const { error: insertError } = await supabase.from("analytics").insert(newEntry);
 
         if (insertError) {
-          console.error('Error inserting analytics:', insertError)
+          console.error("Error inserting analytics:", insertError);
+          return new Response(
+            JSON.stringify({
+              error: "Failed to insert analytics",
+              details: insertError.message,
+            }),
+            {
+              headers: { ...corsHeaders, "Content-Type": "application/json" },
+              status: 500,
+            }
+          );
         }
       }
 
-      // Store the detailed event in a new domain_events table for more granular analysis
-      // This would be implemented in a production system
-      
       return new Response(
-        JSON.stringify({ success: true }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    } else if (path === 'ping') {
-      // Record domain ping (last seen)
-      const { scriptId, domain, timestamp, region, visitorId, sessionId, userAgent, language } = body
-      
-      if (!scriptId) {
-        return new Response(
-          JSON.stringify({ error: 'Missing script ID' }),
-          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-
-      // Get the script to find the website_id
-      const { data: script, error: scriptError } = await supabase
-        .from('consent_scripts')
-        .select('website_id')
-        .eq('script_id', scriptId)
-        .single()
-
-      if (scriptError || !script) {
-        console.error('Error finding script:', scriptError)
-        return new Response(
-          JSON.stringify({ error: 'Script not found' }),
-          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        )
-      }
-
-      // Update the website with last_seen timestamp
-      // In a real system, we would have a dedicated domain_activity table
-      const { error: updateError } = await supabase
-        .from('websites')
-        .update({ 
-          updated_at: new Date().toISOString(),
-          // In a production system, we would store additional metadata
-          // like geo distribution, browser info, etc.
-        })
-        .eq('id', script.website_id)
-
-      if (updateError) {
-        console.error('Error updating website last seen:', updateError)
-      }
-      
-      return new Response(
-        JSON.stringify({ success: true }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
+        JSON.stringify({
+          success: true,
+          message: "Analytics recorded",
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
     }
+    
+    // Handle ping requests (update last seen)
+    else if (req.url.includes("/ping")) {
+      const { scriptId, domain } = await req.json();
 
-    // Default response for unknown paths
+      if (!scriptId || !domain) {
+        return new Response(
+          JSON.stringify({
+            error: "Missing required fields",
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 400,
+          }
+        );
+      }
+
+      // Record ping as domain activity
+      await supabase.from("domain_activity").insert({
+        script_id: scriptId,
+        event_type: 'ping',
+        domain,
+        visitor_id: req.json().visitorId || null,
+        session_id: req.json().sessionId || null,
+        user_agent: req.json().userAgent || null,
+        region: req.json().region || 'other',
+        language: req.json().language || null,
+      });
+
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: "Ping recorded",
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
+    }
+    
+    // Handle unknown endpoints
     return new Response(
-      JSON.stringify({ error: 'Invalid endpoint' }),
-      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+      JSON.stringify({
+        error: "Unknown endpoint",
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 404,
+      }
+    );
   } catch (error) {
-    console.error('Error processing request:', error)
+    console.error("Unhandled error:", error);
     return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    )
+      JSON.stringify({
+        error: "Internal server error",
+        details: error.message,
+      }),
+      {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500,
+      }
+    );
   }
-})
+});

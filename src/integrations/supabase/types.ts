@@ -112,6 +112,56 @@ export type Database = {
           },
         ]
       }
+      domain_activity: {
+        Row: {
+          created_at: string
+          domain: string
+          event_type: string
+          id: string
+          language: string | null
+          region: string | null
+          script_id: string
+          session_id: string | null
+          url: string | null
+          user_agent: string | null
+          visitor_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          domain: string
+          event_type: string
+          id?: string
+          language?: string | null
+          region?: string | null
+          script_id: string
+          session_id?: string | null
+          url?: string | null
+          user_agent?: string | null
+          visitor_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          domain?: string
+          event_type?: string
+          id?: string
+          language?: string | null
+          region?: string | null
+          script_id?: string
+          session_id?: string | null
+          url?: string | null
+          user_agent?: string | null
+          visitor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "domain_activity_script_id_fkey"
+            columns: ["script_id"]
+            isOneToOne: false
+            referencedRelation: "consent_scripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -259,7 +309,25 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      domain_geo_distribution: {
+        Row: {
+          domain: string | null
+          eu_visitors: number | null
+          other_visitors: number | null
+          script_id: string | null
+          total_unique_visitors: number | null
+          us_visitors: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "domain_activity_script_id_fkey"
+            columns: ["script_id"]
+            isOneToOne: false
+            referencedRelation: "consent_scripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       is_admin: {

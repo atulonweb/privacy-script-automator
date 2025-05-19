@@ -46,12 +46,14 @@ export async function recordAnalytics(action) {
         region: region,
         // Add unique visitor tracking
         visitorId: getOrCreateVisitorId(),
-        sessionId: getOrCreateSessionId()
+        sessionId: getOrCreateSessionId(),
+        userAgent: navigator.userAgent,
+        language: language
       })
     });
     
-    // Also record a ping to update the "last seen" timestamp
-    recordDomainPing();
+    // Also record a domain activity entry to store detailed data
+    recordDomainActivity(action);
   } catch (error) {
     console.error('ConsentGuard: Error recording analytics', error);
   }
@@ -92,13 +94,15 @@ function getOrCreateVisitorId() {
 }
 
 /**
- * Record a domain ping to track when the script was last seen active
+ * Record detailed domain activity for better analytics
+ * @param {string} eventType - The type of event (ping, view, accept, reject, partial)
  */
-export async function recordDomainPing() {
+async function recordDomainActivity(eventType) {
   if (testMode) return;
   
   try {
     const domain = window.location.hostname;
+    const currentUrl = window.location.href;
     
     // Get browser language for rough geo determination
     const language = navigator.language || 'en-US';
@@ -110,22 +114,37 @@ export async function recordDomainPing() {
       region = 'eu'; 
     }
     
-    await fetch(`${API_ENDPOINT}/ping`, {
+    await fetch(`${API_ENDPOINT}/domain-activity`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         scriptId: scriptId,
+        eventType: eventType,
         domain: domain,
-        timestamp: new Date().toISOString(),
+        url: currentUrl,
         visitorId: getOrCreateVisitorId(),
         sessionId: getOrCreateSessionId(),
-        region: region,
         userAgent: navigator.userAgent,
+        region: region,
         language: language
       })
     });
+  } catch (error) {
+    // Silent fail for activity recording - don't disrupt user experience
+    console.error('ConsentGuard: Error recording domain activity', error);
+  }
+}
+
+/**
+ * Record a domain ping to track when the script was last seen active
+ */
+export async function recordDomainPing() {
+  if (testMode) return;
+  
+  try {
+    await recordDomainActivity('ping');
   } catch (error) {
     // Silent fail for pings - don't disrupt user experience
     console.error('ConsentGuard: Error recording domain ping', error);
