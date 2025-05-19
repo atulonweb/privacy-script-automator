@@ -13,7 +13,7 @@ import {
   DialogTrigger,
 } from '@/components/ui/dialog';
 import AdminForm from '@/components/admin/AdminForm';
-import AdminsList from '@/components/admin/AdminsList';
+import { AdminsList } from '@/components/admin/AdminsList';
 import { useAdminManagement } from '@/hooks/admin/useAdminManagement';
 
 const AdminManagementPage = () => {
