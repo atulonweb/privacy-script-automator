@@ -91,9 +91,10 @@ const ConsentLogsTable: React.FC<ConsentLogsTableProps> = ({ logs }) => {
         <Pagination>
           <PaginationContent>
             <PaginationItem>
+              {/* Fix 1: Remove the disabled prop and use className to style it when disabled instead */}
               <PaginationPrevious 
-                onClick={() => setPage((p) => Math.max(p - 1, 1))} 
-                disabled={page === 1}
+                onClick={() => page > 1 ? setPage((p) => p - 1) : undefined} 
+                className={page === 1 ? "pointer-events-none opacity-50" : ""}
               />
             </PaginationItem>
             
@@ -127,9 +128,10 @@ const ConsentLogsTable: React.FC<ConsentLogsTableProps> = ({ logs }) => {
             })}
             
             <PaginationItem>
+              {/* Fix 2: Remove the disabled prop and use className to style it when disabled instead */}
               <PaginationNext 
-                onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
-                disabled={page === totalPages}
+                onClick={() => page < totalPages ? setPage((p) => p + 1) : undefined}
+                className={page === totalPages ? "pointer-events-none opacity-50" : ""}
               />
             </PaginationItem>
           </PaginationContent>

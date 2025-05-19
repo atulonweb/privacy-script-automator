@@ -87,16 +87,17 @@ export const useConsentLogs = ({
   useEffect(() => {
     const fetchDomains = async () => {
       try {
+        // Fix: Use a different approach to get distinct domains since `.distinct()` is not available
         const { data, error: domainError } = await supabase
           .from('domain_activity')
-          .select('domain')
-          .distinct();
+          .select('domain');
 
         if (domainError) {
           throw new Error(domainError.message);
         }
 
-        const uniqueDomains = data?.map(item => item.domain) || [];
+        // Extract unique domains manually using Set
+        const uniqueDomains = Array.from(new Set(data?.map(item => item.domain) || []));
         setDomains(uniqueDomains);
       } catch (err) {
         console.error('Error fetching domains:', err);
