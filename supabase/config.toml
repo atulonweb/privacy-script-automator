@@ -1,21 +1,17 @@
 
+# This file is used to configure the Supabase project.
 project_id = "rzmfwwkumniuwenammaj"
 
 [api]
 enabled = true
 port = 54321
-schemas = ["public", "storage"]
+endpoint = "http://localhost"
 
 [db]
 port = 54322
 
-[studio]
+[realtime]
 enabled = true
-port = 54323
-
-[inbucket]
-enabled = true
-port = 54324
 
 [storage]
 enabled = true
@@ -23,20 +19,20 @@ enabled = true
 [auth]
 enabled = true
 
-[realtime]
+[functions]
 enabled = true
 
-[functions.admin-role]
-verify_jwt = true
+[functions.consent-config]
+verify_jwt = false
 
-[functions.admin-setup]
+[functions.admin-role]
 verify_jwt = true
 
 [functions.admin-settings]
 verify_jwt = true
 
-[functions.consent-config]
+[functions.admin-setup]
 verify_jwt = true
 
-[functions.test-webhook]
-verify_jwt = true
+[functions.consent-analytics]
+verify_jwt = false

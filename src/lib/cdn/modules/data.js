@@ -6,6 +6,7 @@
 import { config, setConfig } from './core.js';
 import { cookieCategories } from './categories.js';
 import { getCookie } from './cookies.js';
+import { recordAnalytics } from './analytics.js';
 
 // Extract script ID from the current script tag's URL
 const scriptElement = document.currentScript || 
@@ -47,8 +48,8 @@ export async function fetchConfig() {
       setConfig(data);
     }
     
-    // Log domain activity for analytics
-    logDomainActivity().catch(err => console.error('Failed to log activity:', err));
+    // Record the script load for analytics
+    recordAnalytics('view');
     
     return config;
   } catch (error) {
@@ -112,7 +113,8 @@ export async function notifyConsentWebhook(choice, preferences) {
         scriptId: scriptId,
         choice: choice,
         preferences: preferences,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        visitorId: getOrCreateVisitorId() // Get the visitor ID for tracking
       })
     });
   } catch (error) {
@@ -121,52 +123,22 @@ export async function notifyConsentWebhook(choice, preferences) {
 }
 
 /**
- * Log domain activity for analytics purposes
- * This helps track when a domain was last seen active
+ * Get or create a unique visitor ID that persists across sessions
  */
-async function logDomainActivity() {
-  if (testMode) return;
+function getOrCreateVisitorId() {
+  let visitorId = localStorage.getItem('cg_visitor_id');
   
-  try {
-    const domain = window.location.hostname;
-    const language = navigator.language || 'en-US';
-    
-    // Approximate region based on browser language
-    // This is a simplification - a real implementation would use IP geolocation
-    let region = 'other';
-    if (language.includes('en-US') || language.includes('en-CA')) {
-      region = 'us';
-    } else if (language.match(/^(de|fr|es|it|nl|pt|sv|da|fi|el|cs|et|lv|lt|pl|sk|sl|bg|ro|hr)-?/)) {
-      region = 'eu';
-    }
-    
-    await fetch(`${API_ENDPOINT}/activity`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        scriptId: scriptId,
-        domain: domain,
-        url: window.location.href,
-        timestamp: new Date().toISOString(),
-        region: region,
-        // Browser details to help with unique visitor estimation
-        userAgent: navigator.userAgent,
-        language: language,
-        // Add a simple session identifier
-        sessionId: generateSessionId()
-      })
-    });
-  } catch (error) {
-    // Silent fail - don't disrupt user experience for analytics
-    console.error('ConsentGuard: Error logging domain activity', error);
+  if (!visitorId) {
+    visitorId = 'cgv_' + Math.random().toString(36).substring(2, 15) + 
+                Math.random().toString(36).substring(2, 15);
+    localStorage.setItem('cg_visitor_id', visitorId);
   }
+  
+  return visitorId;
 }
 
 /**
  * Generate a simple session identifier to help track unique visitors
- * A proper implementation would use more robust fingerprinting
  */
 function generateSessionId() {
   let sessionId = sessionStorage.getItem('cg_session_id');
