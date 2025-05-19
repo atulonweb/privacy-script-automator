@@ -1,6 +1,5 @@
 
 import React, { useEffect } from "react";
-import { useAdminManagement } from "@/hooks/admin/useAdminManagement";
 import { format } from "date-fns";
 import { Loader } from "lucide-react";
 import {
@@ -12,13 +11,21 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { UserPermissionsForm } from "./UserPermissionsForm";
+import { Admin } from "@/hooks/admin/useAdminManagement";
 
-export function AdminsList() {
-  const { admins, loading, refreshing, fetchAdmins } = useAdminManagement();
+interface AdminsListProps {
+  admins: Admin[];
+  loading: boolean;
+  onRefresh: () => Promise<void>;
+}
 
+export function AdminsList({ admins, loading, onRefresh }: AdminsListProps) {
   useEffect(() => {
-    fetchAdmins();
-  }, [fetchAdmins]);
+    // Initial load
+    if (admins.length === 0 && !loading) {
+      onRefresh();
+    }
+  }, [admins.length, loading, onRefresh]);
 
   return (
     <div className="space-y-6">
