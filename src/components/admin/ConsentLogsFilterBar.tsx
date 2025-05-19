@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -104,14 +105,14 @@ const ConsentLogsFilterBar: React.FC<ConsentLogsFilterBarProps> = ({
       {/* Domain Filter */}
       <div className="w-full md:w-auto">
         <Select 
-          value={selectedDomain || ""} 
-          onValueChange={(value) => onDomainChange(value || null)}
+          value={selectedDomain || "all"} 
+          onValueChange={(value) => onDomainChange(value === "all" ? null : value)}
         >
           <SelectTrigger className="w-full md:w-[180px]">
             <SelectValue placeholder="All domains" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All domains</SelectItem>
+            <SelectItem value="all">All domains</SelectItem>
             {domains.map((domain) => (
               <SelectItem key={domain} value={domain}>
                 {domain}
@@ -124,14 +125,14 @@ const ConsentLogsFilterBar: React.FC<ConsentLogsFilterBarProps> = ({
       {/* Event Type Filter */}
       <div className="w-full md:w-auto">
         <Select 
-          value={selectedEventType || ""} 
-          onValueChange={(value) => onEventTypeChange(value || null)}
+          value={selectedEventType || "all"} 
+          onValueChange={(value) => onEventTypeChange(value === "all" ? null : value)}
         >
           <SelectTrigger className="w-full md:w-[180px]">
             <SelectValue placeholder="All events" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All events</SelectItem>
+            <SelectItem value="all">All events</SelectItem>
             <SelectItem value="accept">Accept</SelectItem>
             <SelectItem value="reject">Reject</SelectItem>
             <SelectItem value="partial">Partial</SelectItem>
@@ -144,14 +145,14 @@ const ConsentLogsFilterBar: React.FC<ConsentLogsFilterBarProps> = ({
       {/* Region Filter */}
       <div className="w-full md:w-auto">
         <Select 
-          value={selectedRegion || ""} 
-          onValueChange={(value) => onRegionChange(value || null)}
+          value={selectedRegion || "all"} 
+          onValueChange={(value) => onRegionChange(value === "all" ? null : value)}
         >
           <SelectTrigger className="w-full md:w-[180px]">
             <SelectValue placeholder="All regions" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All regions</SelectItem>
+            <SelectItem value="all">All regions</SelectItem>
             <SelectItem value="eu">EU</SelectItem>
             <SelectItem value="us">US</SelectItem>
             <SelectItem value="other">Other</SelectItem>

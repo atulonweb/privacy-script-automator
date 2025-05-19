@@ -14,7 +14,7 @@ const AdminConsentLogsPage = () => {
   const [domain, setDomain] = useState<string | null>(null);
   const [eventType, setEventType] = useState<string | null>(null);
   const [region, setRegion] = useState<string | null>(null);
-  const { logs, isLoading, domains } = useConsentLogs({ dateRange, domain, eventType, region });
+  const { logs, isLoading, domains, error } = useConsentLogs({ dateRange, domain, eventType, region });
 
   const handleExportCSV = () => {
     if (logs) {
@@ -89,6 +89,10 @@ const AdminConsentLogsPage = () => {
             {isLoading ? (
               <div className="py-8 flex justify-center items-center">
                 <Loader className="h-8 w-8 animate-spin text-brand-600" />
+              </div>
+            ) : error ? (
+              <div className="py-8 text-center text-red-500">
+                Error: {error}
               </div>
             ) : logs && logs.length > 0 ? (
               <ConsentLogsTable logs={logs} />
