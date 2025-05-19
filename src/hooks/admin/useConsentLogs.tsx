@@ -39,6 +39,7 @@ export const useConsentLogs = ({
   // Check if the current user is an admin
   const checkAdminStatus = async () => {
     try {
+      // Use the function we created to check admin status
       const { data, error } = await supabase.rpc('is_admin');
       
       if (error) {
@@ -59,7 +60,7 @@ export const useConsentLogs = ({
       setError(null);
 
       try {
-        // Check if user is admin
+        // Check if user is admin first
         const isAdmin = await checkAdminStatus();
         
         if (!isAdmin) {
