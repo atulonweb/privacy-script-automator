@@ -14,11 +14,13 @@ import {
 import { toast } from 'sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AdminsList } from '@/components/admin/AdminsList';
+import { useAdminManagement } from '@/hooks/admin/useAdminManagement';
 
 const AdminSettingsPage = () => {
   const [defaultLanguage, setDefaultLanguage] = useState<string>('en');
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<string>('general');
+  const { admins, loading, fetchAdmins } = useAdminManagement();
   
   const languages = [
     { value: 'en', label: 'English' },
@@ -88,7 +90,7 @@ const AdminSettingsPage = () => {
           </TabsContent>
 
           <TabsContent value="permissions" className="space-y-4 pt-4">
-            <AdminsList />
+            <AdminsList admins={admins} loading={loading} onRefresh={fetchAdmins} />
           </TabsContent>
         </Tabs>
       </div>
