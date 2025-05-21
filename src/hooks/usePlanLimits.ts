@@ -84,9 +84,11 @@ const usePlanLimits = () => {
     queryKey: ['planSettings'],
     queryFn: fetchPlanSettings,
     staleTime: 1000 * 60 * 60, // Cache for 1 hour
-    // If the fetch fails, use the default values
-    onError: (err) => {
-      console.error('Failed to fetch plan settings:', err);
+    // Using meta and onSettled to handle errors in the latest TanStack Query version
+    meta: {
+      onError: (err: Error) => {
+        console.error('Failed to fetch plan settings:', err);
+      }
     }
   });
 
