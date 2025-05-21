@@ -8,12 +8,14 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { useAuth } from '@/context/AuthContext';
 import { Loader } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Checkbox } from '@/components/ui/checkbox';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showVerificationAlert, setShowVerificationAlert] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
   const navigate = useNavigate();
   const { signIn, user, resendVerificationEmail } = useAuth();
 
@@ -26,6 +28,12 @@ const LoginPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!termsAccepted) {
+      alert("You must accept the Privacy Policy and Terms of Service to continue");
+      return;
+    }
+    
     setIsLoading(true);
     setShowVerificationAlert(false);
 
@@ -96,6 +104,19 @@ const LoginPage: React.FC = () => {
                   required
                   disabled={isLoading}
                 />
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox 
+                  id="terms" 
+                  checked={termsAccepted}
+                  onCheckedChange={(checked) => setTermsAccepted(checked === true)}
+                />
+                <label
+                  htmlFor="terms"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                >
+                  I accept the <Link to="/privacy" className="text-brand-600 hover:underline">Privacy Policy</Link> and <Link to="/terms" className="text-brand-600 hover:underline">Terms of Service</Link>
+                </label>
               </div>
               <Button 
                 type="submit" 
