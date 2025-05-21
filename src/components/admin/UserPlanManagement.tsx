@@ -17,6 +17,12 @@ import { Loader } from 'lucide-react';
 
 type SubscriptionPlan = 'free' | 'basic' | 'professional';
 
+// Define the type for the userData returned from get_user_by_email RPC
+interface UserData {
+  id: string;
+  email: string;
+}
+
 export function UserPlanManagement() {
   const [email, setEmail] = useState('');
   const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan>('free');
@@ -38,14 +44,16 @@ export function UserPlanManagement() {
         if (userError) throw userError;
         
         if (userData) {
+          // Cast the userData to ensure TypeScript knows it has an id
+          const user = userData as UserData;
           setUserFound(true);
-          setUserId(userData.id);
+          setUserId(user.id);
           
           // Fetch user's current plan using raw SQL query since the table isn't in the types yet
           const { data: subscriptionData, error: subscriptionError } = await supabase
             .from('user_subscriptions')
             .select('*')
-            .eq('user_id', userData.id)
+            .eq('user_id', user.id)
             .single();
             
           if (!subscriptionError && subscriptionData) {
