@@ -162,6 +162,45 @@ export type Database = {
           },
         ]
       }
+      plan_settings: {
+        Row: {
+          analytics_history: number
+          created_at: string
+          customization: string
+          id: string
+          plan_type: string
+          support_level: string
+          updated_at: string
+          webhooks_enabled: boolean
+          website_limit: number
+          white_label: boolean
+        }
+        Insert: {
+          analytics_history?: number
+          created_at?: string
+          customization?: string
+          id?: string
+          plan_type: string
+          support_level?: string
+          updated_at?: string
+          webhooks_enabled?: boolean
+          website_limit?: number
+          white_label?: boolean
+        }
+        Update: {
+          analytics_history?: number
+          created_at?: string
+          customization?: string
+          id?: string
+          plan_type?: string
+          support_level?: string
+          updated_at?: string
+          webhooks_enabled?: boolean
+          website_limit?: number
+          white_label?: boolean
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

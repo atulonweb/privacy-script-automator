@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,39 +18,8 @@ import { useAdminManagement } from '@/hooks/admin/useAdminManagement';
 import { CustomizeDialog } from '@/components/ui/customize-dialog';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/context/AuthContext';
-import { supabase } from '@/integrations/supabase/client';
 import { Link } from 'react-router-dom';
-
-// Define subscription plan types
-type SubscriptionPlan = 'free' | 'basic' | 'professional';
-
-// Define plan features and limits
-const planLimits = {
-  free: {
-    websiteLimit: 1,
-    analyticsHistory: 7,
-    webhooksEnabled: false,
-    whiteLabel: false,
-    customization: 'basic',
-    supportLevel: 'community'
-  },
-  basic: {
-    websiteLimit: 5,
-    analyticsHistory: 30,
-    webhooksEnabled: true,
-    whiteLabel: false,
-    customization: 'standard',
-    supportLevel: 'email'
-  },
-  professional: {
-    websiteLimit: 20,
-    analyticsHistory: 90,
-    webhooksEnabled: true,
-    whiteLabel: true,
-    customization: 'full',
-    supportLevel: 'priority'
-  }
-};
+import PlanSettingsManager from '@/components/admin/PlanSettingsManager';
 
 const AdminSettingsPage = () => {
   const [defaultLanguage, setDefaultLanguage] = useState<string>('en');
@@ -57,7 +27,6 @@ const AdminSettingsPage = () => {
   const [activeTab, setActiveTab] = useState<string>('general');
   const { admins, loading, fetchAdmins } = useAdminManagement();
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
-  const [userPlan, setUserPlan] = useState<SubscriptionPlan>('free');
   const [whiteLabelEnabled, setWhiteLabelEnabled] = useState(false);
   const { user } = useAuth();
   
@@ -73,38 +42,6 @@ const AdminSettingsPage = () => {
       social: []
     }
   });
-  
-  // Fetch user's subscription plan
-  useEffect(() => {
-    const fetchUserPlan = async () => {
-      if (!user) return;
-      
-      try {
-        // This would normally come from a subscriptions table in a real implementation
-        // For demo, we're using 'professional' plan for admins
-        const { data, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-          
-        if (error) throw error;
-        
-        // In a real implementation, you would get the plan from the user's subscription
-        // Here we're just setting professional for admin users as a demo
-        setUserPlan('professional');
-        
-        // Check if white labeling is available for user's plan
-        setWhiteLabelEnabled(planLimits['professional'].whiteLabel);
-      } catch (error) {
-        console.error('Error fetching user plan:', error);
-        // Default to free plan if there's an error
-        setUserPlan('free');
-      }
-    };
-    
-    fetchUserPlan();
-  }, [user]);
   
   const languages = [
     { value: 'en', label: 'English' },
@@ -131,12 +68,8 @@ const AdminSettingsPage = () => {
   };
 
   const handleToggleWhiteLabel = (checked) => {
-    if (planLimits[userPlan].whiteLabel) {
-      setWhiteLabelEnabled(checked);
-      toast.success('White label setting updated');
-    } else {
-      toast.error('White labeling is only available on the Professional tier');
-    }
+    setWhiteLabelEnabled(checked);
+    toast.success('White label setting updated');
   };
 
   return (
@@ -192,18 +125,9 @@ const AdminSettingsPage = () => {
                     <Switch 
                       id="white-label" 
                       checked={whiteLabelEnabled} 
-                      onCheckedChange={handleToggleWhiteLabel} 
-                      disabled={!planLimits[userPlan].whiteLabel} 
+                      onCheckedChange={handleToggleWhiteLabel}
                     />
                   </div>
-                  {!planLimits[userPlan].whiteLabel && (
-                    <p className="text-sm text-muted-foreground">
-                      White labeling is only available on the Professional tier.
-                      <button className="text-brand-600 ml-1 hover:underline">
-                        Upgrade your plan
-                      </button>
-                    </p>
-                  )}
                 </div>
               </CardContent>
               <CardFooter>
@@ -283,55 +207,7 @@ const AdminSettingsPage = () => {
           </TabsContent>
           
           <TabsContent value="plan" className="space-y-4 pt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Plan Information</CardTitle>
-                <CardDescription>
-                  Default plan features and limitations
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="border rounded-lg p-6 bg-muted/20">
-                  <h3 className="text-xl font-medium mb-4">Plan Tiers Overview</h3>
-                  
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <h4 className="text-sm font-medium text-muted-foreground">Free Tier</h4>
-                        <p className="text-lg">{planLimits.free.websiteLimit} website</p>
-                        <p className="text-sm text-muted-foreground">{planLimits.free.analyticsHistory} days history</p>
-                      </div>
-                      
-                      <div>
-                        <h4 className="text-sm font-medium text-muted-foreground">Basic Tier</h4>
-                        <p className="text-lg">{planLimits.basic.websiteLimit} websites</p>
-                        <p className="text-sm text-muted-foreground">{planLimits.basic.analyticsHistory} days history</p>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <h4 className="text-sm font-medium text-muted-foreground">Professional Tier</h4>
-                      <p className="text-lg">{planLimits.professional.websiteLimit} websites</p>
-                      <p className="text-sm text-muted-foreground">{planLimits.professional.analyticsHistory} days history</p>
-                    </div>
-                    
-                    <div className="pt-4 mt-4 border-t">
-                      <Link to="/admin/plans" className="text-brand-600 hover:text-brand-800 hover:underline">
-                        Go to detailed plan management →
-                      </Link>
-                    </div>
-                  </div>
-                </div>
-                
-                {userPlan !== 'professional' && (
-                  <div className="text-center">
-                    <Button className="bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-700 hover:to-indigo-700">
-                      Upgrade Your Plan
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+            <PlanSettingsManager />
           </TabsContent>
         </Tabs>
       </div>

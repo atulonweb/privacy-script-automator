@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
+import { useQuery } from '@tanstack/react-query';
 
 type PlanDetails = {
   websiteLimit: number;
@@ -15,7 +16,8 @@ type PlanDetails = {
 
 type PlanType = 'free' | 'basic' | 'professional';
 
-const planLimits: Record<PlanType, PlanDetails> = {
+// Default fallback plan limits in case database fetch fails
+const defaultPlanLimits: Record<PlanType, PlanDetails> = {
   free: {
     websiteLimit: 1,
     analyticsHistory: 7,
@@ -42,17 +44,56 @@ const planLimits: Record<PlanType, PlanDetails> = {
   }
 };
 
+// Function to fetch all plan settings from the database
+const fetchPlanSettings = async (): Promise<Record<PlanType, PlanDetails>> => {
+  const { data, error } = await supabase
+    .from('plan_settings')
+    .select('*');
+
+  if (error) {
+    console.error('Error fetching plan settings:', error);
+    throw error;
+  }
+
+  // Convert the database results to the format our application uses
+  const planSettings: Record<PlanType, PlanDetails> = { ...defaultPlanLimits };
+
+  data.forEach((plan) => {
+    const planType = plan.plan_type as PlanType;
+    planSettings[planType] = {
+      websiteLimit: plan.website_limit,
+      analyticsHistory: plan.analytics_history,
+      webhooksEnabled: plan.webhooks_enabled,
+      whiteLabel: plan.white_label,
+      customization: plan.customization as 'basic' | 'standard' | 'full',
+      supportLevel: plan.support_level as 'community' | 'email' | 'priority'
+    };
+  });
+
+  return planSettings;
+};
+
 const usePlanLimits = () => {
   const { user } = useAuth();
   const [userPlan, setUserPlan] = useState<PlanType>('free');
-  const [planDetails, setPlanDetails] = useState<PlanDetails>(planLimits.free);
-  const [isLoading, setIsLoading] = useState(true);
+  const [planDetails, setPlanDetails] = useState<PlanDetails>(defaultPlanLimits.free);
   const [error, setError] = useState<string | null>(null);
 
+  // Fetch plan settings with react-query for caching
+  const { data: planSettings } = useQuery({
+    queryKey: ['planSettings'],
+    queryFn: fetchPlanSettings,
+    staleTime: 1000 * 60 * 60, // Cache for 1 hour
+    // If the fetch fails, use the default values
+    onError: (err) => {
+      console.error('Failed to fetch plan settings:', err);
+    }
+  });
+
+  // Fetch user's current subscription plan
   useEffect(() => {
     const fetchUserPlan = async () => {
       if (!user) {
-        setIsLoading(false);
         return;
       }
 
@@ -69,17 +110,27 @@ const usePlanLimits = () => {
 
         const plan = (data?.plan as PlanType) || 'free';
         setUserPlan(plan);
-        setPlanDetails(planLimits[plan]);
+        
+        // Use the fetched plan settings or fall back to defaults if not available
+        const currentPlanSettings = planSettings || defaultPlanLimits;
+        setPlanDetails(currentPlanSettings[plan]);
       } catch (err: any) {
         console.error('Error fetching user plan:', err);
         setError(err.message);
-      } finally {
-        setIsLoading(false);
+        // Fall back to default limits for the user's plan
+        setPlanDetails(defaultPlanLimits[userPlan]);
       }
     };
 
     fetchUserPlan();
-  }, [user]);
+  }, [user, planSettings]);
+
+  // Update plan details whenever planSettings changes
+  useEffect(() => {
+    if (planSettings && userPlan) {
+      setPlanDetails(planSettings[userPlan]);
+    }
+  }, [planSettings, userPlan]);
 
   const checkWebsiteLimit = async (): Promise<boolean> => {
     if (!user) return false;
@@ -136,7 +187,7 @@ const usePlanLimits = () => {
   return {
     userPlan,
     planDetails,
-    isLoading,
+    isLoading: !planSettings,
     error,
     checkWebsiteLimit,
     checkWebhookEnabled,
