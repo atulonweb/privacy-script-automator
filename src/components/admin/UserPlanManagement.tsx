@@ -41,7 +41,13 @@ export function UserPlanManagement() {
         const { data: userData, error: userError } = await supabase
           .rpc('get_user_by_email', { user_email: email });
           
-        if (userError) throw userError;
+        if (userError) {
+          console.error('Error getting user:', userError);
+          setUserFound(false);
+          setUserId(null);
+          setCurrentPlan(null);
+          return;
+        }
         
         if (userData) {
           // Safely check if userData has the expected structure before casting
@@ -71,6 +77,7 @@ export function UserPlanManagement() {
               setSelectedPlan(subscriptionData.plan as SubscriptionPlan);
               setCurrentPlan(subscriptionData.plan as SubscriptionPlan);
             } else {
+              console.log('No subscription found or error:', subscriptionError);
               setSelectedPlan('free');
               setCurrentPlan('free');
             }
@@ -116,22 +123,27 @@ export function UserPlanManagement() {
     setIsLoading(true);
     
     try {
-      // Update the user's plan in the database using raw SQL query
-      const { error } = await supabase
-        .from('user_subscriptions')
-        .upsert({
-          user_id: userId,
-          plan: selectedPlan,
-          updated_at: new Date().toISOString()
-        }, {
-          onConflict: 'user_id'  // Add this to handle conflict on user_id
-        });
+      // Call the admin-plans edge function instead of direct table access
+      const { data, error } = await supabase.functions.invoke('admin-plans', {
+        body: {
+          userId: userId,
+          plan: selectedPlan
+        }
+      });
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error from admin-plans function:', error);
+        throw new Error(error.message || 'Failed to update plan');
+      }
+      
+      if (!data.success) {
+        throw new Error(data.message || 'Failed to update plan');
+      }
       
       setCurrentPlan(selectedPlan);
       toast.success(`Successfully updated ${email}'s plan to ${selectedPlan}`);
     } catch (error: any) {
+      console.error('Error updating plan:', error);
       toast.error('Failed to update plan', { 
         description: error.message || 'Please try again later'
       });

@@ -34,5 +34,8 @@ verify_jwt = true
 [functions.admin-setup]
 verify_jwt = true
 
+[functions.admin-plans]
+verify_jwt = true
+
 [functions.consent-analytics]
 verify_jwt = false
