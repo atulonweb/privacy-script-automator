@@ -36,26 +36,61 @@ const handleRequest = async (req: Request): Promise<Response> => {
     
     console.log('Updating plan for user:', userId, 'to plan:', plan);
 
-    // Update the user's subscription plan directly using admin client
-    const { data: subscription, error: subscriptionError } = await supabaseAdmin
+    // First check if a subscription already exists for this user
+    const { data: existingSubscription, error: fetchError } = await supabaseAdmin
       .from('user_subscriptions')
-      .upsert({
-        user_id: userId,
-        plan: plan,
-        updated_at: new Date().toISOString(),
-      }, {
-        onConflict: 'user_id'
-      });
+      .select('*')
+      .eq('user_id', userId)
+      .single();
       
-    if (subscriptionError) {
-      console.error('Error updating subscription:', subscriptionError);
-      throw new Error(`Failed to update subscription: ${subscriptionError.message}`);
+    if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "no rows returned" error
+      console.error('Error checking existing subscription:', fetchError);
+      throw new Error(`Failed to check subscription: ${fetchError.message}`);
+    }
+    
+    let result;
+    
+    if (existingSubscription) {
+      // Update existing subscription
+      const { data: updatedSubscription, error: updateError } = await supabaseAdmin
+        .from('user_subscriptions')
+        .update({
+          plan: plan,
+          updated_at: new Date().toISOString()
+        })
+        .eq('user_id', userId)
+        .select();
+        
+      if (updateError) {
+        console.error('Error updating subscription:', updateError);
+        throw new Error(`Failed to update subscription: ${updateError.message}`);
+      }
+      
+      result = updatedSubscription;
+    } else {
+      // Insert new subscription
+      const { data: newSubscription, error: insertError } = await supabaseAdmin
+        .from('user_subscriptions')
+        .insert({
+          user_id: userId,
+          plan: plan,
+          updated_at: new Date().toISOString()
+        })
+        .select();
+        
+      if (insertError) {
+        console.error('Error creating subscription:', insertError);
+        throw new Error(`Failed to create subscription: ${insertError.message}`);
+      }
+      
+      result = newSubscription;
     }
     
     return new Response(
       JSON.stringify({
         success: true,
         message: `Successfully updated user plan to ${plan}`,
+        data: result
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
