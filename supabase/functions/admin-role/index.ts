@@ -1,78 +1,63 @@
+// Follow this setup guide to integrate the Deno runtime and the Supabase JS library with your project:
+// https://docs.supabase.com/guides/functions/getting-started
 
-import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.38.4';
+import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
+import { corsHeaders } from "../_shared/cors.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
 serve(async (req) => {
-  // CORS Headers
-  const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Content-Type': 'application/json',
-  };
-  
-  // Handle OPTIONS request (CORS preflight)
+  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
-      headers,
+      headers: corsHeaders,
     });
   }
 
   try {
-    // Verify admin status
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
+    const supabaseAdmin = createClient(
+      Deno.env.get('SUPABASE_URL')!,
+      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     );
-    
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('Authorization header is required');
-    }
-    
-    const token = authHeader.split(' ')[1];
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser(token);
-    
-    if (authError || !user) {
-      throw new Error('Unauthorized');
-    }
-    
-    // Check if user is an admin
-    const { data: isAdmin } = await supabaseClient.rpc('is_admin');
-    if (!isAdmin) {
-      throw new Error('Only admins can manage other admins');
+
+    const { email } = await req.json()
+    if (!email) {
+      throw new Error('Email is required')
     }
 
-    // Process based on HTTP method
-    if (req.method === 'DELETE') {
-      const { userId } = await req.json();
-      
-      if (!userId) {
-        throw new Error('User ID is required');
-      }
-      
-      // Remove admin role
-      const { data: userData, error: getUserError } = await supabaseClient.auth.admin.getUserById(userId);
-      if (getUserError) throw getUserError;
-      
-      const { error: updateError } = await supabaseClient.auth.admin.updateUserById(
-        userId,
-        { app_metadata: { role: 'user' } }
-      );
-      
-      if (updateError) throw updateError;
-      
-      return new Response(JSON.stringify({ message: 'Admin role removed successfully' }), {
-        status: 200,
-        headers,
-      });
+    const { data: user, error: userError } = await supabaseAdmin.auth.admin.getUserByEmail(email);
+
+    if (userError) {
+        console.error('Error getting user:', userError);
+        throw new Error(`Failed to get user: ${userError.message}`);
     }
-    
-    throw new Error(`Unsupported HTTP method: ${req.method}`);
-  } catch (error) {
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { status: 400, headers }
+
+    if (!user) {
+        throw new Error('User not found');
+    }
+
+    const userId = user.user.id;
+
+    // Update user's app_metadata to assign the admin role
+    const { data, error } = await supabaseAdmin.auth.admin.updateUserById(
+      userId,
+      { app_metadata: { role: 'admin' } }
     );
+
+    if (error) {
+      console.error('Error assigning admin role:', error);
+      throw new Error(`Failed to assign admin role: ${error.message}`);
+    }
+
+    return new Response(
+      JSON.stringify({ message: `Admin role assigned to ${email}` }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
+    )
+  } catch (error) {
+    console.error('Function error:', error)
+    return new Response(JSON.stringify({ error: error.message }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 400,
+    })
   }
-});
+})

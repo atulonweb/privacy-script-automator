@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -19,6 +18,7 @@ import { CustomizeDialog } from '@/components/ui/customize-dialog';
 import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/context/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { Link } from 'react-router-dom';
 
 // Define subscription plan types
 type SubscriptionPlan = 'free' | 'basic' | 'professional';
@@ -145,9 +145,9 @@ const AdminSettingsPage = () => {
         <div className="flex items-center justify-between">
           <h2 className="text-3xl font-bold tracking-tight">Admin Settings</h2>
           
-          <div className="bg-muted px-4 py-2 rounded-lg text-sm">
-            Current Plan: <span className="font-medium capitalize">{userPlan}</span> Tier
-          </div>
+          <Link to="/admin/plans" className="bg-brand-600 hover:bg-brand-700 text-white px-4 py-2 rounded-md">
+            Manage User Plans
+          </Link>
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
@@ -287,48 +287,38 @@ const AdminSettingsPage = () => {
               <CardHeader>
                 <CardTitle>Plan Information</CardTitle>
                 <CardDescription>
-                  Your current plan features and limitations
+                  Default plan features and limitations
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="border rounded-lg p-6 bg-muted/20">
-                  <h3 className="text-xl font-medium capitalize mb-4">{userPlan} Tier</h3>
+                  <h3 className="text-xl font-medium mb-4">Plan Tiers Overview</h3>
                   
                   <div className="space-y-4">
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <h4 className="text-sm font-medium text-muted-foreground">Websites</h4>
-                        <p className="text-lg">{planLimits[userPlan].websiteLimit} allowed</p>
+                        <h4 className="text-sm font-medium text-muted-foreground">Free Tier</h4>
+                        <p className="text-lg">{planLimits.free.websiteLimit} website</p>
+                        <p className="text-sm text-muted-foreground">{planLimits.free.analyticsHistory} days history</p>
                       </div>
                       
                       <div>
-                        <h4 className="text-sm font-medium text-muted-foreground">Analytics History</h4>
-                        <p className="text-lg">{planLimits[userPlan].analyticsHistory} days</p>
+                        <h4 className="text-sm font-medium text-muted-foreground">Basic Tier</h4>
+                        <p className="text-lg">{planLimits.basic.websiteLimit} websites</p>
+                        <p className="text-sm text-muted-foreground">{planLimits.basic.analyticsHistory} days history</p>
                       </div>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <h4 className="text-sm font-medium text-muted-foreground">Webhook Support</h4>
-                        <p className="text-lg">{planLimits[userPlan].webhooksEnabled ? 'Enabled' : 'Disabled'}</p>
-                      </div>
-                      
-                      <div>
-                        <h4 className="text-sm font-medium text-muted-foreground">White Labeling</h4>
-                        <p className="text-lg">{planLimits[userPlan].whiteLabel ? 'Available' : 'Not Available'}</p>
-                      </div>
+                    <div>
+                      <h4 className="text-sm font-medium text-muted-foreground">Professional Tier</h4>
+                      <p className="text-lg">{planLimits.professional.websiteLimit} websites</p>
+                      <p className="text-sm text-muted-foreground">{planLimits.professional.analyticsHistory} days history</p>
                     </div>
                     
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <h4 className="text-sm font-medium text-muted-foreground">Customization Level</h4>
-                        <p className="text-lg capitalize">{planLimits[userPlan].customization}</p>
-                      </div>
-                      
-                      <div>
-                        <h4 className="text-sm font-medium text-muted-foreground">Support Level</h4>
-                        <p className="text-lg capitalize">{planLimits[userPlan].supportLevel}</p>
-                      </div>
+                    <div className="pt-4 mt-4 border-t">
+                      <Link to="/admin/plans" className="text-brand-600 hover:text-brand-800 hover:underline">
+                        Go to detailed plan management →
+                      </Link>
                     </div>
                   </div>
                 </div>

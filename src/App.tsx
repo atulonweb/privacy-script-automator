@@ -27,6 +27,8 @@ import AdminUserDetailPage from './pages/AdminUserDetailPage';
 import AdminScriptsPage from './pages/AdminScriptsPage';
 import AdminDomainsPage from './pages/AdminDomainsPage';
 import AdminConsentLogsPage from './pages/AdminConsentLogsPage';
+import PlansPage from './pages/PlansPage';
+import AdminPlansPage from './pages/AdminPlansPage';
 
 // Components
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -44,6 +46,7 @@ function App() {
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/admin-setup" element={<AdminSetupPage />} />
           <Route path="/make-admin" element={<MakeAdminPage />} />
+          <Route path="/plans" element={<ProtectedRoute><PlansPage /></ProtectedRoute>} />
           
           <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
           <Route path="/dashboard/websites" element={<ProtectedRoute><WebsitesPage /></ProtectedRoute>} />
@@ -93,6 +96,7 @@ function App() {
             } 
           />
           <Route path="/admin/settings" element={<AdminRoute><AdminSettingsPage /></AdminRoute>} />
+          <Route path="/admin/plans" element={<AdminRoute><AdminPlansPage /></AdminRoute>} />
           <Route path="/admin/webhooks" element={<AdminRoute><AdminWebhooksPage /></AdminRoute>} />
           <Route path="/admin/admins" element={<AdminRoute><AdminManagementPage /></AdminRoute>} />
           
