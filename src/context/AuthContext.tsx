@@ -75,9 +75,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
 
       if (error) throw error;
-      toast.success('Registration successful! Please check your email for verification.');
+      toast.success('Registration Successful', {
+        description: 'Please check your email for verification.'
+      });
     } catch (error: any) {
-      toast.error(error.message || 'Registration failed');
+      toast.error('Registration Failed', {
+        description: error.message || 'Please try again.'
+      });
       throw error;
     }
   };
@@ -90,9 +94,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       });
       
       if (error) throw error;
-      toast.success('Verification email has been sent. Please check your inbox.');
+      toast.success('Verification Email Sent', {
+        description: 'Please check your inbox.'
+      });
     } catch (error: any) {
-      toast.error(error.message || 'Failed to send verification email');
+      toast.error('Failed to Send Verification', {
+        description: error.message || 'Please try again later.'
+      });
+      throw error;
     }
   };
 
@@ -106,7 +115,6 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (error) {
         // Handle email_not_confirmed error specially
         if (error.message.includes('Email not confirmed')) {
-          toast.error('Email not verified. Please check your inbox or click resend verification email.');
           throw new Error('email_not_confirmed');
         }
         throw error;
@@ -115,14 +123,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       // Redirect based on user role
       if (data.user?.app_metadata?.role === 'admin') {
         navigate('/admin');
-        toast.success('Admin login successful!');
+        toast.success('Admin Login Successful', {
+          description: 'Welcome back to your admin dashboard!'
+        });
       } else {
         navigate('/dashboard');
-        toast.success('Login successful!');
+        toast.success('Login Successful', {
+          description: 'Welcome back!'
+        });
       }
     } catch (error: any) {
       if (error.message !== 'email_not_confirmed') {
-        toast.error(error.message || 'Login failed');
+        toast.error('Login Failed', {
+          description: error.message || 'Invalid credentials. Please try again.'
+        });
       }
       throw error;
     }
@@ -132,9 +146,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       await supabase.auth.signOut();
       navigate('/login');
-      toast.success('Logged out successfully');
+      toast.success('Logout Successful', {
+        description: 'You have been logged out successfully.'
+      });
     } catch (error: any) {
-      toast.error(error.message || 'Error logging out');
+      toast.error('Logout Failed', {
+        description: error.message || 'There was a problem logging out.'
+      });
     }
   };
 

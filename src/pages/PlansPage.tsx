@@ -1,4 +1,3 @@
-
 import React from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -122,12 +121,17 @@ const PlansPage = () => {
 
   const handleSelectPlan = async (plan: SubscriptionPlan) => {
     if (!user) {
-      toast.error('You must be logged in to select a plan');
+      toast.error('Authentication Error', {
+        description: 'You must be logged in to select a plan'
+      });
       return;
     }
     
     // Don't do anything if selecting the current plan
     if (plan === currentPlan) {
+      toast.info('Plan Information', {
+        description: `You are already on the ${planDetails[plan].name} plan`
+      });
       return;
     }
     
@@ -154,10 +158,12 @@ const PlansPage = () => {
       if (error) throw error;
       
       setCurrentPlan(plan);
-      toast.success(`Successfully ${plan === 'free' ? 'downgraded to' : 'upgraded to'} ${plan} plan`);
+      toast.success(`Plan Updated`, { 
+        description: `Successfully ${plan === 'free' ? 'downgraded to' : 'upgraded to'} ${planDetails[plan].name} plan`
+      });
       
     } catch (error: any) {
-      toast.error('Failed to update plan', { 
+      toast.error('Update Failed', { 
         description: error.message || 'Please try again later'
       });
     } finally {

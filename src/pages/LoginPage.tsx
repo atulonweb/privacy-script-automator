@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -9,6 +8,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Loader } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Checkbox } from '@/components/ui/checkbox';
+import { toast } from 'sonner';
 
 const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -30,7 +30,9 @@ const LoginPage: React.FC = () => {
     e.preventDefault();
     
     if (!termsAccepted) {
-      alert("You must accept the Privacy Policy and Terms of Service to continue");
+      toast.error("Agreement Required", {
+        description: "You must accept the Privacy Policy and Terms of Service to continue"
+      });
       return;
     }
     
@@ -43,13 +45,26 @@ const LoginPage: React.FC = () => {
     } catch (error: any) {
       if (error.message === 'email_not_confirmed') {
         setShowVerificationAlert(true);
+      } else {
+        toast.error("Login Failed", { 
+          description: error.message || "Invalid email or password. Please try again."
+        });
       }
       setIsLoading(false);
     }
   };
 
   const handleResendVerification = async () => {
-    await resendVerificationEmail(email);
+    try {
+      await resendVerificationEmail(email);
+      toast.success("Verification Email Sent", { 
+        description: "Please check your inbox for the verification email."
+      });
+    } catch (error: any) {
+      toast.error("Failed to Send Verification", { 
+        description: error.message || "Please try again."
+      });
+    }
   };
 
   return (

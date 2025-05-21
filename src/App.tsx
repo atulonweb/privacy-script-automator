@@ -1,6 +1,7 @@
 
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
+import { Toaster } from "sonner";
 
 // Pages
 import HomePage from "./pages/HomePage";
@@ -32,7 +33,6 @@ import PlansPage from './pages/PlansPage';
 // Components
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
-import { Toaster } from "./components/ui/toaster";
 
 // Define App as a React functional component
 function App() {
@@ -100,7 +100,9 @@ function App() {
           
           <Route path="*" element={<NotFound />} />
         </Routes>
-        <Toaster />
+        
+        {/* Add Sonner Toaster component for notifications */}
+        <Toaster position="top-right" richColors />
       </AuthProvider>
     </Router>
   );
