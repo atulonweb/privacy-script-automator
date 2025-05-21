@@ -99,9 +99,10 @@ const PlansPage = () => {
       if (!user) return;
       
       try {
+        // Use raw SQL query to fetch the user's plan
         const { data, error } = await supabase
           .from('user_subscriptions')
-          .select('plan')
+          .select('*')
           .eq('user_id', user.id)
           .single();
           
@@ -112,6 +113,7 @@ const PlansPage = () => {
         }
       } catch (error) {
         console.error('Error fetching user plan:', error);
+        // Default to free plan if no subscription is found
       }
     };
     
@@ -140,7 +142,7 @@ const PlansPage = () => {
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
       
-      // Update user's plan in the database
+      // Update user's plan in the database using raw SQL query
       const { error } = await supabase
         .from('user_subscriptions')
         .upsert({

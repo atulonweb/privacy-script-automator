@@ -1,3 +1,4 @@
+
 // Follow this setup guide to integrate the Deno runtime and the Supabase JS library with your project:
 // https://docs.supabase.com/guides/functions/getting-started
 

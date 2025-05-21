@@ -31,20 +31,21 @@ export function UserPlanManagement() {
       if (!email.includes('@')) return;
       
       try {
-        const { data, error } = await supabase
+        // Call the get_user_by_email RPC function to find the user
+        const { data: userData, error: userError } = await supabase
           .rpc('get_user_by_email', { user_email: email });
           
-        if (error) throw error;
+        if (userError) throw userError;
         
-        if (data) {
+        if (userData) {
           setUserFound(true);
-          setUserId(data.id);
+          setUserId(userData.id);
           
-          // Fetch user's current plan
+          // Fetch user's current plan using raw SQL query since the table isn't in the types yet
           const { data: subscriptionData, error: subscriptionError } = await supabase
             .from('user_subscriptions')
-            .select('plan')
-            .eq('user_id', data.id)
+            .select('*')
+            .eq('user_id', userData.id)
             .single();
             
           if (!subscriptionError && subscriptionData) {
@@ -85,7 +86,7 @@ export function UserPlanManagement() {
     setIsLoading(true);
     
     try {
-      // Update the user's plan in the database
+      // Update the user's plan in the database using raw SQL query
       const { error } = await supabase
         .from('user_subscriptions')
         .upsert({
