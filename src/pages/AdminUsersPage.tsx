@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -54,7 +53,10 @@ type User = {
   websites: number;
   scripts: number;
   blocked: boolean;
+  plan?: string;
 };
+
+type SubscriptionPlan = 'free' | 'basic' | 'professional';
 
 // Sample mock data for when the API fails
 const sampleUsers: User[] = [
@@ -102,6 +104,9 @@ const AdminUsersPage = () => {
   const [isBlockingUser, setIsBlockingUser] = useState<boolean>(false);
   const [userToToggleBlock, setUserToToggleBlock] = useState<User | null>(null);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [updatingPlan, setUpdatingPlan] = useState<boolean>(false);
+  const [userToUpdatePlan, setUserToUpdatePlan] = useState<User | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<SubscriptionPlan>('free');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -226,6 +231,22 @@ const AdminUsersPage = () => {
         scriptCounts.set(script.user_id, count + 1);
       });
       
+      // Fetch user subscription plans
+      const { data: subscriptions, error: subscriptionsError } = await supabase
+        .from('user_subscriptions')
+        .select('*');
+        
+      if (subscriptionsError) {
+        console.error("Error fetching subscriptions:", subscriptionsError);
+        // Non-fatal, continue with what we have
+      }
+      
+      // Create a map of user_id to plan
+      const planMap = new Map();
+      subscriptions?.forEach(sub => {
+        planMap.set(sub.user_id, sub.plan);
+      });
+      
       // Create enhanced users array
       const enhancedUsers = profiles?.map(profile => {
         const userInfo = userMap.get(profile.id) || { 
@@ -242,7 +263,8 @@ const AdminUsersPage = () => {
           role: userInfo.role,
           blocked: userInfo.blocked,
           websites: websiteCounts.get(profile.id) || 0,
-          scripts: scriptCounts.get(profile.id) || 0
+          scripts: scriptCounts.get(profile.id) || 0,
+          plan: planMap.get(profile.id) || 'free'
         };
       }) || [];
       
@@ -431,6 +453,51 @@ const AdminUsersPage = () => {
     }
   };
 
+  const updateUserPlan = async (userId: string, plan: string) => {
+    try {
+      setUpdatingPlan(true);
+      
+      console.log('Updating plan for user:', userId, 'to plan:', plan);
+      
+      // Call the admin-plans edge function
+      const response = await fetch('https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/admin-plans', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId, plan }),
+      });
+
+      const data = await response.json();
+      
+      if (!response.ok) {
+        console.error('Error from edge function:', data);
+        throw new Error(data.error || 'Failed to update plan');
+      }
+      
+      console.log('Response from edge function:', data);
+      
+      // Update the local state to reflect the change
+      setUsers(prevUsers => 
+        prevUsers.map(user => 
+          user.id === userId 
+            ? { ...user, plan: plan } 
+            : user
+        )
+      );
+      
+      toast.success(`Successfully updated user's plan to ${plan}`);
+    } catch (error: any) {
+      console.error("Error updating user plan:", error);
+      toast.error('Failed to update plan', { 
+        description: error.message || 'Please try again later'
+      });
+    } finally {
+      setUpdatingPlan(false);
+      setUserToUpdatePlan(null);
+    }
+  };
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString();
@@ -491,6 +558,7 @@ const AdminUsersPage = () => {
                       <TableHead>Email</TableHead>
                       <TableHead>Role</TableHead>
                       <TableHead>Status</TableHead>
+                      <TableHead>Plan</TableHead>
                       <TableHead>Websites</TableHead>
                       <TableHead>Scripts</TableHead>
                       <TableHead>Joined</TableHead>
@@ -524,11 +592,89 @@ const AdminUsersPage = () => {
                             {user.blocked ? 'Blocked' : 'Active'}
                           </span>
                         </TableCell>
+                        <TableCell>
+                          <span 
+                            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                              ${user.plan === 'professional' 
+                                ? 'bg-blue-100 text-blue-800' 
+                                : user.plan === 'basic'
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-gray-100 text-gray-800'
+                              }`}
+                          >
+                            {user.plan ? user.plan.charAt(0).toUpperCase() + user.plan.slice(1) : 'Free'}
+                          </span>
+                        </TableCell>
                         <TableCell>{user.websites}</TableCell>
                         <TableCell>{user.scripts}</TableCell>
                         <TableCell>{formatDate(user.created_at)}</TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-2">
+                            {/* Change Plan */}
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  className="border-blue-200 text-blue-600 hover:bg-blue-50"
+                                  onClick={() => {
+                                    setUserToUpdatePlan(user);
+                                    setSelectedPlan((user.plan as SubscriptionPlan) || 'free');
+                                  }}
+                                >
+                                  Change Plan
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent>
+                                <DialogHeader>
+                                  <DialogTitle>Update Subscription Plan</DialogTitle>
+                                  <DialogDescription>
+                                    Change the subscription plan for {user.full_name || user.email}
+                                  </DialogDescription>
+                                </DialogHeader>
+                                
+                                <div className="space-y-4 py-4">
+                                  <div className="space-y-2">
+                                    <label className="text-sm font-medium">Current Plan:</label>
+                                    <p className="text-sm font-semibold capitalize">{user.plan || 'Free'}</p>
+                                  </div>
+                                  
+                                  <div className="space-y-2">
+                                    <label className="text-sm font-medium">New Plan:</label>
+                                    <Select
+                                      value={selectedPlan}
+                                      onValueChange={(value) => setSelectedPlan(value as SubscriptionPlan)}
+                                    >
+                                      <SelectTrigger id="plan-select">
+                                        <SelectValue placeholder="Select plan" />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="free">Free</SelectItem>
+                                        <SelectItem value="basic">Basic ($9.99/mo)</SelectItem>
+                                        <SelectItem value="professional">Professional ($29.99/mo)</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                </div>
+                                
+                                <DialogFooter>
+                                  <Button
+                                    variant="outline"
+                                    onClick={() => setUserToUpdatePlan(null)}
+                                    disabled={updatingPlan}
+                                  >
+                                    Cancel
+                                  </Button>
+                                  <Button 
+                                    onClick={() => userToUpdatePlan && updateUserPlan(userToUpdatePlan.id, selectedPlan)}
+                                    disabled={updatingPlan || (userToUpdatePlan?.plan === selectedPlan)}
+                                  >
+                                    {updatingPlan ? 'Updating...' : 'Update Plan'}
+                                  </Button>
+                                </DialogFooter>
+                              </DialogContent>
+                            </Dialog>
+                            
                             {/* Block/Unblock User */}
                             <Dialog>
                               <DialogTrigger asChild>
@@ -663,7 +809,7 @@ const AdminUsersPage = () => {
                     
                     {filteredUsers.length === 0 && !loading && (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
+                        <TableCell colSpan={9} className="text-center py-6 text-muted-foreground">
                           No users found
                         </TableCell>
                       </TableRow>
@@ -671,7 +817,7 @@ const AdminUsersPage = () => {
                     
                     {loading && (
                       <TableRow>
-                        <TableCell colSpan={8} className="text-center py-6 text-muted-foreground">
+                        <TableCell colSpan={9} className="text-center py-6 text-muted-foreground">
                           Loading users...
                         </TableCell>
                       </TableRow>
