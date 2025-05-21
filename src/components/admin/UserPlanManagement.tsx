@@ -123,16 +123,19 @@ export function UserPlanManagement() {
     setIsLoading(true);
     
     try {
-      // Call the admin-plans edge function instead of direct table access
+      console.log('Calling edge function with:', { userId, plan: selectedPlan });
+      
+      // Call the admin-plans edge function
       const { data, error } = await supabase.functions.invoke('admin-plans', {
         body: {
           userId: userId,
           plan: selectedPlan
         }
       });
+      
+      console.log('Response from edge function:', data, error);
         
       if (error) {
-        console.error('Error from admin-plans function:', error);
         throw new Error(error.message || 'Failed to update plan');
       }
       

@@ -28,45 +28,15 @@ const handleRequest = async (req: Request): Promise<Response> => {
       throw new Error('Missing required fields: userId and plan');
     }
     
-    // Get Supabase client with admin privileges from Supabase Auth
-    const authHeader = req.headers.get('Authorization');
-    if (!authHeader) {
-      throw new Error('Missing Authorization header');
-    }
-
-    // Create Supabase clients
+    // Create Supabase admin client directly using service role key
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL')!,
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     );
-
-    const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL')!,
-      Deno.env.get('SUPABASE_ANON_KEY')!,
-      {
-        global: { headers: { Authorization: authHeader } },
-      }
-    );
-
-    // Verify that the caller has admin privileges
-    const { data: { user } } = await supabaseClient.auth.getUser();
-
-    if (!user) {
-      throw new Error('User not authenticated');
-    }
-
-    console.log('Authenticated user:', user.id);
-
-    // Verify admin status using raw app metadata instead of the is_admin function
-    const { data: userData, error: userError } = await supabaseClient.auth.getUser();
-    if (userError) throw userError;
     
-    const isAdmin = userData?.user?.app_metadata?.role === 'admin';
-    if (!isAdmin) {
-      throw new Error('User is not an admin');
-    }
+    console.log('Updating plan for user:', userId, 'to plan:', plan);
 
-    // Update the user's subscription plan
+    // Update the user's subscription plan directly using admin client
     const { data: subscription, error: subscriptionError } = await supabaseAdmin
       .from('user_subscriptions')
       .upsert({
