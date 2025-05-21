@@ -44,24 +44,41 @@ export function UserPlanManagement() {
         if (userError) throw userError;
         
         if (userData) {
-          // Cast the userData to ensure TypeScript knows it has an id
-          const user = userData as UserData;
-          setUserFound(true);
-          setUserId(user.id);
+          // Safely check if userData has the expected structure before casting
+          const userObj = userData as unknown;
           
-          // Fetch user's current plan using raw SQL query since the table isn't in the types yet
-          const { data: subscriptionData, error: subscriptionError } = await supabase
-            .from('user_subscriptions')
-            .select('*')
-            .eq('user_id', user.id)
-            .single();
+          // Verify the structure matches our UserData interface
+          if (
+            typeof userObj === 'object' && 
+            userObj !== null &&
+            'id' in userObj && 
+            'email' in userObj &&
+            typeof userObj.id === 'string' &&
+            typeof userObj.email === 'string'
+          ) {
+            const user = userObj as UserData;
+            setUserFound(true);
+            setUserId(user.id);
             
-          if (!subscriptionError && subscriptionData) {
-            setSelectedPlan(subscriptionData.plan as SubscriptionPlan);
-            setCurrentPlan(subscriptionData.plan as SubscriptionPlan);
+            // Fetch user's current plan using raw SQL query since the table isn't in the types yet
+            const { data: subscriptionData, error: subscriptionError } = await supabase
+              .from('user_subscriptions')
+              .select('*')
+              .eq('user_id', user.id)
+              .single();
+              
+            if (!subscriptionError && subscriptionData) {
+              setSelectedPlan(subscriptionData.plan as SubscriptionPlan);
+              setCurrentPlan(subscriptionData.plan as SubscriptionPlan);
+            } else {
+              setSelectedPlan('free');
+              setCurrentPlan('free');
+            }
           } else {
-            setSelectedPlan('free');
-            setCurrentPlan('free');
+            console.error('Invalid user data structure:', userObj);
+            setUserFound(false);
+            setUserId(null);
+            setCurrentPlan(null);
           }
         } else {
           setUserFound(false);
