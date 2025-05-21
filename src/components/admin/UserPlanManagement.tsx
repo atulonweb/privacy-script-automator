@@ -108,6 +108,11 @@ export function UserPlanManagement() {
       return;
     }
     
+    if (selectedPlan === currentPlan) {
+      toast.info(`${email} is already on the ${selectedPlan} plan`);
+      return;
+    }
+    
     setIsLoading(true);
     
     try {
@@ -118,6 +123,8 @@ export function UserPlanManagement() {
           user_id: userId,
           plan: selectedPlan,
           updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'  // Add this to handle conflict on user_id
         });
         
       if (error) throw error;
@@ -184,7 +191,7 @@ export function UserPlanManagement() {
             <Button 
               className="w-full"
               onClick={handleUpdatePlan}
-              disabled={isLoading || selectedPlan === currentPlan}
+              disabled={isLoading}
             >
               {isLoading ? (
                 <>
