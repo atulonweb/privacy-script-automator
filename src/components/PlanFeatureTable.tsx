@@ -2,12 +2,19 @@
 import React from 'react';
 import { CheckCircle, XCircle } from 'lucide-react';
 import usePlanLimits from '@/hooks/usePlanLimits';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const PlanFeatureTable: React.FC = () => {
   const { planDetails, userPlan, isLoading } = usePlanLimits();
 
   if (isLoading) {
-    return <div className="text-center py-4">Loading plan details...</div>;
+    return (
+      <div className="space-y-2">
+        <Skeleton className="h-4 w-3/4 bg-gray-200" />
+        <Skeleton className="h-12 w-full bg-gray-200" />
+        <Skeleton className="h-12 w-full bg-gray-200" />
+      </div>
+    );
   }
 
   return (

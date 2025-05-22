@@ -105,6 +105,31 @@ export function useWebsites() {
     }
   };
 
+  const updateWebsite = async (id: string, updates: {name?: string, domain?: string}) => {
+    try {
+      if (!user) {
+        toast.error('You must be logged in to update a website');
+        throw new Error('User not authenticated');
+      }
+      
+      const { error } = await supabase
+        .from('websites')
+        .update(updates)
+        .eq('id', id)
+        .eq('user_id', user.id);
+      
+      if (error) throw error;
+      
+      toast.success('Website updated successfully');
+      await fetchWebsites();
+      return true;
+    } catch (err: any) {
+      console.error('Error updating website:', err);
+      toast.error(err.message || 'Failed to update website');
+      throw err;
+    }
+  };
+
   const updateWebsiteStatus = async (id: string, active: boolean) => {
     try {
       if (!user) {
@@ -168,6 +193,7 @@ export function useWebsites() {
     error,
     fetchWebsites,
     addWebsite,
+    updateWebsite,
     updateWebsiteStatus,
     deleteWebsite,
     retryCount

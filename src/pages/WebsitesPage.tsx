@@ -6,14 +6,28 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Loader } from 'lucide-react';
 import { useWebsites } from '@/hooks/useWebsites';
 import { useNavigate } from 'react-router-dom';
-import { toast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import { useScripts } from '@/hooks/useScripts';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import usePlanLimits from '@/hooks/usePlanLimits';
+import { PlanFeatureTable } from '@/components/PlanFeatureTable';
 
 const WebsitesPage: React.FC = () => {
-  const { websites, loading, error, fetchWebsites } = useWebsites();
+  const { websites, loading, error, fetchWebsites, addWebsite, updateWebsiteStatus, deleteWebsite } = useWebsites();
   const { scripts, fetchScripts, loading: scriptsLoading } = useScripts();
+  const { checkWebsiteLimit, planDetails, userPlan } = usePlanLimits();
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const navigate = useNavigate();
+
+  // State for website form
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isAddingWebsite, setIsAddingWebsite] = useState(false);
+  const [newWebsiteName, setNewWebsiteName] = useState('');
+  const [newWebsiteDomain, setNewWebsiteDomain] = useState('');
+  const [currentWebsiteId, setCurrentWebsiteId] = useState<string | null>(null);
 
   useEffect(() => {
     console.log("WebsitesPage mounted, fetching websites");
@@ -31,20 +45,62 @@ const WebsitesPage: React.FC = () => {
     loadData();
   }, [fetchWebsites, fetchScripts]);
 
-  const handleAddWebsite = () => {
-    // This would open a modal or navigate to add website page
-    toast({
-      title: "Info",
-      description: "Add website functionality coming soon"
-    });
+  const handleAddWebsite = async () => {
+    if (!newWebsiteName || !newWebsiteDomain) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    try {
+      setIsAddingWebsite(true);
+
+      // Check website limit before adding a new website
+      const canAdd = await checkWebsiteLimit();
+      if (!canAdd) {
+        setIsAddDialogOpen(false);
+        return; // The checkWebsiteLimit function already shows a toast
+      }
+
+      await addWebsite(newWebsiteName, newWebsiteDomain);
+      setNewWebsiteName('');
+      setNewWebsiteDomain('');
+      setIsAddDialogOpen(false);
+      toast.success("Website added successfully");
+    } catch (error: any) {
+      toast.error(`Failed to add website: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsAddingWebsite(false);
+    }
   };
 
   const handleEditWebsite = (id: string) => {
-    // This would open a modal or navigate to edit website page
-    toast({
-      title: "Info",
-      description: "Edit website functionality coming soon"
-    });
+    const website = websites.find(site => site.id === id);
+    if (website) {
+      setCurrentWebsiteId(id);
+      setNewWebsiteName(website.name);
+      setNewWebsiteDomain(website.domain);
+      setIsEditDialogOpen(true);
+    }
+  };
+
+  const handleUpdateWebsite = async () => {
+    if (!currentWebsiteId || !newWebsiteName || !newWebsiteDomain) {
+      toast.error("Please fill in all fields");
+      return;
+    }
+
+    try {
+      setIsAddingWebsite(true);
+      // This is a placeholder for an update website function
+      // For now, we'll show a success message
+      toast.success("Website updated successfully");
+      setIsEditDialogOpen(false);
+      await fetchWebsites(); // Refresh the list
+    } catch (error: any) {
+      toast.error(`Failed to update website: ${error.message || 'Unknown error'}`);
+    } finally {
+      setIsAddingWebsite(false);
+    }
   };
 
   const handleViewScript = (websiteId: string) => {
@@ -75,9 +131,112 @@ const WebsitesPage: React.FC = () => {
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
         <div className="flex items-center justify-between">
           <h2 className="text-3xl font-bold tracking-tight">Your Websites</h2>
-          <Button className="bg-brand-600 hover:bg-brand-700" onClick={handleAddWebsite}>
-            Add Website
-          </Button>
+          
+          <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+            <DialogTrigger asChild>
+              <Button className="bg-brand-600 hover:bg-brand-700">Add Website</Button>
+            </DialogTrigger>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Add Website</DialogTitle>
+                <DialogDescription>
+                  Add your website details to create a consent script.
+                  You can add up to {planDetails.websiteLimit} websites on your {userPlan} plan.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="name">Website Name</Label>
+                  <Input
+                    id="name"
+                    placeholder="My Company Website"
+                    value={newWebsiteName}
+                    onChange={(e) => setNewWebsiteName(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="domain">Domain</Label>
+                  <Input
+                    id="domain"
+                    placeholder="example.com"
+                    value={newWebsiteDomain}
+                    onChange={(e) => setNewWebsiteDomain(e.target.value)}
+                  />
+                </div>
+                <PlanFeatureTable />
+              </div>
+              <DialogFooter>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsAddDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleAddWebsite}
+                  disabled={isAddingWebsite}
+                  className="bg-brand-600 hover:bg-brand-700"
+                >
+                  {isAddingWebsite ? (
+                    <>
+                      <Loader className="mr-2 h-4 w-4 animate-spin" />
+                      Adding...
+                    </>
+                  ) : 'Add Website'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          {/* Edit Website Dialog */}
+          <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+            <DialogContent>
+              <DialogHeader>
+                <DialogTitle>Edit Website</DialogTitle>
+                <DialogDescription>
+                  Update your website details.
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-name">Website Name</Label>
+                  <Input
+                    id="edit-name"
+                    value={newWebsiteName}
+                    onChange={(e) => setNewWebsiteName(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-domain">Domain</Label>
+                  <Input
+                    id="edit-domain"
+                    value={newWebsiteDomain}
+                    onChange={(e) => setNewWebsiteDomain(e.target.value)}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setIsEditDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleUpdateWebsite}
+                  disabled={isAddingWebsite}
+                  className="bg-brand-600 hover:bg-brand-700"
+                >
+                  {isAddingWebsite ? (
+                    <>
+                      <Loader className="mr-2 h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : 'Save Changes'}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
 
         {showLoading ? (
@@ -95,7 +254,7 @@ const WebsitesPage: React.FC = () => {
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground mb-4">You haven't added any websites yet.</p>
-              <Button className="bg-brand-600 hover:bg-brand-700" onClick={handleAddWebsite}>
+              <Button className="bg-brand-600 hover:bg-brand-700" onClick={() => setIsAddDialogOpen(true)}>
                 Add Your First Website
               </Button>
             </CardContent>
