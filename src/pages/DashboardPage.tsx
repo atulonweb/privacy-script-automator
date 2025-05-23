@@ -29,7 +29,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { usePlanLimits } from '@/hooks/usePlanLimits';
+import usePlanLimits from '@/hooks/usePlanLimits';
 
 const DashboardPage: React.FC = () => {
   const [copiedScript, setCopiedScript] = useState(false);
