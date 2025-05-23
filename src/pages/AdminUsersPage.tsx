@@ -144,6 +144,7 @@ const AdminUsersPage = () => {
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
+                <TableHead>Email</TableHead>
                 <TableHead>Plan</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -151,13 +152,13 @@ const AdminUsersPage = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center py-10">
+                  <TableCell colSpan={4} className="text-center py-10">
                     Loading users...
                   </TableCell>
                 </TableRow>
               ) : users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={3} className="text-center py-10">
+                  <TableCell colSpan={4} className="text-center py-10">
                     No users found
                   </TableCell>
                 </TableRow>
@@ -167,6 +168,7 @@ const AdminUsersPage = () => {
                     <TableCell className="font-medium">
                       {user.full_name || 'Unnamed User'}
                     </TableCell>
+                    <TableCell>{user.email}</TableCell>
                     <TableCell>
                       {renderPlanBadge(user.plan)}
                     </TableCell>
