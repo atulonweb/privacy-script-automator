@@ -27,7 +27,7 @@ const defaultPlanLimits: Record<PlanType, PlanDetails> = {
     supportLevel: 'community'
   },
   basic: {
-    websiteLimit: 5,
+    websiteLimit: 3,
     analyticsHistory: 30,
     webhooksEnabled: true,
     whiteLabel: false,
@@ -88,6 +88,19 @@ const fetchUserSubscription = async (userId: string): Promise<PlanType> => {
   return (data?.plan as PlanType) || 'free';
 };
 
+// Function to get current website count for user
+const fetchUserWebsiteCount = async (userId: string): Promise<number> => {
+  const { data, error } = await supabase
+    .from('websites')
+    .select('id')
+    .eq('user_id', userId)
+    .eq('active', true);
+
+  if (error) throw error;
+  
+  return data?.length || 0;
+};
+
 const usePlanLimits = () => {
   const { user } = useAuth();
   const [planDetails, setPlanDetails] = useState<PlanDetails>(defaultPlanLimits.free);
@@ -118,6 +131,15 @@ const usePlanLimits = () => {
     },
   });
 
+  // Fetch user's current website count
+  const { data: websiteCount, refetch: refetchWebsiteCount } = useQuery({
+    queryKey: ['userWebsiteCount', user?.id],
+    queryFn: () => fetchUserWebsiteCount(user!.id),
+    enabled: !!user?.id,
+    staleTime: 1000 * 30, // Cache for 30 seconds for real-time updates
+    refetchOnWindowFocus: true,
+  });
+
   const currentPlan = userPlan || 'free';
   const isLoading = planSettingsLoading || userPlanLoading;
 
@@ -132,8 +154,11 @@ const usePlanLimits = () => {
   // Function to refresh user plan data (useful after plan updates)
   const refreshUserPlan = async () => {
     try {
-      await refetchUserPlan();
-      await queryClient.invalidateQueries({ queryKey: ['planSettings'] });
+      await Promise.all([
+        refetchUserPlan(),
+        refetchWebsiteCount(),
+        queryClient.invalidateQueries({ queryKey: ['planSettings'] })
+      ]);
     } catch (err: any) {
       console.error('Error refreshing user plan:', err);
       setError(err.message);
@@ -141,22 +166,23 @@ const usePlanLimits = () => {
   };
 
   const checkWebsiteLimit = async (): Promise<boolean> => {
-    if (!user) return false;
+    if (!user || !planDetails) return false;
 
     try {
-      const { data: websites, error } = await supabase
-        .from('websites')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('active', true);
-
-      if (error) throw error;
-
-      const currentCount = websites?.length || 0;
+      // Get fresh website count
+      await refetchWebsiteCount();
+      const currentCount = websiteCount || 0;
+      
+      console.log('Plan limit check:', {
+        currentPlan,
+        websiteLimit: planDetails.websiteLimit,
+        currentCount,
+        canAdd: currentCount < planDetails.websiteLimit
+      });
       
       if (currentCount >= planDetails.websiteLimit) {
         toast.warning('Plan Limit Reached', { 
-          description: `Your ${currentPlan} plan allows a maximum of ${planDetails.websiteLimit} websites. Please upgrade to add more websites.`
+          description: `Your ${currentPlan} plan allows a maximum of ${planDetails.websiteLimit} websites. You currently have ${currentCount}. Please upgrade to add more websites.`
         });
         return false;
       }
@@ -212,7 +238,13 @@ const usePlanLimits = () => {
     // Get the analytics retention period
     getAnalyticsRetention: (): number => {
       return getAnalyticsRetentionDays();
-    }
+    },
+
+    // Get current usage stats
+    getCurrentUsage: () => ({
+      websites: websiteCount || 0,
+      websiteLimit: planDetails.websiteLimit
+    })
   };
 
   return {
@@ -222,6 +254,7 @@ const usePlanLimits = () => {
     error,
     refreshUserPlan,
     enforcePlanLimits,
+    websiteCount: websiteCount || 0,
     // Legacy methods for backward compatibility
     checkWebsiteLimit,
     checkWebhookEnabled,

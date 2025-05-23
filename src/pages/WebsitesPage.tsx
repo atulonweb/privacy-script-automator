@@ -17,7 +17,7 @@ import PlanFeatureTable from '@/components/PlanFeatureTable';
 const WebsitesPage: React.FC = () => {
   const { websites, loading, error, fetchWebsites, addWebsite, updateWebsite, updateWebsiteStatus, deleteWebsite } = useWebsites();
   const { scripts, fetchScripts, loading: scriptsLoading } = useScripts();
-  const { checkWebsiteLimit, planDetails, userPlan } = usePlanLimits();
+  const { enforcePlanLimits, planDetails, userPlan, websiteCount, refreshUserPlan } = usePlanLimits();
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const navigate = useNavigate();
 
@@ -33,17 +33,16 @@ const WebsitesPage: React.FC = () => {
     console.log("WebsitesPage mounted, fetching websites");
     const loadData = async () => {
       try {
-        await Promise.all([fetchWebsites(), fetchScripts()]);
+        await Promise.all([fetchWebsites(), fetchScripts(), refreshUserPlan()]);
       } catch (error) {
         console.error("Error loading websites or scripts:", error);
       } finally {
-        // Mark initial load as complete regardless of success/failure
         setIsInitialLoad(false);
       }
     };
     
     loadData();
-  }, [fetchWebsites, fetchScripts]);
+  }, [fetchWebsites, fetchScripts, refreshUserPlan]);
 
   const handleAddWebsite = async () => {
     if (!newWebsiteName || !newWebsiteDomain) {
@@ -57,16 +56,20 @@ const WebsitesPage: React.FC = () => {
       // Check website limit before adding a new website - this enforces plan restrictions
       console.log('Checking website limit before adding new website');
       console.log('Current plan:', userPlan, 'Website limit:', planDetails.websiteLimit);
-      console.log('Current websites count:', websites.length);
+      console.log('Current websites count:', websiteCount);
 
-      const canAdd = await checkWebsiteLimit();
+      const canAdd = await enforcePlanLimits.canCreateWebsite();
       if (!canAdd) {
         console.log('Website limit reached, cannot add more websites');
         setIsAddDialogOpen(false);
-        return; // The checkWebsiteLimit function already shows a toast
+        return;
       }
 
       await addWebsite(newWebsiteName, newWebsiteDomain);
+      
+      // Refresh plan data to get updated counts
+      await refreshUserPlan();
+      
       setNewWebsiteName('');
       setNewWebsiteDomain('');
       setIsAddDialogOpen(false);
@@ -134,9 +137,10 @@ const WebsitesPage: React.FC = () => {
   // Show loading only during initial load
   const showLoading = isInitialLoad && (loading || scriptsLoading);
 
-  // Check if user is approaching website limit
-  const isApproachingLimit = websites.length >= planDetails.websiteLimit * 0.8;
-  const isAtLimit = websites.length >= planDetails.websiteLimit;
+  // Check if user is approaching website limit (using real database values)
+  const isApproachingLimit = websiteCount >= planDetails.websiteLimit * 0.8;
+  const isAtLimit = websiteCount >= planDetails.websiteLimit;
+  const isOverLimit = websiteCount > planDetails.websiteLimit;
 
   return (
     <DashboardLayout>
@@ -148,7 +152,7 @@ const WebsitesPage: React.FC = () => {
             <DialogTrigger asChild>
               <Button 
                 className="bg-brand-600 hover:bg-brand-700" 
-                disabled={isAtLimit}
+                disabled={isAtLimit || isOverLimit}
               >
                 Add Website
               </Button>
@@ -161,7 +165,7 @@ const WebsitesPage: React.FC = () => {
                   You can add up to {planDetails.websiteLimit} websites on your {userPlan} plan.
                   {isApproachingLimit && (
                     <span className="block mt-2 text-amber-600 font-medium">
-                      ⚠️ You're using {websites.length} of {planDetails.websiteLimit} websites. Consider upgrading your plan.
+                      ⚠️ You're using {websiteCount} of {planDetails.websiteLimit} websites. Consider upgrading your plan.
                     </span>
                   )}
                 </DialogDescription>
@@ -261,24 +265,35 @@ const WebsitesPage: React.FC = () => {
           </Dialog>
         </div>
 
-        {/* Plan limit warning */}
-        {isApproachingLimit && !isAtLimit && (
-          <Card className="border-amber-200 bg-amber-50">
+        {/* Plan limit warnings */}
+        {isOverLimit && (
+          <Card className="border-red-200 bg-red-50">
             <CardContent className="py-4">
-              <p className="text-amber-800">
-                <strong>Plan Limit Warning:</strong> You're using {websites.length} of {planDetails.websiteLimit} websites. 
-                Consider upgrading your plan to add more websites.
+              <p className="text-red-800">
+                <strong>Plan Limit Exceeded:</strong> You have {websiteCount} websites but your {userPlan} plan only allows {planDetails.websiteLimit}. 
+                Please upgrade your plan or remove excess websites to continue using all features.
               </p>
             </CardContent>
           </Card>
         )}
 
-        {isAtLimit && (
+        {isAtLimit && !isOverLimit && (
           <Card className="border-red-200 bg-red-50">
             <CardContent className="py-4">
               <p className="text-red-800">
                 <strong>Plan Limit Reached:</strong> You've reached your {planDetails.websiteLimit} website limit. 
                 Please upgrade your plan to add more websites.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {isApproachingLimit && !isAtLimit && !isOverLimit && (
+          <Card className="border-amber-200 bg-amber-50">
+            <CardContent className="py-4">
+              <p className="text-amber-800">
+                <strong>Plan Limit Warning:</strong> You're using {websiteCount} of {planDetails.websiteLimit} websites. 
+                Consider upgrading your plan to add more websites.
               </p>
             </CardContent>
           </Card>
@@ -302,7 +317,7 @@ const WebsitesPage: React.FC = () => {
               <Button 
                 className="bg-brand-600 hover:bg-brand-700" 
                 onClick={() => setIsAddDialogOpen(true)}
-                disabled={isAtLimit}
+                disabled={isAtLimit || isOverLimit}
               >
                 Add Your First Website
               </Button>

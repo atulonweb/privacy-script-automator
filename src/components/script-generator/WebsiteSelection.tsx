@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Website } from '@/hooks/useWebsites';
 import { toast } from 'sonner';
+import usePlanLimits from '@/hooks/usePlanLimits';
 
 interface WebsiteSelectionProps {
   websites: Website[];
@@ -24,6 +25,7 @@ const WebsiteSelection: React.FC<WebsiteSelectionProps> = ({
   onNext,
 }) => {
   const navigate = useNavigate();
+  const { planDetails, userPlan, websiteCount } = usePlanLimits();
 
   const handleNext = () => {
     if (!websiteId) {
@@ -33,13 +35,21 @@ const WebsiteSelection: React.FC<WebsiteSelectionProps> = ({
     onNext();
   };
 
+  const isOverLimit = websiteCount > planDetails.websiteLimit;
+
   return (
     <div className="space-y-6">
       <div>
         <h3 className="text-lg font-medium">Select Website</h3>
         <p className="text-sm text-muted-foreground">
           Choose the website where this consent banner will be used.
+          You have {websiteCount} of {planDetails.websiteLimit} websites on your {userPlan} plan.
         </p>
+        {isOverLimit && (
+          <p className="text-sm text-red-600 mt-2">
+            ⚠️ You have exceeded your plan limit. Please upgrade or remove excess websites.
+          </p>
+        )}
       </div>
 
       <div className="space-y-4">
@@ -78,9 +88,9 @@ const WebsiteSelection: React.FC<WebsiteSelectionProps> = ({
                 <Button
                   variant="outline"
                   className="mt-4"
-                  onClick={() => navigate('/dashboard', { replace: true })}
+                  onClick={() => navigate('/dashboard/websites')}
                 >
-                  Go to Dashboard
+                  Go to Websites
                 </Button>
               </div>
             )}

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Card, 
@@ -30,6 +29,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { usePlanLimits } from '@/hooks/usePlanLimits';
 
 const DashboardPage: React.FC = () => {
   const [copiedScript, setCopiedScript] = useState(false);
@@ -42,6 +42,7 @@ const DashboardPage: React.FC = () => {
   const { websites, loading: websitesLoading, addWebsite, updateWebsiteStatus } = useWebsites();
   const { scripts, loading: scriptsLoading } = useScripts();
   const { chartData, loading: analyticsLoading } = useAnalytics();
+  const { enforcePlanLimits, planDetails, userPlan, websiteCount } = usePlanLimits();
   
   const totalVisitors = websites.reduce((acc, site) => {
     // For each website, add the visitor_count (or 0 if undefined)
@@ -54,6 +55,13 @@ const DashboardPage: React.FC = () => {
     
   const handleAddWebsite = async () => {
     if (!newWebsiteName || !newWebsiteDomain) return;
+    
+    // Check plan limits before adding website
+    const canAdd = await enforcePlanLimits.canCreateWebsite();
+    if (!canAdd) {
+      setIsAddDialogOpen(false);
+      return;
+    }
     
     setIsAddingWebsite(true);
     try {
@@ -87,6 +95,9 @@ const DashboardPage: React.FC = () => {
     }, 3000);
   };
 
+  // Check if user is at limit
+  const isAtLimit = websiteCount >= planDetails.websiteLimit;
+
   return (
     <DashboardLayout>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -94,7 +105,10 @@ const DashboardPage: React.FC = () => {
           <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-brand-600 hover:bg-brand-700">
+              <Button 
+                className="bg-brand-600 hover:bg-brand-700"
+                disabled={isAtLimit}
+              >
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add New Website
               </Button>
@@ -104,6 +118,12 @@ const DashboardPage: React.FC = () => {
                 <DialogTitle>Add New Website</DialogTitle>
                 <DialogDescription>
                   Add details about your website to create a consent script.
+                  You can add up to {planDetails.websiteLimit} websites on your {userPlan} plan.
+                  {websiteCount >= planDetails.websiteLimit * 0.8 && (
+                    <span className="block mt-2 text-amber-600 font-medium">
+                      ⚠️ You're using {websiteCount} of {planDetails.websiteLimit} websites.
+                    </span>
+                  )}
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -333,7 +353,8 @@ const DashboardPage: React.FC = () => {
           <CardHeader>
             <CardTitle>Your Websites</CardTitle>
             <CardDescription>
-              Manage your websites and view their consent statistics
+              Manage your websites and view their consent statistics.
+              Using {websiteCount} of {planDetails.websiteLimit} websites allowed on your {userPlan} plan.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -393,6 +414,7 @@ const DashboardPage: React.FC = () => {
                 <Button 
                   className="bg-brand-600 hover:bg-brand-700"
                   onClick={() => setIsAddDialogOpen(true)}
+                  disabled={isAtLimit}
                 >
                   <Plus className="mr-2 h-4 w-4" />
                   Add Website
