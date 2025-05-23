@@ -45,11 +45,11 @@ const DashboardPage: React.FC = () => {
   const { chartData, loading: analyticsLoading } = useAnalytics();
   const { enforcePlanLimits, planDetails, userPlan, websiteCount } = usePlanLimits();
   
-  // Check plan limits on component mount
+  // Check plan limits on component mount - ONLY show notifications on dashboard
   useEffect(() => {
     if (!websitesLoading && websiteCount > 0) {
       setTimeout(() => {
-        enforcePlanLimits.enforceAllLimits();
+        enforcePlanLimits.enforceAllLimits(true); // Pass true to show notifications on dashboard
       }, 1000);
     }
   }, [websitesLoading, websiteCount, enforcePlanLimits]);

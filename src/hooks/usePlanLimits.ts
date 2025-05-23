@@ -1,9 +1,9 @@
-
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
+import usePlanLimitNotifications from './usePlanLimitNotifications';
 
 type PlanDetails = {
   websiteLimit: number;
@@ -104,6 +104,7 @@ const usePlanLimits = () => {
   const [planDetails, setPlanDetails] = useState<PlanDetails>(defaultPlanLimits.free);
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
+  const { showOneTimeNotification } = usePlanLimitNotifications();
 
   const { data: planSettings, isLoading: planSettingsLoading } = useQuery({
     queryKey: ['planSettings'],
@@ -163,9 +164,13 @@ const usePlanLimits = () => {
         const currentCount = websiteCount || 0;
         
         if (currentCount >= planDetails.websiteLimit) {
-          toast.error('Website Limit Reached', { 
-            description: `Your ${currentPlan} plan allows a maximum of ${planDetails.websiteLimit} websites. You currently have ${currentCount}. Please upgrade to add more websites.`
-          });
+          showOneTimeNotification(
+            'feature_restricted',
+            'Website Limit Reached',
+            `Your ${currentPlan} plan allows a maximum of ${planDetails.websiteLimit} websites. You currently have ${currentCount}. Please upgrade to add more websites.`,
+            'error',
+            'website_limit'
+          );
           return false;
         }
         
@@ -178,9 +183,13 @@ const usePlanLimits = () => {
 
     canUseWebhooks: (): boolean => {
       if (!planDetails.webhooksEnabled) {
-        toast.error('Feature Not Available', { 
-          description: `Webhooks are not available on your ${currentPlan} plan. Please upgrade to use webhooks.`
-        });
+        showOneTimeNotification(
+          'feature_restricted',
+          'Feature Not Available',
+          `Webhooks are not available on your ${currentPlan} plan. Please upgrade to use webhooks.`,
+          'error',
+          'webhooks'
+        );
         return false;
       }
       return true;
@@ -188,9 +197,13 @@ const usePlanLimits = () => {
 
     canUseWhiteLabel: (): boolean => {
       if (!planDetails.whiteLabel) {
-        toast.error('Feature Not Available', { 
-          description: `White labeling is not available on your ${currentPlan} plan. Please upgrade to remove branding.`
-        });
+        showOneTimeNotification(
+          'feature_restricted',
+          'Feature Not Available',
+          `White labeling is not available on your ${currentPlan} plan. Please upgrade to remove branding.`,
+          'error',
+          'white_label'
+        );
         return false;
       }
       return true;
@@ -211,8 +224,8 @@ const usePlanLimits = () => {
       isOverLimit: (websiteCount || 0) > planDetails.websiteLimit
     }),
 
-    // New method to enforce limits on existing data
-    enforceAllLimits: () => {
+    // Updated method to show notifications only on dashboard and only once per session
+    enforceAllLimits: (showOnDashboard: boolean = false) => {
       const currentCount = websiteCount || 0;
       const violations = [];
 
@@ -220,10 +233,14 @@ const usePlanLimits = () => {
         violations.push(`You have ${currentCount} websites but your ${currentPlan} plan only allows ${planDetails.websiteLimit}`);
       }
 
-      if (violations.length > 0) {
-        toast.error('Plan Limits Exceeded', {
-          description: violations.join('. ') + '. Please upgrade your plan or remove excess items.'
-        });
+      if (violations.length > 0 && showOnDashboard) {
+        showOneTimeNotification(
+          'plan_limit_exceeded',
+          'Plan Limits Exceeded',
+          violations.join('. ') + '. Please upgrade your plan or remove excess items.',
+          'error',
+          'dashboard'
+        );
       }
 
       return violations.length === 0;

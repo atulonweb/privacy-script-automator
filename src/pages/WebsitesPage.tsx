@@ -34,10 +34,6 @@ const WebsitesPage: React.FC = () => {
     const loadData = async () => {
       try {
         await Promise.all([fetchWebsites(), fetchScripts(), refreshUserPlan()]);
-        // Check and enforce all limits after data is loaded
-        setTimeout(() => {
-          enforcePlanLimits.enforceAllLimits();
-        }, 1000);
       } catch (error) {
         console.error("Error loading websites or scripts:", error);
       } finally {
