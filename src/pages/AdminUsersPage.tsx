@@ -100,14 +100,14 @@ const AdminUsersPage = () => {
         // Fallback to direct database update if edge function fails
         console.log("Falling back to direct database update");
         
-        // Check if subscription exists using maybeSingle to avoid errors
+        // First check if subscription exists
         const { data: existingSubscription, error: checkError } = await supabase
           .from('user_subscriptions')
           .select('*')
           .eq('user_id', userId)
-          .maybeSingle();
+          .single();
         
-        if (checkError) {
+        if (checkError && checkError.code !== 'PGRST116') {
           throw checkError;
         }
         

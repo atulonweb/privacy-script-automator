@@ -52,7 +52,6 @@ const handleRequest = async (req: Request): Promise<Response> => {
     
     if (existingSubscription) {
       // Update existing subscription
-      console.log('Updating existing subscription for user:', userId);
       const { data: updatedSubscription, error: updateError } = await supabaseAdmin
         .from('user_subscriptions')
         .update({
@@ -68,10 +67,8 @@ const handleRequest = async (req: Request): Promise<Response> => {
       }
       
       result = updatedSubscription;
-      console.log('Successfully updated subscription:', result);
     } else {
       // Insert new subscription
-      console.log('Creating new subscription for user:', userId);
       const { data: newSubscription, error: insertError } = await supabaseAdmin
         .from('user_subscriptions')
         .insert({
@@ -87,7 +84,6 @@ const handleRequest = async (req: Request): Promise<Response> => {
       }
       
       result = newSubscription;
-      console.log('Successfully created subscription:', result);
     }
     
     return new Response(
