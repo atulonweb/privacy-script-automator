@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
@@ -16,7 +15,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AdminsList } from '@/components/admin/AdminsList';
 import { useAdminManagement } from '@/hooks/admin/useAdminManagement';
 import { CustomizeDialog } from '@/components/ui/customize-dialog';
-import { Switch } from '@/components/ui/switch';
 import { useAuth } from '@/context/AuthContext';
 import { Link } from 'react-router-dom';
 import PlanSettingsManager from '@/components/admin/PlanSettingsManager';
@@ -27,7 +25,6 @@ const AdminSettingsPage = () => {
   const [activeTab, setActiveTab] = useState<string>('general');
   const { admins, loading, fetchAdmins } = useAdminManagement();
   const [configDialogOpen, setConfigDialogOpen] = useState(false);
-  const [whiteLabelEnabled, setWhiteLabelEnabled] = useState(false);
   const { user } = useAuth();
   
   const [scriptSettings, setScriptSettings] = useState({
@@ -65,11 +62,6 @@ const AdminSettingsPage = () => {
     setScriptSettings(settings);
     toast.success('Script settings saved successfully!');
     setConfigDialogOpen(false);
-  };
-
-  const handleToggleWhiteLabel = (checked) => {
-    setWhiteLabelEnabled(checked);
-    toast.success('White label setting updated');
   };
 
   return (
@@ -117,17 +109,6 @@ const AdminSettingsPage = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-                
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between">
-                    <Label htmlFor="white-label">White Label (Remove "Powered by" branding)</Label>
-                    <Switch 
-                      id="white-label" 
-                      checked={whiteLabelEnabled} 
-                      onCheckedChange={handleToggleWhiteLabel}
-                    />
-                  </div>
                 </div>
               </CardContent>
               <CardFooter>
