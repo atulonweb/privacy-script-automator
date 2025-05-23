@@ -52,9 +52,37 @@ const AdminUsersPage = () => {
         console.error("Subscription error:", subscriptionError);
       }
 
-      // Create a map of user_id to plan
+      // Get website counts for each user
+      const { data: websiteData, error: websiteError } = await supabase
+        .from('websites')
+        .select('user_id');
+
+      if (websiteError) {
+        console.error("Website error:", websiteError);
+      }
+
+      // Get script counts for each user
+      const { data: scriptData, error: scriptError } = await supabase
+        .from('consent_scripts')
+        .select('user_id');
+
+      if (scriptError) {
+        console.error("Script error:", scriptError);
+      }
+
+      // Create maps for counts
       const subscriptionMap = subscriptionData?.reduce((acc: any, item: any) => {
         acc[item.user_id] = item.plan;
+        return acc;
+      }, {}) || {};
+
+      const websiteCountMap = websiteData?.reduce((acc: any, item: any) => {
+        acc[item.user_id] = (acc[item.user_id] || 0) + 1;
+        return acc;
+      }, {}) || {};
+
+      const scriptCountMap = scriptData?.reduce((acc: any, item: any) => {
+        acc[item.user_id] = (acc[item.user_id] || 0) + 1;
         return acc;
       }, {}) || {};
 
@@ -63,7 +91,12 @@ const AdminUsersPage = () => {
         id: user.id,
         full_name: user.user_metadata?.full_name || user.email || 'Unknown User',
         email: user.email,
-        plan: subscriptionMap[user.id] || 'free'
+        role: user.app_metadata?.role || 'user',
+        status: user.email_confirmed_at ? 'Active' : 'Pending',
+        plan: subscriptionMap[user.id] || 'free',
+        websites: websiteCountMap[user.id] || 0,
+        scripts: scriptCountMap[user.id] || 0,
+        joined: new Date(user.created_at).toLocaleDateString()
       })) || [];
 
       setUsers(processedUsers);
@@ -134,6 +167,28 @@ const AdminUsersPage = () => {
     }
   };
 
+  const renderRoleBadge = (role: string) => {
+    switch (role) {
+      case 'admin':
+        return <Badge className="bg-red-500">Admin</Badge>;
+      case 'super_admin':
+        return <Badge className="bg-red-700">Super Admin</Badge>;
+      default:
+        return <Badge variant="outline">User</Badge>;
+    }
+  };
+
+  const renderStatusBadge = (status: string) => {
+    switch (status) {
+      case 'Active':
+        return <Badge className="bg-green-500">Active</Badge>;
+      case 'Pending':
+        return <Badge className="bg-yellow-500">Pending</Badge>;
+      default:
+        return <Badge variant="outline">Unknown</Badge>;
+    }
+  };
+
   return (
     <AdminLayout>
       <div className="container mx-auto py-10">
@@ -145,20 +200,24 @@ const AdminUsersPage = () => {
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
-                <TableHead>Plan</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead>Websites</TableHead>
+                <TableHead>Scripts</TableHead>
+                <TableHead>Joined</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-10">
+                  <TableCell colSpan={8} className="text-center py-10">
                     Loading users...
                   </TableCell>
                 </TableRow>
               ) : users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-10">
+                  <TableCell colSpan={8} className="text-center py-10">
                     No users found
                   </TableCell>
                 </TableRow>
@@ -170,8 +229,14 @@ const AdminUsersPage = () => {
                     </TableCell>
                     <TableCell>{user.email}</TableCell>
                     <TableCell>
-                      {renderPlanBadge(user.plan)}
+                      {renderRoleBadge(user.role)}
                     </TableCell>
+                    <TableCell>
+                      {renderStatusBadge(user.status)}
+                    </TableCell>
+                    <TableCell>{user.websites}</TableCell>
+                    <TableCell>{user.scripts}</TableCell>
+                    <TableCell>{user.joined}</TableCell>
                     <TableCell className="text-right">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
