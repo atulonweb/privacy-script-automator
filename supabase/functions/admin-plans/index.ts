@@ -41,9 +41,9 @@ const handleRequest = async (req: Request): Promise<Response> => {
       .from('user_subscriptions')
       .select('*')
       .eq('user_id', userId)
-      .single();
+      .maybeSingle();
       
-    if (fetchError && fetchError.code !== 'PGRST116') { // PGRST116 is "no rows returned" error
+    if (fetchError) {
       console.error('Error checking existing subscription:', fetchError);
       throw new Error(`Failed to check subscription: ${fetchError.message}`);
     }
