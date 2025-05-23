@@ -9,20 +9,40 @@ import { ChevronDown, MoreHorizontal } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 
 const AdminUsersPage = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingPlan, setUpdatingPlan] = useState(false);
-  const [userToUpdatePlan, setUserToUpdatePlan] = useState<{userId: string, name: string} | null>(null);
+  const [userToUpdatePlan, setUserToUpdatePlan] = useState<{userId: string, name: string, currentPlan: string} | null>(null);
   const [selectedPlan, setSelectedPlan] = useState<string>('free');
+  const [availablePlans, setAvailablePlans] = useState<any[]>([]);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchUsers();
+    fetchAvailablePlans();
   }, []);
+
+  const fetchAvailablePlans = async () => {
+    try {
+      const { data: planData, error: planError } = await supabase
+        .from('plan_settings')
+        .select('*')
+        .order('plan_type');
+
+      if (planError) {
+        console.error("Plan settings error:", planError);
+        return;
+      }
+
+      setAvailablePlans(planData || []);
+    } catch (error: any) {
+      console.error("Error fetching plans:", error);
+    }
+  };
 
   const fetchUsers = async () => {
     setLoading(true);
@@ -202,6 +222,7 @@ const AdminUsersPage = () => {
                 <TableHead>Email</TableHead>
                 <TableHead>Role</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Plan</TableHead>
                 <TableHead>Websites</TableHead>
                 <TableHead>Scripts</TableHead>
                 <TableHead>Joined</TableHead>
@@ -211,13 +232,13 @@ const AdminUsersPage = () => {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-10">
+                  <TableCell colSpan={9} className="text-center py-10">
                     Loading users...
                   </TableCell>
                 </TableRow>
               ) : users.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-10">
+                  <TableCell colSpan={9} className="text-center py-10">
                     No users found
                   </TableCell>
                 </TableRow>
@@ -233,6 +254,9 @@ const AdminUsersPage = () => {
                     </TableCell>
                     <TableCell>
                       {renderStatusBadge(user.status)}
+                    </TableCell>
+                    <TableCell>
+                      {renderPlanBadge(user.plan)}
                     </TableCell>
                     <TableCell>{user.websites}</TableCell>
                     <TableCell>{user.scripts}</TableCell>
@@ -252,7 +276,8 @@ const AdminUsersPage = () => {
                             onClick={() => {
                               setUserToUpdatePlan({
                                 userId: user.id, 
-                                name: user.full_name || 'Unnamed User'
+                                name: user.full_name || 'Unnamed User',
+                                currentPlan: user.plan
                               });
                               setSelectedPlan(user.plan);
                             }}
@@ -277,67 +302,30 @@ const AdminUsersPage = () => {
             <DialogTitle>Update Plan</DialogTitle>
             <DialogDescription>
               Change the subscription plan for {userToUpdatePlan?.name}.
+              Current plan: {userToUpdatePlan?.currentPlan}
             </DialogDescription>
           </DialogHeader>
           
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
               <label className="text-sm font-medium">Select Plan</label>
-              <TooltipProvider>
-                <div className="grid grid-cols-2 gap-2">
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant={selectedPlan === 'free' ? 'default' : 'outline'}
-                        className="w-full"
-                        onClick={() => setSelectedPlan('free')}
-                      >
-                        Free
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Basic features, 1 website</TooltipContent>
-                  </Tooltip>
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant={selectedPlan === 'pro' ? 'default' : 'outline'}
-                        className="w-full"
-                        onClick={() => setSelectedPlan('pro')}
-                      >
-                        Pro
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Full features, 5 websites</TooltipContent>
-                  </Tooltip>
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant={selectedPlan === 'business' ? 'default' : 'outline'}
-                        className="w-full"
-                        onClick={() => setSelectedPlan('business')}
-                      >
-                        Business
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>All features, 20 websites, priority support</TooltipContent>
-                  </Tooltip>
-                  
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant={selectedPlan === 'enterprise' ? 'default' : 'outline'}
-                        className="w-full"
-                        onClick={() => setSelectedPlan('enterprise')}
-                      >
-                        Enterprise
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>Unlimited websites, dedicated support</TooltipContent>
-                  </Tooltip>
-                </div>
-              </TooltipProvider>
+              <Select value={selectedPlan} onValueChange={setSelectedPlan}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a plan" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availablePlans.map((plan) => (
+                    <SelectItem key={plan.plan_type} value={plan.plan_type}>
+                      <div className="flex flex-col">
+                        <span className="font-medium capitalize">{plan.plan_type}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {plan.website_limit} websites, {plan.customization} customization
+                        </span>
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
           
