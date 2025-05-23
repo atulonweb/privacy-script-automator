@@ -224,8 +224,13 @@ const usePlanLimits = () => {
       isOverLimit: (websiteCount || 0) > planDetails.websiteLimit
     }),
 
-    // Updated method to show notifications only on dashboard and only once per session
+    // Make sure this is only called on dashboard page with showOnDashboard=true
     enforceAllLimits: (showOnDashboard: boolean = false) => {
+      // Only proceed if we're explicitly showing on dashboard
+      if (!showOnDashboard) {
+        return true; // Skip notification on non-dashboard pages
+      }
+
       const currentCount = websiteCount || 0;
       const violations = [];
 
@@ -233,7 +238,7 @@ const usePlanLimits = () => {
         violations.push(`You have ${currentCount} websites but your ${currentPlan} plan only allows ${planDetails.websiteLimit}`);
       }
 
-      if (violations.length > 0 && showOnDashboard) {
+      if (violations.length > 0) {
         showOneTimeNotification(
           'plan_limit_exceeded',
           'Plan Limits Exceeded',
