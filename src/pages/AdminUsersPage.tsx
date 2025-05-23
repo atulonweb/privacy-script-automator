@@ -34,6 +34,7 @@ const AdminUsersPage: React.FC = () => {
   const updateUserPlan = async (userId: string, plan: string) => {
     try {
       setUpdatingPlan(true);
+      setUserToUpdatePlan(userId);
       
       console.log('Updating plan for user:', userId, 'to plan:', plan);
       
