@@ -1,9 +1,8 @@
-
 import React, { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { Loader } from 'lucide-react';
+import { Loader, AlertTriangle } from 'lucide-react';
 import { useWebsites } from '@/hooks/useWebsites';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -13,6 +12,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import usePlanLimits from '@/hooks/usePlanLimits';
 import PlanFeatureTable from '@/components/PlanFeatureTable';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const WebsitesPage: React.FC = () => {
   const { websites, loading, error, fetchWebsites, addWebsite, updateWebsite, updateWebsiteStatus, deleteWebsite } = useWebsites();
@@ -34,6 +34,10 @@ const WebsitesPage: React.FC = () => {
     const loadData = async () => {
       try {
         await Promise.all([fetchWebsites(), fetchScripts(), refreshUserPlan()]);
+        // Check and enforce all limits after data is loaded
+        setTimeout(() => {
+          enforcePlanLimits.enforceAllLimits();
+        }, 1000);
       } catch (error) {
         console.error("Error loading websites or scripts:", error);
       } finally {
@@ -53,21 +57,13 @@ const WebsitesPage: React.FC = () => {
     try {
       setIsAddingWebsite(true);
 
-      // Check website limit before adding a new website - this enforces plan restrictions
-      console.log('Checking website limit before adding new website');
-      console.log('Current plan:', userPlan, 'Website limit:', planDetails.websiteLimit);
-      console.log('Current websites count:', websiteCount);
-
       const canAdd = await enforcePlanLimits.canCreateWebsite();
       if (!canAdd) {
-        console.log('Website limit reached, cannot add more websites');
         setIsAddDialogOpen(false);
         return;
       }
 
       await addWebsite(newWebsiteName, newWebsiteDomain);
-      
-      // Refresh plan data to get updated counts
       await refreshUserPlan();
       
       setNewWebsiteName('');
@@ -138,9 +134,9 @@ const WebsitesPage: React.FC = () => {
   const showLoading = isInitialLoad && (loading || scriptsLoading);
 
   // Check if user is approaching website limit (using real database values)
-  const isApproachingLimit = websiteCount >= planDetails.websiteLimit * 0.8;
-  const isAtLimit = websiteCount >= planDetails.websiteLimit;
   const isOverLimit = websiteCount > planDetails.websiteLimit;
+  const isAtLimit = websiteCount >= planDetails.websiteLimit;
+  const isApproachingLimit = websiteCount >= planDetails.websiteLimit * 0.8;
 
   return (
     <DashboardLayout>
@@ -265,39 +261,58 @@ const WebsitesPage: React.FC = () => {
           </Dialog>
         </div>
 
-        {/* Plan limit warnings */}
+        {/* Enhanced Plan limit warnings */}
         {isOverLimit && (
-          <Card className="border-red-200 bg-red-50">
-            <CardContent className="py-4">
-              <p className="text-red-800">
-                <strong>Plan Limit Exceeded:</strong> You have {websiteCount} websites but your {userPlan} plan only allows {planDetails.websiteLimit}. 
-                Please upgrade your plan or remove excess websites to continue using all features.
-              </p>
-            </CardContent>
-          </Card>
+          <Alert className="border-red-500 bg-red-50">
+            <AlertTriangle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-800">
+              <strong>Plan Limit Exceeded:</strong> You have {websiteCount} websites but your {userPlan} plan only allows {planDetails.websiteLimit}. 
+              Some features may be restricted. Please upgrade your plan or remove excess websites to continue using all features.
+              <div className="mt-2">
+                <Button variant="destructive" size="sm" onClick={() => navigate('/dashboard/plans')}>
+                  Upgrade Plan
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
         )}
 
         {isAtLimit && !isOverLimit && (
-          <Card className="border-red-200 bg-red-50">
-            <CardContent className="py-4">
-              <p className="text-red-800">
-                <strong>Plan Limit Reached:</strong> You've reached your {planDetails.websiteLimit} website limit. 
-                Please upgrade your plan to add more websites.
-              </p>
-            </CardContent>
-          </Card>
+          <Alert className="border-amber-500 bg-amber-50">
+            <AlertTriangle className="h-4 w-4 text-amber-600" />
+            <AlertDescription className="text-amber-800">
+              <strong>Plan Limit Reached:</strong> You've reached your {planDetails.websiteLimit} website limit. 
+              Please upgrade your plan to add more websites.
+            </AlertDescription>
+          </Alert>
         )}
 
-        {isApproachingLimit && !isAtLimit && !isOverLimit && (
-          <Card className="border-amber-200 bg-amber-50">
-            <CardContent className="py-4">
-              <p className="text-amber-800">
-                <strong>Plan Limit Warning:</strong> You're using {websiteCount} of {planDetails.websiteLimit} websites. 
-                Consider upgrading your plan to add more websites.
-              </p>
-            </CardContent>
-          </Card>
-        )}
+        {/* Feature restrictions display */}
+        <Card>
+          <CardContent className="py-4">
+            <h3 className="font-semibold mb-2">Current Plan Features ({userPlan})</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+              <div>
+                <span className="font-medium">Websites:</span> {websiteCount}/{planDetails.websiteLimit}
+              </div>
+              <div>
+                <span className="font-medium">Analytics History:</span> {planDetails.analyticsHistory} days
+              </div>
+              <div>
+                <span className="font-medium">Webhooks:</span> 
+                <span className={planDetails.webhooksEnabled ? "text-green-600 ml-1" : "text-red-600 ml-1"}>
+                  {planDetails.webhooksEnabled ? "Enabled" : "Disabled"}
+                </span>
+              </div>
+              <div>
+                <span className="font-medium">White Label:</span>
+                <span className={planDetails.whiteLabel ? "text-green-600 ml-1" : "text-red-600 ml-1"}>
+                  {planDetails.whiteLabel ? "Available" : "Not Available"}
+                </span>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         {showLoading ? (
           <div className="flex justify-center py-12">
@@ -306,7 +321,7 @@ const WebsitesPage: React.FC = () => {
         ) : error ? (
           <div className="py-12 text-center">
             <p className="text-red-500">Error loading websites: {error}</p>
-            <Button variant="outline" className="mt-4" onClick={handleRetryFetch}>
+            <Button variant="outline" className="mt-4" onClick={() => fetchWebsites(0)}>
               Try Again
             </Button>
           </div>
@@ -325,11 +340,18 @@ const WebsitesPage: React.FC = () => {
           </Card>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {websites.map((website) => (
-              <Card key={website.id} className="overflow-hidden">
+            {websites.map((website, index) => (
+              <Card key={website.id} className={`overflow-hidden ${isOverLimit && index >= planDetails.websiteLimit ? 'border-red-300 bg-red-50' : ''}`}>
                 <div className="bg-gradient-to-r from-brand-100 to-brand-50 p-6">
                   <h3 className="text-xl font-bold">{website.name}</h3>
                   <p className="text-sm text-muted-foreground mt-1">{website.domain}</p>
+                  {isOverLimit && index >= planDetails.websiteLimit && (
+                    <div className="mt-2">
+                      <span className="text-xs bg-red-200 text-red-800 px-2 py-1 rounded">
+                        Exceeds Plan Limit
+                      </span>
+                    </div>
+                  )}
                 </div>
                 <CardContent className="p-6">
                   <div className="space-y-2">
@@ -347,15 +369,34 @@ const WebsitesPage: React.FC = () => {
                       <Button 
                         variant="outline" 
                         className="flex-1 text-sm"
-                        onClick={() => handleEditWebsite(website.id)}
+                        onClick={() => {
+                          const website_to_edit = websites.find(site => site.id === website.id);
+                          if (website_to_edit) {
+                            setCurrentWebsiteId(website.id);
+                            setNewWebsiteName(website_to_edit.name);
+                            setNewWebsiteDomain(website_to_edit.domain);
+                            setIsEditDialogOpen(true);
+                          }
+                        }}
+                        disabled={isOverLimit && index >= planDetails.websiteLimit}
                       >
                         Edit
                       </Button>
                       <Button 
                         variant="outline" 
                         className="flex-1 text-sm" 
-                        disabled={!website.active}
-                        onClick={() => handleViewScript(website.id)}
+                        disabled={!website.active || (isOverLimit && index >= planDetails.websiteLimit)}
+                        onClick={() => {
+                          const websiteScript = scripts.find(script => script.website_id === website.id);
+                          
+                          if (websiteScript) {
+                            navigate(`/dashboard/scripts/test/${websiteScript.script_id}`);
+                          } else {
+                            navigate('/dashboard/scripts/create', { 
+                              state: { selectedWebsiteId: website.id }
+                            });
+                          }
+                        }}
                       >
                         Manage Script
                       </Button>

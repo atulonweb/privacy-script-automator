@@ -16,7 +16,7 @@ type PlanDetails = {
 
 type PlanType = 'free' | 'basic' | 'professional';
 
-// Default fallback plan limits in case database fetch fails
+// Default fallback plan limits
 const defaultPlanLimits: Record<PlanType, PlanDetails> = {
   free: {
     websiteLimit: 1,
@@ -44,7 +44,6 @@ const defaultPlanLimits: Record<PlanType, PlanDetails> = {
   }
 };
 
-// Function to fetch all plan settings from the database
 const fetchPlanSettings = async (): Promise<Record<PlanType, PlanDetails>> => {
   const { data, error } = await supabase
     .from('plan_settings')
@@ -52,10 +51,9 @@ const fetchPlanSettings = async (): Promise<Record<PlanType, PlanDetails>> => {
 
   if (error) {
     console.error('Error fetching plan settings:', error);
-    throw error;
+    return defaultPlanLimits;
   }
 
-  // Convert the database results to the format our application uses
   const planSettings: Record<PlanType, PlanDetails> = { ...defaultPlanLimits };
 
   data.forEach((plan) => {
@@ -73,7 +71,6 @@ const fetchPlanSettings = async (): Promise<Record<PlanType, PlanDetails>> => {
   return planSettings;
 };
 
-// Function to fetch user's current subscription plan
 const fetchUserSubscription = async (userId: string): Promise<PlanType> => {
   const { data, error } = await supabase
     .from('user_subscriptions')
@@ -81,22 +78,23 @@ const fetchUserSubscription = async (userId: string): Promise<PlanType> => {
     .eq('user_id', userId)
     .single();
 
-  if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned" error
-    throw error;
+  if (error && error.code !== 'PGRST116') {
+    console.error('Error fetching user subscription:', error);
   }
 
   return (data?.plan as PlanType) || 'free';
 };
 
-// Function to get current website count for user
 const fetchUserWebsiteCount = async (userId: string): Promise<number> => {
   const { data, error } = await supabase
     .from('websites')
     .select('id')
-    .eq('user_id', userId)
-    .eq('active', true);
+    .eq('user_id', userId);
 
-  if (error) throw error;
+  if (error) {
+    console.error('Error fetching website count:', error);
+    return 0;
+  }
   
   return data?.length || 0;
 };
@@ -107,43 +105,34 @@ const usePlanLimits = () => {
   const [error, setError] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
-  // Fetch plan settings with react-query for caching and real-time updates
   const { data: planSettings, isLoading: planSettingsLoading } = useQuery({
     queryKey: ['planSettings'],
     queryFn: fetchPlanSettings,
-    staleTime: 1000 * 60 * 5, // Cache for 5 minutes
-    gcTime: 1000 * 60 * 10, // Keep in cache for 10 minutes
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 10,
     refetchOnWindowFocus: false,
   });
 
-  // Fetch user's current subscription plan with react-query
   const { data: userPlan, isLoading: userPlanLoading, refetch: refetchUserPlan } = useQuery({
     queryKey: ['userSubscription', user?.id],
     queryFn: () => fetchUserSubscription(user!.id),
     enabled: !!user?.id,
-    staleTime: 1000 * 60 * 2, // Cache for 2 minutes (shorter for more real-time updates)
-    gcTime: 1000 * 60 * 5, // Keep in cache for 5 minutes
-    refetchOnWindowFocus: true, // Refetch when window gains focus
-    retry: (failureCount, error: any) => {
-      // Don't retry on "no rows returned" error
-      if (error?.code === 'PGRST116') return false;
-      return failureCount < 2;
-    },
+    staleTime: 1000 * 60 * 2,
+    gcTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: true,
   });
 
-  // Fetch user's current website count
   const { data: websiteCount, refetch: refetchWebsiteCount } = useQuery({
     queryKey: ['userWebsiteCount', user?.id],
     queryFn: () => fetchUserWebsiteCount(user!.id),
     enabled: !!user?.id,
-    staleTime: 1000 * 30, // Cache for 30 seconds for real-time updates
+    staleTime: 1000 * 30,
     refetchOnWindowFocus: true,
   });
 
   const currentPlan = userPlan || 'free';
   const isLoading = planSettingsLoading || userPlanLoading;
 
-  // Update plan details whenever planSettings or userPlan changes
   useEffect(() => {
     if (planSettings && currentPlan) {
       setPlanDetails(planSettings[currentPlan]);
@@ -151,7 +140,6 @@ const usePlanLimits = () => {
     }
   }, [planSettings, currentPlan]);
 
-  // Function to refresh user plan data (useful after plan updates)
   const refreshUserPlan = async () => {
     try {
       await Promise.all([
@@ -165,86 +153,81 @@ const usePlanLimits = () => {
     }
   };
 
-  const checkWebsiteLimit = async (): Promise<boolean> => {
-    if (!user || !planDetails) return false;
+  // Comprehensive plan limit enforcement
+  const enforcePlanLimits = {
+    canCreateWebsite: async (): Promise<boolean> => {
+      if (!user || !planDetails) return false;
 
-    try {
-      // Get fresh website count
-      await refetchWebsiteCount();
-      const currentCount = websiteCount || 0;
-      
-      console.log('Plan limit check:', {
-        currentPlan,
-        websiteLimit: planDetails.websiteLimit,
-        currentCount,
-        canAdd: currentCount < planDetails.websiteLimit
-      });
-      
-      if (currentCount >= planDetails.websiteLimit) {
-        toast.warning('Plan Limit Reached', { 
-          description: `Your ${currentPlan} plan allows a maximum of ${planDetails.websiteLimit} websites. You currently have ${currentCount}. Please upgrade to add more websites.`
+      try {
+        await refetchWebsiteCount();
+        const currentCount = websiteCount || 0;
+        
+        if (currentCount >= planDetails.websiteLimit) {
+          toast.error('Website Limit Reached', { 
+            description: `Your ${currentPlan} plan allows a maximum of ${planDetails.websiteLimit} websites. You currently have ${currentCount}. Please upgrade to add more websites.`
+          });
+          return false;
+        }
+        
+        return true;
+      } catch (err) {
+        console.error('Error checking website limits:', err);
+        return false;
+      }
+    },
+
+    canUseWebhooks: (): boolean => {
+      if (!planDetails.webhooksEnabled) {
+        toast.error('Feature Not Available', { 
+          description: `Webhooks are not available on your ${currentPlan} plan. Please upgrade to use webhooks.`
         });
         return false;
       }
-      
       return true;
-    } catch (err) {
-      console.error('Error checking website limits:', err);
-      return false;
-    }
-  };
-
-  const checkWebhookEnabled = (): boolean => {
-    if (!planDetails.webhooksEnabled) {
-      toast.warning('Feature Not Available', { 
-        description: `Webhooks are not available on your ${currentPlan} plan. Please upgrade to use webhooks.`
-      });
-      return false;
-    }
-    return true;
-  };
-
-  const checkWhiteLabelEnabled = (): boolean => {
-    if (!planDetails.whiteLabel) {
-      toast.warning('Feature Not Available', { 
-        description: `White labeling is not available on your ${currentPlan} plan. Please upgrade to remove branding.`
-      });
-      return false;
-    }
-    return true;
-  };
-
-  const getAnalyticsRetentionDays = (): number => {
-    return planDetails.analyticsHistory;
-  };
-
-  // Real-time plan limit enforcement
-  const enforcePlanLimits = {
-    // Check if user can create a new website
-    canCreateWebsite: async (): Promise<boolean> => {
-      return await checkWebsiteLimit();
     },
-    
-    // Check if user can use webhooks
-    canUseWebhooks: (): boolean => {
-      return checkWebhookEnabled();
-    },
-    
-    // Check if user can use white label features
+
     canUseWhiteLabel: (): boolean => {
-      return checkWhiteLabelEnabled();
-    },
-    
-    // Get the analytics retention period
-    getAnalyticsRetention: (): number => {
-      return getAnalyticsRetentionDays();
+      if (!planDetails.whiteLabel) {
+        toast.error('Feature Not Available', { 
+          description: `White labeling is not available on your ${currentPlan} plan. Please upgrade to remove branding.`
+        });
+        return false;
+      }
+      return true;
     },
 
-    // Get current usage stats
+    getAnalyticsRetention: (): number => {
+      return planDetails.analyticsHistory;
+    },
+
+    isOverWebsiteLimit: (): boolean => {
+      const currentCount = websiteCount || 0;
+      return currentCount > planDetails.websiteLimit;
+    },
+
     getCurrentUsage: () => ({
       websites: websiteCount || 0,
-      websiteLimit: planDetails.websiteLimit
-    })
+      websiteLimit: planDetails.websiteLimit,
+      isOverLimit: (websiteCount || 0) > planDetails.websiteLimit
+    }),
+
+    // New method to enforce limits on existing data
+    enforceAllLimits: () => {
+      const currentCount = websiteCount || 0;
+      const violations = [];
+
+      if (currentCount > planDetails.websiteLimit) {
+        violations.push(`You have ${currentCount} websites but your ${currentPlan} plan only allows ${planDetails.websiteLimit}`);
+      }
+
+      if (violations.length > 0) {
+        toast.error('Plan Limits Exceeded', {
+          description: violations.join('. ') + '. Please upgrade your plan or remove excess items.'
+        });
+      }
+
+      return violations.length === 0;
+    }
   };
 
   return {
@@ -256,10 +239,10 @@ const usePlanLimits = () => {
     enforcePlanLimits,
     websiteCount: websiteCount || 0,
     // Legacy methods for backward compatibility
-    checkWebsiteLimit,
-    checkWebhookEnabled,
-    checkWhiteLabelEnabled,
-    getAnalyticsRetentionDays
+    checkWebsiteLimit: enforcePlanLimits.canCreateWebsite,
+    checkWebhookEnabled: enforcePlanLimits.canUseWebhooks,
+    checkWhiteLabelEnabled: enforcePlanLimits.canUseWhiteLabel,
+    getAnalyticsRetentionDays: enforcePlanLimits.getAnalyticsRetention
   };
 };
 

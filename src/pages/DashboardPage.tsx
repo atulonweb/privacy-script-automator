@@ -18,7 +18,7 @@ import {
   ResponsiveContainer,
   Legend
 } from 'recharts';
-import { CopyIcon, CheckIcon, Loader, Plus, PlusCircle } from 'lucide-react';
+import { CopyIcon, CheckIcon, Loader, Plus, PlusCircle, AlertTriangle } from 'lucide-react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { useWebsites } from '@/hooks/useWebsites';
 import { useScripts } from '@/hooks/useScripts';
@@ -29,6 +29,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import usePlanLimits from '@/hooks/usePlanLimits';
 
 const DashboardPage: React.FC = () => {
@@ -44,8 +45,16 @@ const DashboardPage: React.FC = () => {
   const { chartData, loading: analyticsLoading } = useAnalytics();
   const { enforcePlanLimits, planDetails, userPlan, websiteCount } = usePlanLimits();
   
+  // Check plan limits on component mount
+  useEffect(() => {
+    if (!websitesLoading && websiteCount > 0) {
+      setTimeout(() => {
+        enforcePlanLimits.enforceAllLimits();
+      }, 1000);
+    }
+  }, [websitesLoading, websiteCount, enforcePlanLimits]);
+  
   const totalVisitors = websites.reduce((acc, site) => {
-    // For each website, add the visitor_count (or 0 if undefined)
     return acc + (site.visitor_count || 0);
   }, 0);
   
@@ -56,7 +65,6 @@ const DashboardPage: React.FC = () => {
   const handleAddWebsite = async () => {
     if (!newWebsiteName || !newWebsiteDomain) return;
     
-    // Check plan limits before adding website
     const canAdd = await enforcePlanLimits.canCreateWebsite();
     if (!canAdd) {
       setIsAddDialogOpen(false);
@@ -95,8 +103,16 @@ const DashboardPage: React.FC = () => {
     }, 3000);
   };
 
-  // Check if user is at limit
   const isAtLimit = websiteCount >= planDetails.websiteLimit;
+  const isOverLimit = websiteCount > planDetails.websiteLimit;
+
+  // Filter chart data based on analytics retention limit
+  const filteredChartData = chartData.filter((item) => {
+    const itemDate = new Date(item.date);
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - planDetails.analyticsHistory);
+    return itemDate >= cutoffDate;
+  });
 
   return (
     <DashboardLayout>
@@ -107,7 +123,7 @@ const DashboardPage: React.FC = () => {
             <DialogTrigger asChild>
               <Button 
                 className="bg-brand-600 hover:bg-brand-700"
-                disabled={isAtLimit}
+                disabled={isAtLimit || isOverLimit}
               >
                 <PlusCircle className="mr-2 h-4 w-4" />
                 Add New Website
@@ -169,6 +185,22 @@ const DashboardPage: React.FC = () => {
             </DialogContent>
           </Dialog>
         </div>
+
+        {/* Plan limit warnings */}
+        {isOverLimit && (
+          <Alert className="border-red-500 bg-red-50">
+            <AlertTriangle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-800">
+              <strong>Plan Limit Exceeded:</strong> You have {websiteCount} websites but your {userPlan} plan only allows {planDetails.websiteLimit}. 
+              Some features may be restricted. Please upgrade your plan.
+              <div className="mt-2">
+                <Button variant="destructive" size="sm" onClick={() => navigate('/dashboard/plans')}>
+                  Upgrade Plan
+                </Button>
+              </div>
+            </AlertDescription>
+          </Alert>
+        )}
         
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
@@ -182,14 +214,19 @@ const DashboardPage: React.FC = () => {
                 <Loader className="h-4 w-4 animate-spin" />
               ) : (
                 <>
-                  <div className="text-2xl font-bold">{websites.length}</div>
+                  <div className="text-2xl font-bold flex items-center gap-2">
+                    {websites.length}
+                    {isOverLimit && <AlertTriangle className="h-4 w-4 text-red-500" />}
+                  </div>
                   <p className="text-xs text-muted-foreground">
-                    Active websites using ConsentGuard
+                    Active websites using ConsentGuard ({websites.length}/{planDetails.websiteLimit} allowed)
                   </p>
                 </>
               )}
             </CardContent>
           </Card>
+          
+          {/* Keep existing cards with minor updates */}
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
@@ -211,6 +248,7 @@ const DashboardPage: React.FC = () => {
               )}
             </CardContent>
           </Card>
+          
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
@@ -232,6 +270,7 @@ const DashboardPage: React.FC = () => {
               )}
             </CardContent>
           </Card>
+          
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
@@ -257,16 +296,19 @@ const DashboardPage: React.FC = () => {
           <Card className="col-span-4">
             <CardHeader>
               <CardTitle>Consent Analytics</CardTitle>
+              <CardDescription>
+                Showing last {planDetails.analyticsHistory} days ({userPlan} plan limit)
+              </CardDescription>
             </CardHeader>
             <CardContent className="pl-2">
               {analyticsLoading ? (
                 <div className="flex items-center justify-center py-24">
                   <Loader className="h-8 w-8 animate-spin text-brand-600" />
                 </div>
-              ) : chartData.length > 0 ? (
+              ) : filteredChartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height={350}>
                   <AreaChart
-                    data={chartData}
+                    data={filteredChartData}
                     margin={{
                       top: 10,
                       right: 30,
@@ -294,6 +336,8 @@ const DashboardPage: React.FC = () => {
               )}
             </CardContent>
           </Card>
+          
+          {/* Keep existing consent script card */}
           <Card className="col-span-3">
             <CardHeader>
               <CardTitle>Your Consent Script</CardTitle>
@@ -349,6 +393,7 @@ const DashboardPage: React.FC = () => {
           </Card>
         </div>
         
+        {/* Enhanced websites table with plan enforcement */}
         <Card>
           <CardHeader>
             <CardTitle>Your Websites</CardTitle>
@@ -370,11 +415,12 @@ const DashboardPage: React.FC = () => {
                       <th className="text-left py-3 px-4 font-medium">Name</th>
                       <th className="text-left py-3 px-4 font-medium">Domain</th>
                       <th className="text-left py-3 px-4 font-medium">Status</th>
+                      <th className="text-left py-3 px-4 font-medium">Plan Status</th>
                       <th className="text-left py-3 px-4 font-medium">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {websites.map((site) => (
+                    {websites.map((site, index) => (
                       <tr key={site.id} className="border-b">
                         <td className="py-3 px-4">{site.name}</td>
                         <td className="py-3 px-4">{site.domain}</td>
@@ -384,11 +430,19 @@ const DashboardPage: React.FC = () => {
                           </Badge>
                         </td>
                         <td className="py-3 px-4">
+                          {index >= planDetails.websiteLimit ? (
+                            <Badge variant="destructive">Exceeds Limit</Badge>
+                          ) : (
+                            <Badge variant="secondary">Within Limit</Badge>
+                          )}
+                        </td>
+                        <td className="py-3 px-4">
                           <div className="flex space-x-2">
                             <Button 
                               variant="outline" 
                               size="sm"
                               onClick={() => navigate('/dashboard/scripts/create')}
+                              disabled={index >= planDetails.websiteLimit}
                             >
                               Create Script
                             </Button>
@@ -396,6 +450,7 @@ const DashboardPage: React.FC = () => {
                               variant={site.active ? "destructive" : "secondary"} 
                               size="sm"
                               onClick={() => updateWebsiteStatus(site.id, !site.active)}
+                              disabled={index >= planDetails.websiteLimit}
                             >
                               {site.active ? 'Deactivate' : 'Activate'}
                             </Button>
