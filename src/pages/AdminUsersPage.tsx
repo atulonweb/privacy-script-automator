@@ -27,37 +27,46 @@ const AdminUsersPage = () => {
   const fetchUsers = async () => {
     setLoading(true);
     try {
-      // Fetch users
-      const { data: usersData, error: usersError } = await supabase
-        .from('profiles')
-        .select('id, full_name, avatar_url');
+      // Use the admin-settings edge function to get all users
+      const response = await fetch('https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/admin-settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+        body: JSON.stringify({ action: 'get_users' }),
+      });
 
-      if (usersError) {
-        throw usersError;
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch users');
       }
 
-      // Fetch subscription data
+      // Get subscription data
       const { data: subscriptionData, error: subscriptionError } = await supabase
         .from('user_subscriptions')
         .select('user_id, plan');
 
       if (subscriptionError) {
-        throw subscriptionError;
+        console.error("Subscription error:", subscriptionError);
       }
 
       // Create a map of user_id to plan
-      const subscriptionMap = subscriptionData.reduce((acc: any, item: any) => {
+      const subscriptionMap = subscriptionData?.reduce((acc: any, item: any) => {
         acc[item.user_id] = item.plan;
         return acc;
-      }, {});
+      }, {}) || {};
 
-      // Merge user data with subscription data
-      const mergedUsers = usersData.map((user: any) => ({
-        ...user,
+      // Process users from edge function
+      const processedUsers = data.users?.map((user: any) => ({
+        id: user.id,
+        full_name: user.user_metadata?.full_name || user.email || 'Unknown User',
+        email: user.email,
         plan: subscriptionMap[user.id] || 'free'
-      }));
+      })) || [];
 
-      setUsers(mergedUsers);
+      setUsers(processedUsers);
     } catch (error: any) {
       console.error("Error fetching users:", error);
       toast.error('Failed to fetch users', {
@@ -74,71 +83,27 @@ const AdminUsersPage = () => {
       
       console.log('Updating plan for user:', userId, 'to plan:', plan);
       
-      try {
-        // Call edge function to update the plan with admin privileges
-        const response = await fetch('https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/admin-plans', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
-          },
-          body: JSON.stringify({ userId, plan }),
-        });
+      // Call edge function to update the plan with admin privileges
+      const response = await fetch('https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/admin-plans', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+        body: JSON.stringify({ userId, plan }),
+      });
 
-        const data = await response.json();
-        
-        if (!response.ok) {
-          console.error("Edge function error:", data);
-          throw new Error(data.error || 'Failed to update subscription plan');
-        }
-        
-        console.log('Edge function response:', data);
-        toast.success(`Successfully updated user's plan to ${plan}`);
-      } catch (edgeError: any) {
-        console.error("Edge function call failed:", edgeError);
-        
-        // Fallback to direct database update if edge function fails
-        console.log("Falling back to direct database update");
-        
-        // First check if subscription exists
-        const { data: existingSubscription, error: checkError } = await supabase
-          .from('user_subscriptions')
-          .select('*')
-          .eq('user_id', userId)
-          .single();
-        
-        if (checkError && checkError.code !== 'PGRST116') {
-          throw checkError;
-        }
-        
-        if (!existingSubscription) {
-          // Insert new subscription
-          const { error: insertError } = await supabase
-            .from('user_subscriptions')
-            .insert({
-              user_id: userId,
-              plan: plan,
-              updated_at: new Date().toISOString()
-            });
-            
-          if (insertError) throw insertError;
-        } else {
-          // Update existing subscription
-          const { error: updateError } = await supabase
-            .from('user_subscriptions')
-            .update({
-              plan: plan,
-              updated_at: new Date().toISOString()
-            })
-            .eq('user_id', userId);
-            
-          if (updateError) throw updateError;
-        }
-        
-        toast.success(`Successfully updated user's plan to ${plan}`);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        console.error("Edge function error:", data);
+        throw new Error(data.error || 'Failed to update subscription plan');
       }
       
-      // Refresh the entire users list to get the latest data
+      console.log('Edge function response:', data);
+      toast.success(`Successfully updated user's plan to ${plan}`);
+      
+      // Refresh the users list
       await fetchUsers();
       
     } catch (error: any) {
