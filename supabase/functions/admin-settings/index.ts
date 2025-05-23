@@ -1,6 +1,6 @@
 
 // Follow this setup guide to integrate the Deno runtime and the Supabase JS library with your project:
-// https://docs.supabase.com/guides/functions/getting-started
+// https://docs.lovable.dev/guides/functions/getting-started
 
 import { serve } from "https://deno.land/std@0.177.0/http/server.ts";
 import { createClient, SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -16,6 +16,7 @@ interface WebResponse {
   message?: string;
   admins?: any[];
   users?: any[];
+  plans?: any[];
 }
 
 export const handleOptions = () => {
@@ -76,6 +77,12 @@ const handleRequest = async (req: Request): Promise<Response> => {
         break;
       case 'get_users':
         result = await getUsers(supabaseAdmin);
+        break;
+      case 'get_users_complete':
+        result = await getUsersComplete(supabaseAdmin);
+        break;
+      case 'get_plans':
+        result = await getPlans(supabaseAdmin);
         break;
       case 'block_user':
         if (!userId) throw new Error('User ID is required');
@@ -144,6 +151,102 @@ async function getUsers(supabaseAdmin: SupabaseClient) {
     };
   } catch (error) {
     console.error('Error getting users:', error);
+    throw error;
+  }
+}
+
+async function getUsersComplete(supabaseAdmin: SupabaseClient) {
+  console.log('Attempting to fetch complete user data');
+  
+  try {
+    // Get all users
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.listUsers();
+    if (authError) throw authError;
+
+    // Get all subscription data using service role
+    const { data: subscriptionData, error: subscriptionError } = await supabaseAdmin
+      .from('user_subscriptions')
+      .select('user_id, plan');
+
+    if (subscriptionError) {
+      console.error("Subscription error:", subscriptionError);
+    }
+
+    // Get website counts for each user using service role
+    const { data: websiteData, error: websiteError } = await supabaseAdmin
+      .from('websites')
+      .select('user_id');
+
+    if (websiteError) {
+      console.error("Website error:", websiteError);
+    }
+
+    // Get script counts for each user using service role
+    const { data: scriptData, error: scriptError } = await supabaseAdmin
+      .from('consent_scripts')
+      .select('user_id');
+
+    if (scriptError) {
+      console.error("Script error:", scriptError);
+    }
+
+    // Create maps for counts
+    const subscriptionMap = subscriptionData?.reduce((acc: any, item: any) => {
+      acc[item.user_id] = item.plan;
+      return acc;
+    }, {}) || {};
+
+    const websiteCountMap = websiteData?.reduce((acc: any, item: any) => {
+      acc[item.user_id] = (acc[item.user_id] || 0) + 1;
+      return acc;
+    }, {}) || {};
+
+    const scriptCountMap = scriptData?.reduce((acc: any, item: any) => {
+      acc[item.user_id] = (acc[item.user_id] || 0) + 1;
+      return acc;
+    }, {}) || {};
+
+    // Process users with complete data
+    const processedUsers = authData.users?.map((user: any) => ({
+      id: user.id,
+      full_name: user.user_metadata?.full_name || user.email || 'Unknown User',
+      email: user.email,
+      role: user.app_metadata?.role || 'user',
+      status: user.email_confirmed_at ? 'Active' : 'Pending',
+      plan: subscriptionMap[user.id] || 'free',
+      websites: websiteCountMap[user.id] || 0,
+      scripts: scriptCountMap[user.id] || 0,
+      joined: new Date(user.created_at).toLocaleDateString()
+    })) || [];
+
+    console.log(`Successfully retrieved ${processedUsers.length} users with complete data`);
+    return {
+      users: processedUsers,
+    };
+  } catch (error) {
+    console.error('Error getting complete user data:', error);
+    throw error;
+  }
+}
+
+async function getPlans(supabaseAdmin: SupabaseClient) {
+  console.log('Attempting to fetch available plans');
+  
+  try {
+    // Get all plan settings using service role
+    const { data: planData, error: planError } = await supabaseAdmin
+      .from('plan_settings')
+      .select('*')
+      .order('plan_type');
+
+    if (planError) throw planError;
+
+    console.log(`Successfully retrieved ${planData?.length || 0} plans`);
+    return {
+      plans: planData || [],
+    };
+  } catch (error) {
+    console.error('Error getting plans:', error);
     throw error;
   }
 }

@@ -1,11 +1,27 @@
 
+/*
+ * ADMIN PAGE CODING STANDARDS:
+ * 
+ * 🚨 EDGE FUNCTION FIRST APPROACH 🚨
+ * - NEVER make direct database queries from admin pages
+ * - ALL admin data must come from edge functions
+ * - Edge functions use service role key to bypass RLS
+ * - This prevents permission errors and ensures proper security
+ * 
+ * PATTERN TO FOLLOW:
+ * 1. Create edge function actions for all data needs
+ * 2. Use single edge function calls to get complete data
+ * 3. Process data client-side only for UI formatting
+ * 4. Keep frontend logic minimal and focused on presentation
+ */
+
 import React, { useState, useEffect } from 'react';
 import AdminLayout from '@/components/AdminLayout';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
-import { ChevronDown, MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
@@ -22,107 +38,55 @@ const AdminUsersPage = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchUsers();
-    fetchAvailablePlans();
+    fetchCompleteData();
   }, []);
 
-  const fetchAvailablePlans = async () => {
-    try {
-      const { data: planData, error: planError } = await supabase
-        .from('plan_settings')
-        .select('*')
-        .order('plan_type');
-
-      if (planError) {
-        console.error("Plan settings error:", planError);
-        return;
-      }
-
-      setAvailablePlans(planData || []);
-    } catch (error: any) {
-      console.error("Error fetching plans:", error);
-    }
-  };
-
-  const fetchUsers = async () => {
+  const fetchCompleteData = async () => {
     setLoading(true);
     try {
-      // Use the admin-settings edge function to get all users
-      const response = await fetch('https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/admin-settings', {
+      console.log('Fetching complete admin data using edge functions only');
+      
+      // Fetch complete user data using edge function
+      const usersResponse = await fetch('https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/admin-settings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
         },
-        body: JSON.stringify({ action: 'get_users' }),
+        body: JSON.stringify({ action: 'get_users_complete' }),
       });
 
-      const data = await response.json();
+      const usersData = await usersResponse.json();
       
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch users');
+      if (!usersResponse.ok) {
+        throw new Error(usersData.error || 'Failed to fetch users');
       }
 
-      // Get subscription data
-      const { data: subscriptionData, error: subscriptionError } = await supabase
-        .from('user_subscriptions')
-        .select('user_id, plan');
+      console.log('Users data:', usersData);
+      setUsers(usersData.users || []);
 
-      if (subscriptionError) {
-        console.error("Subscription error:", subscriptionError);
+      // Fetch available plans using edge function
+      const plansResponse = await fetch('https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/admin-settings', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+        body: JSON.stringify({ action: 'get_plans' }),
+      });
+
+      const plansData = await plansResponse.json();
+      
+      if (!plansResponse.ok) {
+        throw new Error(plansData.error || 'Failed to fetch plans');
       }
 
-      // Get website counts for each user
-      const { data: websiteData, error: websiteError } = await supabase
-        .from('websites')
-        .select('user_id');
+      console.log('Plans data:', plansData);
+      setAvailablePlans(plansData.plans || []);
 
-      if (websiteError) {
-        console.error("Website error:", websiteError);
-      }
-
-      // Get script counts for each user
-      const { data: scriptData, error: scriptError } = await supabase
-        .from('consent_scripts')
-        .select('user_id');
-
-      if (scriptError) {
-        console.error("Script error:", scriptError);
-      }
-
-      // Create maps for counts
-      const subscriptionMap = subscriptionData?.reduce((acc: any, item: any) => {
-        acc[item.user_id] = item.plan;
-        return acc;
-      }, {}) || {};
-
-      const websiteCountMap = websiteData?.reduce((acc: any, item: any) => {
-        acc[item.user_id] = (acc[item.user_id] || 0) + 1;
-        return acc;
-      }, {}) || {};
-
-      const scriptCountMap = scriptData?.reduce((acc: any, item: any) => {
-        acc[item.user_id] = (acc[item.user_id] || 0) + 1;
-        return acc;
-      }, {}) || {};
-
-      // Process users from edge function
-      const processedUsers = data.users?.map((user: any) => ({
-        id: user.id,
-        full_name: user.user_metadata?.full_name || user.email || 'Unknown User',
-        email: user.email,
-        role: user.app_metadata?.role || 'user',
-        status: user.email_confirmed_at ? 'Active' : 'Pending',
-        plan: subscriptionMap[user.id] || 'free',
-        websites: websiteCountMap[user.id] || 0,
-        scripts: scriptCountMap[user.id] || 0,
-        joined: new Date(user.created_at).toLocaleDateString()
-      })) || [];
-
-      setUsers(processedUsers);
     } catch (error: any) {
-      console.error("Error fetching users:", error);
-      toast.error('Failed to fetch users', {
+      console.error("Error fetching complete admin data:", error);
+      toast.error('Failed to fetch admin data', {
         description: error.message || 'Please try again later'
       });
     } finally {
@@ -157,7 +121,7 @@ const AdminUsersPage = () => {
       toast.success(`Successfully updated user's plan to ${plan}`);
       
       // Refresh the users list
-      await fetchUsers();
+      await fetchCompleteData();
       
     } catch (error: any) {
       console.error("Error updating user plan:", error);
