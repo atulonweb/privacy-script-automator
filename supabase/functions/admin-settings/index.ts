@@ -1,4 +1,3 @@
-
 // Follow this setup guide to integrate the Deno runtime and the Supabase JS library with your project:
 // https://docs.lovable.dev/guides/functions/getting-started
 
@@ -17,6 +16,7 @@ interface WebResponse {
   admins?: any[];
   users?: any[];
   plans?: any[];
+  cache_busted?: boolean;
 }
 
 export const handleOptions = () => {
@@ -30,7 +30,7 @@ const handleRequest = async (req: Request): Promise<Response> => {
   try {
     // Get request body
     const body = await req.json();
-    const { action, userId, email } = body;
+    const { action, userId, email, bustCache = false } = body;
     
     // Get Supabase client with admin privileges from Supabase Auth
     const authHeader = req.headers.get('Authorization');
@@ -79,10 +79,10 @@ const handleRequest = async (req: Request): Promise<Response> => {
         result = await getUsers(supabaseAdmin);
         break;
       case 'get_users_complete':
-        result = await getUsersComplete(supabaseAdmin);
+        result = await getUsersComplete(supabaseAdmin, bustCache);
         break;
       case 'get_plans':
-        result = await getPlans(supabaseAdmin);
+        result = await getPlans(supabaseAdmin, bustCache);
         break;
       case 'block_user':
         if (!userId) throw new Error('User ID is required');
@@ -155,18 +155,25 @@ async function getUsers(supabaseAdmin: SupabaseClient) {
   }
 }
 
-async function getUsersComplete(supabaseAdmin: SupabaseClient) {
-  console.log('Attempting to fetch complete user data');
+async function getUsersComplete(supabaseAdmin: SupabaseClient, bustCache = false) {
+  console.log(`Attempting to fetch complete user data${bustCache ? ' (cache busted)' : ''}`);
   
   try {
     // Get all users
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.listUsers();
     if (authError) throw authError;
 
-    // Get all subscription data using service role
-    const { data: subscriptionData, error: subscriptionError } = await supabaseAdmin
+    // Get all subscription data using service role with cache busting
+    const subscriptionQuery = supabaseAdmin
       .from('user_subscriptions')
       .select('user_id, plan');
+    
+    if (bustCache) {
+      // Add timestamp to bust cache
+      subscriptionQuery.gte('updated_at', new Date(0).toISOString());
+    }
+
+    const { data: subscriptionData, error: subscriptionError } = await subscriptionQuery;
 
     if (subscriptionError) {
       console.error("Subscription error:", subscriptionError);
@@ -222,6 +229,7 @@ async function getUsersComplete(supabaseAdmin: SupabaseClient) {
     console.log(`Successfully retrieved ${processedUsers.length} users with complete data`);
     return {
       users: processedUsers,
+      cache_busted: bustCache
     };
   } catch (error) {
     console.error('Error getting complete user data:', error);
@@ -229,21 +237,29 @@ async function getUsersComplete(supabaseAdmin: SupabaseClient) {
   }
 }
 
-async function getPlans(supabaseAdmin: SupabaseClient) {
-  console.log('Attempting to fetch available plans');
+async function getPlans(supabaseAdmin: SupabaseClient, bustCache = false) {
+  console.log(`Attempting to fetch available plans${bustCache ? ' (cache busted)' : ''}`);
   
   try {
     // Get all plan settings using service role
-    const { data: planData, error: planError } = await supabaseAdmin
+    const planQuery = supabaseAdmin
       .from('plan_settings')
       .select('*')
       .order('plan_type');
+
+    if (bustCache) {
+      // Add timestamp to bust cache
+      planQuery.gte('updated_at', new Date(0).toISOString());
+    }
+
+    const { data: planData, error: planError } = await planQuery;
 
     if (planError) throw planError;
 
     console.log(`Successfully retrieved ${planData?.length || 0} plans`);
     return {
       plans: planData || [],
+      cache_busted: bustCache
     };
   } catch (error) {
     console.error('Error getting plans:', error);

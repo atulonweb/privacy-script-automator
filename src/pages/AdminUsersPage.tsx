@@ -8,11 +8,20 @@
  * - Edge functions use service role key to bypass RLS
  * - This prevents permission errors and ensures proper security
  * 
+ * 🚨 DATA CONSISTENCY STANDARDS 🚨
+ * - Use optimistic updates for immediate UI feedback
+ * - Pattern: Update local state → Call API → Refresh data on success
+ * - Always revert local changes if API calls fail
+ * - Invalidate relevant caches after successful operations
+ * - Show loading states during operations
+ * - Handle errors gracefully with user feedback
+ * 
  * PATTERN TO FOLLOW:
  * 1. Create edge function actions for all data needs
  * 2. Use single edge function calls to get complete data
  * 3. Process data client-side only for UI formatting
  * 4. Keep frontend logic minimal and focused on presentation
+ * 5. Implement optimistic updates for all data modifications
  */
 
 import React, { useState, useEffect } from 'react';
@@ -27,6 +36,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
+import { useQueryClient } from '@tanstack/react-query';
 
 const AdminUsersPage = () => {
   const [users, setUsers] = useState<any[]>([]);
@@ -36,6 +46,7 @@ const AdminUsersPage = () => {
   const [selectedPlan, setSelectedPlan] = useState<string>('free');
   const [availablePlans, setAvailablePlans] = useState<any[]>([]);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     fetchCompleteData();
@@ -94,11 +105,36 @@ const AdminUsersPage = () => {
     }
   };
 
+  // Helper function to update user in local state (optimistic updates)
+  const updateUserInLocalState = (userId: string, updates: Partial<any>) => {
+    setUsers(prevUsers => 
+      prevUsers.map(user => 
+        user.id === userId ? { ...user, ...updates } : user
+      )
+    );
+  };
+
+  // Helper function to revert user state (on error)
+  const revertUserState = (userId: string, originalData: any) => {
+    setUsers(prevUsers => 
+      prevUsers.map(user => 
+        user.id === userId ? { ...user, ...originalData } : user
+      )
+    );
+  };
+
   const updateUserPlan = async (userId: string, plan: string) => {
+    // Find the current user data for potential revert
+    const currentUser = users.find(user => user.id === userId);
+    const originalPlan = currentUser?.plan;
+    
     try {
       setUpdatingPlan(true);
       
       console.log('Updating plan for user:', userId, 'to plan:', plan);
+      
+      // OPTIMISTIC UPDATE: Immediately update the UI
+      updateUserInLocalState(userId, { plan });
       
       // Call edge function to update the plan with admin privileges
       const response = await fetch('https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/admin-plans', {
@@ -114,17 +150,29 @@ const AdminUsersPage = () => {
       
       if (!response.ok) {
         console.error("Edge function error:", data);
+        // Revert the optimistic update on error
+        revertUserState(userId, { plan: originalPlan });
         throw new Error(data.error || 'Failed to update subscription plan');
       }
       
       console.log('Edge function response:', data);
       toast.success(`Successfully updated user's plan to ${plan}`);
       
-      // Refresh the users list
+      // Invalidate plan limits cache for real-time updates
+      await queryClient.invalidateQueries({ queryKey: ['planSettings'] });
+      await queryClient.invalidateQueries({ queryKey: ['userSubscription'] });
+      
+      // Refresh the complete data to ensure consistency
       await fetchCompleteData();
       
     } catch (error: any) {
       console.error("Error updating user plan:", error);
+      
+      // Revert optimistic update on error
+      if (originalPlan) {
+        revertUserState(userId, { plan: originalPlan });
+      }
+      
       toast.error('Failed to update plan', { 
         description: error.message || 'Please try again later'
       });
@@ -140,10 +188,10 @@ const AdminUsersPage = () => {
 
   const renderPlanBadge = (plan: string) => {
     switch (plan) {
-      case 'pro':
-        return <Badge className="bg-purple-500">Pro</Badge>;
-      case 'business':
-        return <Badge className="bg-blue-600">Business</Badge>;
+      case 'professional':
+        return <Badge className="bg-purple-500">Professional</Badge>;
+      case 'basic':
+        return <Badge className="bg-blue-600">Basic</Badge>;
       case 'enterprise':
         return <Badge className="bg-orange-500">Enterprise</Badge>;
       default:
@@ -297,6 +345,7 @@ const AdminUsersPage = () => {
             <Button 
               variant="outline" 
               onClick={() => setUserToUpdatePlan(null)}
+              disabled={updatingPlan}
             >
               Cancel
             </Button>
