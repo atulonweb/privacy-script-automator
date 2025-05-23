@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
@@ -14,7 +15,7 @@ import usePlanLimits from '@/hooks/usePlanLimits';
 import PlanFeatureTable from '@/components/PlanFeatureTable';
 
 const WebsitesPage: React.FC = () => {
-  const { websites, loading, error, fetchWebsites, addWebsite, updateWebsiteStatus, deleteWebsite } = useWebsites();
+  const { websites, loading, error, fetchWebsites, addWebsite, updateWebsite, updateWebsiteStatus, deleteWebsite } = useWebsites();
   const { scripts, fetchScripts, loading: scriptsLoading } = useScripts();
   const { checkWebsiteLimit, planDetails, userPlan } = usePlanLimits();
   const [isInitialLoad, setIsInitialLoad] = useState(true);
@@ -53,9 +54,14 @@ const WebsitesPage: React.FC = () => {
     try {
       setIsAddingWebsite(true);
 
-      // Check website limit before adding a new website
+      // Check website limit before adding a new website - this enforces plan restrictions
+      console.log('Checking website limit before adding new website');
+      console.log('Current plan:', userPlan, 'Website limit:', planDetails.websiteLimit);
+      console.log('Current websites count:', websites.length);
+
       const canAdd = await checkWebsiteLimit();
       if (!canAdd) {
+        console.log('Website limit reached, cannot add more websites');
         setIsAddDialogOpen(false);
         return; // The checkWebsiteLimit function already shows a toast
       }
@@ -90,11 +96,14 @@ const WebsitesPage: React.FC = () => {
 
     try {
       setIsAddingWebsite(true);
-      // This is a placeholder for an update website function
-      // For now, we'll show a success message
-      toast.success("Website updated successfully");
+      await updateWebsite(currentWebsiteId, {
+        name: newWebsiteName,
+        domain: newWebsiteDomain
+      });
       setIsEditDialogOpen(false);
-      await fetchWebsites(); // Refresh the list
+      setNewWebsiteName('');
+      setNewWebsiteDomain('');
+      setCurrentWebsiteId(null);
     } catch (error: any) {
       toast.error(`Failed to update website: ${error.message || 'Unknown error'}`);
     } finally {
@@ -125,6 +134,10 @@ const WebsitesPage: React.FC = () => {
   // Show loading only during initial load
   const showLoading = isInitialLoad && (loading || scriptsLoading);
 
+  // Check if user is approaching website limit
+  const isApproachingLimit = websites.length >= planDetails.websiteLimit * 0.8;
+  const isAtLimit = websites.length >= planDetails.websiteLimit;
+
   return (
     <DashboardLayout>
       <div className="flex-1 space-y-4 p-4 md:p-8 pt-6">
@@ -133,7 +146,12 @@ const WebsitesPage: React.FC = () => {
           
           <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
             <DialogTrigger asChild>
-              <Button className="bg-brand-600 hover:bg-brand-700">Add Website</Button>
+              <Button 
+                className="bg-brand-600 hover:bg-brand-700" 
+                disabled={isAtLimit}
+              >
+                Add Website
+              </Button>
             </DialogTrigger>
             <DialogContent>
               <DialogHeader>
@@ -141,6 +159,11 @@ const WebsitesPage: React.FC = () => {
                 <DialogDescription>
                   Add your website details to create a consent script.
                   You can add up to {planDetails.websiteLimit} websites on your {userPlan} plan.
+                  {isApproachingLimit && (
+                    <span className="block mt-2 text-amber-600 font-medium">
+                      ⚠️ You're using {websites.length} of {planDetails.websiteLimit} websites. Consider upgrading your plan.
+                    </span>
+                  )}
                 </DialogDescription>
               </DialogHeader>
               <div className="grid gap-4 py-4">
@@ -238,6 +261,29 @@ const WebsitesPage: React.FC = () => {
           </Dialog>
         </div>
 
+        {/* Plan limit warning */}
+        {isApproachingLimit && !isAtLimit && (
+          <Card className="border-amber-200 bg-amber-50">
+            <CardContent className="py-4">
+              <p className="text-amber-800">
+                <strong>Plan Limit Warning:</strong> You're using {websites.length} of {planDetails.websiteLimit} websites. 
+                Consider upgrading your plan to add more websites.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {isAtLimit && (
+          <Card className="border-red-200 bg-red-50">
+            <CardContent className="py-4">
+              <p className="text-red-800">
+                <strong>Plan Limit Reached:</strong> You've reached your {planDetails.websiteLimit} website limit. 
+                Please upgrade your plan to add more websites.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
         {showLoading ? (
           <div className="flex justify-center py-12">
             <Loader className="h-8 w-8 animate-spin text-brand-600" />
@@ -253,7 +299,11 @@ const WebsitesPage: React.FC = () => {
           <Card>
             <CardContent className="py-12 text-center">
               <p className="text-muted-foreground mb-4">You haven't added any websites yet.</p>
-              <Button className="bg-brand-600 hover:bg-brand-700" onClick={() => setIsAddDialogOpen(true)}>
+              <Button 
+                className="bg-brand-600 hover:bg-brand-700" 
+                onClick={() => setIsAddDialogOpen(true)}
+                disabled={isAtLimit}
+              >
                 Add Your First Website
               </Button>
             </CardContent>

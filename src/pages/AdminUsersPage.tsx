@@ -231,7 +231,7 @@ const AdminUsersPage = () => {
         scriptCounts.set(script.user_id, count + 1);
       });
       
-      // Fetch user subscription plans
+      // Fetch user subscription plans - this is the key fix
       const { data: subscriptions, error: subscriptionsError } = await supabase
         .from('user_subscriptions')
         .select('*');
@@ -240,6 +240,8 @@ const AdminUsersPage = () => {
         console.error("Error fetching subscriptions:", subscriptionsError);
         // Non-fatal, continue with what we have
       }
+      
+      console.log("Fetched subscriptions:", subscriptions);
       
       // Create a map of user_id to plan
       const planMap = new Map();
@@ -459,25 +461,23 @@ const AdminUsersPage = () => {
       
       console.log('Updating plan for user:', userId, 'to plan:', plan);
       
-      // Call the admin-plans edge function
-      const response = await fetch('https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/admin-plans', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ userId, plan }),
-      });
+      // First try to update directly in the database
+      const { error: dbError } = await supabase
+        .from('user_subscriptions')
+        .upsert({
+          user_id: userId,
+          plan: plan,
+          updated_at: new Date().toISOString()
+        });
 
-      const data = await response.json();
-      
-      if (!response.ok) {
-        console.error('Error from edge function:', data);
-        throw new Error(data.error || 'Failed to update plan');
+      if (dbError) {
+        console.error('Database update error:', dbError);
+        throw dbError;
       }
+
+      console.log('Successfully updated plan in database');
       
-      console.log('Response from edge function:', data);
-      
-      // Update the local state to reflect the change
+      // Update the local state to reflect the change immediately
       setUsers(prevUsers => 
         prevUsers.map(user => 
           user.id === userId 
@@ -487,6 +487,10 @@ const AdminUsersPage = () => {
       );
       
       toast.success(`Successfully updated user's plan to ${plan}`);
+      
+      // Refresh the users list to ensure we have the latest data
+      await fetchUsers();
+      
     } catch (error: any) {
       console.error("Error updating user plan:", error);
       toast.error('Failed to update plan', { 
@@ -605,8 +609,16 @@ const AdminUsersPage = () => {
                             {user.plan ? user.plan.charAt(0).toUpperCase() + user.plan.slice(1) : 'Free'}
                           </span>
                         </TableCell>
-                        <TableCell>{user.websites}</TableCell>
-                        <TableCell>{user.scripts}</TableCell>
+                        <TableCell>
+                          <span className={user.websites > 0 ? 'text-green-600 font-medium' : 'text-gray-500'}>
+                            {user.websites}
+                          </span>
+                        </TableCell>
+                        <TableCell>
+                          <span className={user.scripts > 0 ? 'text-blue-600 font-medium' : 'text-gray-500'}>
+                            {user.scripts}
+                          </span>
+                        </TableCell>
                         <TableCell>{formatDate(user.created_at)}</TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-2">
