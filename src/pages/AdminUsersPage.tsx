@@ -1,7 +1,73 @@
 
-  // This is a partial update to the updateUserPlan function in AdminUsersPage.tsx
-  // Replace just this function with the version below
-  
+import React, { useState, useEffect } from 'react';
+import AdminLayout from '@/components/AdminLayout';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { toast } from 'sonner';
+import { ChevronDown, MoreHorizontal } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { supabase } from '@/integrations/supabase/client';
+
+const AdminUsersPage = () => {
+  const [users, setUsers] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [updatingPlan, setUpdatingPlan] = useState(false);
+  const [userToUpdatePlan, setUserToUpdatePlan] = useState<{userId: string, name: string} | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<string>('free');
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchUsers();
+  }, []);
+
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      // Fetch users
+      const { data: usersData, error: usersError } = await supabase
+        .from('profiles')
+        .select('id, full_name, avatar_url');
+
+      if (usersError) {
+        throw usersError;
+      }
+
+      // Fetch subscription data
+      const { data: subscriptionData, error: subscriptionError } = await supabase
+        .from('user_subscriptions')
+        .select('user_id, plan');
+
+      if (subscriptionError) {
+        throw subscriptionError;
+      }
+
+      // Create a map of user_id to plan
+      const subscriptionMap = subscriptionData.reduce((acc: any, item: any) => {
+        acc[item.user_id] = item.plan;
+        return acc;
+      }, {});
+
+      // Merge user data with subscription data
+      const mergedUsers = usersData.map((user: any) => ({
+        ...user,
+        plan: subscriptionMap[user.id] || 'free'
+      }));
+
+      setUsers(mergedUsers);
+    } catch (error: any) {
+      console.error("Error fetching users:", error);
+      toast.error('Failed to fetch users', {
+        description: error.message || 'Please try again later'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const updateUserPlan = async (userId: string, plan: string) => {
     try {
       setUpdatingPlan(true);
@@ -85,3 +151,182 @@
       setUserToUpdatePlan(null);
     }
   };
+  
+  const viewUserDetails = (userId: string) => {
+    navigate(`/admin/users/${userId}`);
+  };
+
+  const renderPlanBadge = (plan: string) => {
+    switch (plan) {
+      case 'pro':
+        return <Badge className="bg-purple-500">Pro</Badge>;
+      case 'business':
+        return <Badge className="bg-blue-600">Business</Badge>;
+      case 'enterprise':
+        return <Badge className="bg-orange-500">Enterprise</Badge>;
+      default:
+        return <Badge variant="outline">Free</Badge>;
+    }
+  };
+
+  return (
+    <AdminLayout>
+      <div className="container mx-auto py-10">
+        <h1 className="text-2xl font-bold mb-6">User Management</h1>
+        
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Plan</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={3} className="text-center py-10">
+                    Loading users...
+                  </TableCell>
+                </TableRow>
+              ) : users.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={3} className="text-center py-10">
+                    No users found
+                  </TableCell>
+                </TableRow>
+              ) : (
+                users.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell className="font-medium">
+                      {user.full_name || 'Unnamed User'}
+                    </TableCell>
+                    <TableCell>
+                      {renderPlanBadge(user.plan)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => viewUserDetails(user.id)}>
+                            View Details
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => {
+                              setUserToUpdatePlan({
+                                userId: user.id, 
+                                name: user.full_name || 'Unnamed User'
+                              });
+                              setSelectedPlan(user.plan);
+                            }}
+                          >
+                            Update Plan
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+
+      {/* Update Plan Dialog */}
+      <Dialog open={!!userToUpdatePlan} onOpenChange={(open) => !open && setUserToUpdatePlan(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Update Plan</DialogTitle>
+            <DialogDescription>
+              Change the subscription plan for {userToUpdatePlan?.name}.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Select Plan</label>
+              <TooltipProvider>
+                <div className="grid grid-cols-2 gap-2">
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={selectedPlan === 'free' ? 'default' : 'outline'}
+                        className="w-full"
+                        onClick={() => setSelectedPlan('free')}
+                      >
+                        Free
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Basic features, 1 website</TooltipContent>
+                  </Tooltip>
+                  
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={selectedPlan === 'pro' ? 'default' : 'outline'}
+                        className="w-full"
+                        onClick={() => setSelectedPlan('pro')}
+                      >
+                        Pro
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Full features, 5 websites</TooltipContent>
+                  </Tooltip>
+                  
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={selectedPlan === 'business' ? 'default' : 'outline'}
+                        className="w-full"
+                        onClick={() => setSelectedPlan('business')}
+                      >
+                        Business
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>All features, 20 websites, priority support</TooltipContent>
+                  </Tooltip>
+                  
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant={selectedPlan === 'enterprise' ? 'default' : 'outline'}
+                        className="w-full"
+                        onClick={() => setSelectedPlan('enterprise')}
+                      >
+                        Enterprise
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>Unlimited websites, dedicated support</TooltipContent>
+                  </Tooltip>
+                </div>
+              </TooltipProvider>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setUserToUpdatePlan(null)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              onClick={() => userToUpdatePlan && updateUserPlan(userToUpdatePlan.userId, selectedPlan)}
+              disabled={updatingPlan}
+            >
+              {updatingPlan ? 'Updating...' : 'Update Plan'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </AdminLayout>
+  );
+};
+
+export default AdminUsersPage;
