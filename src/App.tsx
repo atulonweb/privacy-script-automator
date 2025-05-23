@@ -29,7 +29,6 @@ import AdminScriptsPage from './pages/AdminScriptsPage';
 import AdminDomainsPage from './pages/AdminDomainsPage';
 import AdminConsentLogsPage from './pages/AdminConsentLogsPage';
 import PlansPage from './pages/PlansPage';
-import WhiteLabelPage from './pages/WhiteLabelPage';
 
 // Components
 import ProtectedRoute from "./components/ProtectedRoute";
@@ -56,7 +55,6 @@ function App() {
           <Route path="/dashboard/scripts/test/:id" element={<ProtectedRoute><TestScriptPage /></ProtectedRoute>} />
           <Route path="/dashboard/analytics" element={<ProtectedRoute><AnalyticsPage /></ProtectedRoute>} />
           <Route path="/dashboard/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
-          <Route path="/dashboard/white-label" element={<ProtectedRoute><WhiteLabelPage /></ProtectedRoute>} />
           <Route path="/dashboard/testing" element={<ProtectedRoute><TestingPage /></ProtectedRoute>} />
           
           {/* Admin Routes */}
