@@ -231,7 +231,7 @@ const AdminUsersPage = () => {
         scriptCounts.set(script.user_id, count + 1);
       });
       
-      // Fetch user subscription plans - this is the key fix
+      // Fetch user subscription plans
       const { data: subscriptions, error: subscriptionsError } = await supabase
         .from('user_subscriptions')
         .select('*');
@@ -461,13 +461,15 @@ const AdminUsersPage = () => {
       
       console.log('Updating plan for user:', userId, 'to plan:', plan);
       
-      // First try to update directly in the database
+      // Update subscription plan in database with admin privileges
       const { error: dbError } = await supabase
         .from('user_subscriptions')
         .upsert({
           user_id: userId,
           plan: plan,
           updated_at: new Date().toISOString()
+        }, {
+          onConflict: 'user_id'
         });
 
       if (dbError) {
@@ -477,18 +479,9 @@ const AdminUsersPage = () => {
 
       console.log('Successfully updated plan in database');
       
-      // Update the local state to reflect the change immediately
-      setUsers(prevUsers => 
-        prevUsers.map(user => 
-          user.id === userId 
-            ? { ...user, plan: plan } 
-            : user
-        )
-      );
-      
       toast.success(`Successfully updated user's plan to ${plan}`);
       
-      // Refresh the users list to ensure we have the latest data
+      // Refresh the entire users list to get the latest data
       await fetchUsers();
       
     } catch (error: any) {
@@ -619,7 +612,7 @@ const AdminUsersPage = () => {
                             {user.scripts}
                           </span>
                         </TableCell>
-                        <TableCell>{formatDate(user.created_at)}</TableCell>
+                        <TableCell>{new Date(user.created_at).toLocaleDateString()}</TableCell>
                         <TableCell>
                           <div className="flex flex-wrap gap-2">
                             {/* Change Plan */}
