@@ -31,4 +31,6 @@ export interface PresetScript {
   async: boolean;
   icon?: string;
   description?: string;
+  docUrl?: string;
+  helpText?: string;
 }
