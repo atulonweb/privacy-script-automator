@@ -1,11 +1,10 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { PresetScript } from '@/types/scripts-config.types';
-import { ScriptIcon } from '@/components/ui/script-icon';
+import ScriptIcon from '@/components/ui/script-icon';
 import { InfoIcon, ExternalLinkIcon } from 'lucide-react';
 
 interface PresetScriptCardProps {
