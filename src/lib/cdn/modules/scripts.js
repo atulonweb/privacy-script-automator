@@ -26,13 +26,19 @@ export function loadGoogleAnalyticsScriptsEarly() {
   allCategories.forEach(category => {
     const categoryScripts = scripts[category] || [];
     categoryScripts.forEach(scriptConfig => {
-      // Improved detection: check both ID and src URL for Google Analytics patterns
+      // Enhanced detection: check both ID and src URL for Google Analytics patterns
       const isGoogleAnalytics = (
-        (scriptConfig.id && scriptConfig.id.includes('google-analytics')) ||
+        (scriptConfig.id && (
+          scriptConfig.id.includes('google-analytics') ||
+          scriptConfig.id.includes('ga') ||
+          scriptConfig.id.includes('gtag')
+        )) ||
         (scriptConfig.src && (
           scriptConfig.src.includes('gtag') || 
           scriptConfig.src.includes('googletagmanager') ||
-          scriptConfig.src.includes('analytics')
+          scriptConfig.src.includes('analytics') ||
+          scriptConfig.src.includes('GA_MEASUREMENT_ID') ||
+          scriptConfig.src.includes('G-')
         ))
       );
       
@@ -46,6 +52,15 @@ export function loadGoogleAnalyticsScriptsEarly() {
   
   if (foundGAScripts === 0) {
     console.log('ConsentGuard: No Google Analytics scripts found in configuration');
+    console.log('ConsentGuard: Checking for any scripts with GA patterns...');
+    
+    // Additional debug logging to help diagnose detection issues
+    allCategories.forEach(category => {
+      const categoryScripts = scripts[category] || [];
+      if (categoryScripts.length > 0) {
+        console.log(`ConsentGuard: Scripts in ${category}:`, categoryScripts);
+      }
+    });
   } else {
     console.log(`ConsentGuard: Loaded ${foundGAScripts} Google Analytics scripts early`);
   }
@@ -121,8 +136,21 @@ function loadScriptsForCategory(category, scripts = [], preferences = {}) {
       return; // Skip loading scripts with placeholder values
     }
     
-    // Special handling for Google Analytics scripts
-    if (scriptConfig.id && scriptConfig.id.includes('google-analytics')) {
+    // Enhanced Google Analytics detection for script loading
+    const isGoogleAnalytics = (
+      (scriptConfig.id && (
+        scriptConfig.id.includes('google-analytics') ||
+        scriptConfig.id.includes('ga') ||
+        scriptConfig.id.includes('gtag')
+      )) ||
+      (scriptConfig.src && (
+        scriptConfig.src.includes('gtag') || 
+        scriptConfig.src.includes('googletagmanager') ||
+        scriptConfig.src.includes('G-')
+      ))
+    );
+    
+    if (isGoogleAnalytics) {
       // GA scripts are already loaded early, just update consent
       updateGoogleAnalyticsConsent(preferences);
     } else if (scriptConfig.id && scriptConfig.src) {
@@ -172,6 +200,7 @@ function loadGoogleAnalyticsScript(scriptConfig) {
   // First, ensure dataLayer exists
   if (!window.dataLayer) {
     window.dataLayer = [];
+    console.log('ConsentGuard: Created dataLayer array');
   }
   
   // Define gtag function if not exists
@@ -179,6 +208,7 @@ function loadGoogleAnalyticsScript(scriptConfig) {
     window.gtag = function() {
       window.dataLayer.push(arguments);
     };
+    console.log('ConsentGuard: Created gtag function');
   }
   
   // Load the external script first if it exists
@@ -194,6 +224,7 @@ function loadGoogleAnalyticsScript(scriptConfig) {
       // Execute the inline script content immediately
       const scriptElement = document.createElement('script');
       scriptElement.innerHTML = scriptConfig.content;
+      scriptElement.id = scriptConfig.id + '-inline';
       document.head.appendChild(scriptElement);
       
       console.log('ConsentGuard: Google Analytics inline script executed successfully');
