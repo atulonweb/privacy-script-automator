@@ -17,6 +17,7 @@ function extractConfigFromScriptTag() {
     if (configAttr) {
       try {
         const configObject = JSON.parse(configAttr);
+        console.log('ConsentGuard: Found script tag configuration:', configObject);
         return configObject;
       } catch (error) {
         console.error('ConsentGuard: Failed to parse configuration', error);
@@ -38,15 +39,16 @@ function extractConfigFromScriptTag() {
       configObject.sessionId = sessionId;
     }
     
-    return configObject;
+    return Object.keys(configObject).length > 0 ? configObject : null;
   }
   
   return null;
 }
 
-// Apply configuration from script tag
+// Apply configuration from script tag IMMEDIATELY before initialization
 const scriptConfig = extractConfigFromScriptTag();
 if (scriptConfig) {
+  console.log('ConsentGuard: Applying script tag configuration before initialization...');
   setConfig(scriptConfig);
 }
 

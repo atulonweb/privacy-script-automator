@@ -10,6 +10,7 @@ import { config } from './core.js';
  */
 export function loadGoogleAnalyticsScriptsEarly() {
   console.log('ConsentGuard: Loading Google Analytics scripts early for detection');
+  console.log('ConsentGuard: Current scripts configuration:', config.scripts);
   
   const scripts = config.scripts || {
     analytics: [],
@@ -18,26 +19,36 @@ export function loadGoogleAnalyticsScriptsEarly() {
     social: []
   };
 
-  // Load Google Analytics scripts from analytics category
-  const analyticsScripts = scripts.analytics || [];
-  analyticsScripts.forEach(scriptConfig => {
-    if (scriptConfig.id && scriptConfig.id.includes('google-analytics')) {
-      console.log('ConsentGuard: Loading GA script early:', scriptConfig.id);
-      loadGoogleAnalyticsScript(scriptConfig);
-    }
-  });
+  // Check all categories for Google Analytics scripts with improved detection
+  const allCategories = ['analytics', 'advertising', 'functional', 'social'];
+  let foundGAScripts = 0;
   
-  // Also check other categories for GA scripts
-  const allCategories = ['advertising', 'functional', 'social'];
   allCategories.forEach(category => {
     const categoryScripts = scripts[category] || [];
     categoryScripts.forEach(scriptConfig => {
-      if (scriptConfig.id && scriptConfig.id.includes('google-analytics')) {
-        console.log('ConsentGuard: Loading GA script early from', category, ':', scriptConfig.id);
+      // Improved detection: check both ID and src URL for Google Analytics patterns
+      const isGoogleAnalytics = (
+        (scriptConfig.id && scriptConfig.id.includes('google-analytics')) ||
+        (scriptConfig.src && (
+          scriptConfig.src.includes('gtag') || 
+          scriptConfig.src.includes('googletagmanager') ||
+          scriptConfig.src.includes('analytics')
+        ))
+      );
+      
+      if (isGoogleAnalytics) {
+        console.log('ConsentGuard: Found GA script in', category, ':', scriptConfig);
+        foundGAScripts++;
         loadGoogleAnalyticsScript(scriptConfig);
       }
     });
   });
+  
+  if (foundGAScripts === 0) {
+    console.log('ConsentGuard: No Google Analytics scripts found in configuration');
+  } else {
+    console.log(`ConsentGuard: Loaded ${foundGAScripts} Google Analytics scripts early`);
+  }
 }
 
 /**
@@ -156,7 +167,7 @@ function updateGoogleAnalyticsConsent(preferences) {
  * @param {object} scriptConfig - Script configuration object
  */
 function loadGoogleAnalyticsScript(scriptConfig) {
-  console.log('ConsentGuard: Loading Google Analytics with special handling');
+  console.log('ConsentGuard: Loading Google Analytics with special handling:', scriptConfig);
   
   // First, ensure dataLayer exists
   if (!window.dataLayer) {
@@ -170,27 +181,28 @@ function loadGoogleAnalyticsScript(scriptConfig) {
     };
   }
   
-  // Load the external script first
+  // Load the external script first if it exists
   if (scriptConfig.src) {
+    console.log('ConsentGuard: Loading GA external script:', scriptConfig.src);
     loadScript(scriptConfig.id, scriptConfig.src, scriptConfig.async !== false, scriptConfig.attributes);
   }
   
-  // Execute inline content after a short delay to ensure external script loads first
+  // Execute inline content immediately if it exists
   if (scriptConfig.content) {
-    setTimeout(() => {
-      console.log('ConsentGuard: Executing GA inline script');
-      try {
-        // Execute the inline script content safely
-        const scriptElement = document.createElement('script');
-        scriptElement.innerHTML = scriptConfig.content;
-        document.head.appendChild(scriptElement);
-        
-        console.log('ConsentGuard: Google Analytics initialized successfully');
-      } catch (error) {
-        console.error('ConsentGuard: Error executing GA inline script:', error);
-      }
-    }, 300); // Increased delay to ensure external script loads first
+    console.log('ConsentGuard: Executing GA inline script immediately');
+    try {
+      // Execute the inline script content immediately
+      const scriptElement = document.createElement('script');
+      scriptElement.innerHTML = scriptConfig.content;
+      document.head.appendChild(scriptElement);
+      
+      console.log('ConsentGuard: Google Analytics inline script executed successfully');
+    } catch (error) {
+      console.error('ConsentGuard: Error executing GA inline script:', error);
+    }
   }
+  
+  console.log('ConsentGuard: Google Analytics script processing complete');
 }
 
 /**

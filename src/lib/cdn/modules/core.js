@@ -80,36 +80,10 @@ export async function init() {
 }
 
 /**
- * Look for custom script configuration in the script tag
- * This function checks for a data-config attribute on the script tag
- * that can be used to override the default configuration
- */
-function getScriptConfiguration() {
-  try {
-    // Find the script tag that loaded this script
-    const scripts = document.querySelectorAll('script');
-    for (const script of scripts) {
-      if (script.src && script.src.includes('cg.js')) {
-        // Check if it has a data-config attribute
-        if (script.getAttribute('data-config')) {
-          const configData = JSON.parse(script.getAttribute('data-config'));
-          console.log('ConsentGuard: Found script configuration', configData);
-          return configData;
-        }
-      }
-    }
-    return null;
-  } catch (error) {
-    console.error('ConsentGuard: Error parsing script configuration', error);
-    return null;
-  }
-}
-
-/**
  * Initialize Google Analytics with proper consent defaults before other initialization
  */
 function initializeGoogleAnalyticsDefaults() {
-  // Look for Google Analytics scripts in configuration
+  // Look for Google Analytics scripts in configuration with improved detection
   const allScripts = [
     ...(config.scripts?.analytics || []),
     ...(config.scripts?.advertising || []),
@@ -118,7 +92,8 @@ function initializeGoogleAnalyticsDefaults() {
   ];
   
   const hasGoogleAnalytics = allScripts.some(script => 
-    script.id && script.id.includes('google-analytics') && script.src && script.src.includes('gtag')
+    (script.id && script.id.includes('google-analytics')) ||
+    (script.src && (script.src.includes('gtag') || script.src.includes('googletagmanager')))
   );
   
   if (hasGoogleAnalytics) {
@@ -149,38 +124,20 @@ function initializeGoogleAnalyticsDefaults() {
 async function initializeConsentManager() {
   try {
     console.log('ConsentGuard: Starting initialization...');
+    console.log('ConsentGuard: Current configuration before remote fetch:', config);
     
-    // First check for inline script configuration
-    const scriptConfig = getScriptConfiguration();
+    // Initialize Google Analytics consent defaults early with current config
+    initializeGoogleAnalyticsDefaults();
     
-    // Then fetch remote config
+    // Load Google Analytics scripts immediately with current configuration
+    // This ensures Google Tag Assistant can detect them
+    loadGoogleAnalyticsScriptsEarly();
+    
+    // Then fetch remote config (this may override some settings but GA is already loaded)
     console.log('ConsentGuard: Fetching remote configuration...');
     await fetchConfig();
     
-    // Apply any script configuration found in script tag
-    if (scriptConfig) {
-      console.log('ConsentGuard: Applying script tag configuration...');
-      if (scriptConfig.scripts) {
-        config.scripts = {
-          ...config.scripts,
-          ...scriptConfig.scripts
-        };
-      }
-      
-      // Allow other config options to be set via script tag
-      if (scriptConfig.language) {
-        config.language = scriptConfig.language;
-      }
-    }
-    
-    console.log('ConsentGuard: Final configuration:', config);
-    
-    // Initialize Google Analytics consent defaults early
-    initializeGoogleAnalyticsDefaults();
-    
-    // Load Google Analytics scripts immediately (before consent banner)
-    // This ensures Google Tag Assistant can detect them
-    loadGoogleAnalyticsScriptsEarly();
+    console.log('ConsentGuard: Final configuration after remote fetch:', config);
     
     const savedPreferences = getSavedPreferences();
     
