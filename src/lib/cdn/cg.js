@@ -1,75 +1,68 @@
-
 /**
  * ConsentGuard - Cookie Consent Management System
  * Main entry point that initializes the consent manager
  */
 
-// CRITICAL: Extract and apply configuration FIRST, before any imports
-// This ensures all modules get the correct configuration from the start
+// STEP 1: Extract configuration IMMEDIATELY
 let scriptConfig = null;
 
 function extractAndApplyConfigImmediately() {
   console.log('ConsentGuard: Extracting configuration immediately...');
-  
-  const scriptElement = document.currentScript || 
-    document.querySelector('script[src*="cg.js"]');
-    
-  if (scriptElement) {
-    // Look for data-config attribute first
-    const configAttr = scriptElement.getAttribute('data-config');
-    if (configAttr) {
-      try {
-        scriptConfig = JSON.parse(configAttr);
-        console.log('ConsentGuard: Found and parsed data-config:', scriptConfig);
-        
-        // IMMEDIATELY apply config to window for global access
-        window.ConsentGuardConfig = scriptConfig;
-        
-        return scriptConfig;
-      } catch (error) {
-        console.error('ConsentGuard: Failed to parse data-config', error);
-      }
-    }
-    
-    // Look for individual data attributes as fallback
-    const configObject = {};
-    
-    const userId = scriptElement.getAttribute('data-user-id');
-    if (userId) {
-      configObject.userId = userId;
-    }
-    
-    const sessionId = scriptElement.getAttribute('data-session-id');
-    if (sessionId) {
-      configObject.sessionId = sessionId;
-    }
-    
-    if (Object.keys(configObject).length > 0) {
-      scriptConfig = configObject;
-      console.log('ConsentGuard: Found data attributes config:', scriptConfig);
-      window.ConsentGuardConfig = scriptConfig;
-      return scriptConfig;
+
+  const scriptElement = document.currentScript || document.querySelector('script[src*="cg.js"]');
+
+  if (!scriptElement) {
+    console.warn('ConsentGuard: Could not find script element');
+    return null;
+  }
+
+  const configAttr = scriptElement.getAttribute('data-config');
+  if (configAttr) {
+    try {
+      const parsed = JSON.parse(configAttr);
+      scriptConfig = parsed;
+      window.ConsentGuardConfig = parsed;
+      console.log('ConsentGuard: Found and parsed data-config:', parsed);
+      return parsed;
+    } catch (e) {
+      console.error('ConsentGuard: Failed to parse data-config:', e);
     }
   }
-  
-  console.log('ConsentGuard: No script configuration found');
+
+  // Fallback to individual attributes (rare case)
+  const fallback = {};
+  const userId = scriptElement.getAttribute('data-user-id');
+  const sessionId = scriptElement.getAttribute('data-session-id');
+  if (userId) fallback.userId = userId;
+  if (sessionId) fallback.sessionId = sessionId;
+
+  if (Object.keys(fallback).length > 0) {
+    scriptConfig = fallback;
+    window.ConsentGuardConfig = fallback;
+    console.log('ConsentGuard: Using fallback config:', fallback);
+    return fallback;
+  }
+
+  console.warn('ConsentGuard: No configuration found on script element');
   return null;
 }
 
-// Extract configuration IMMEDIATELY before any imports
+// Step 2: Extract config before imports
 scriptConfig = extractAndApplyConfigImmediately();
 
-// Now import modules (they will receive the pre-extracted config)
+// Step 3: Import and initialize AFTER config is available
 import { init, setConfig } from './modules/core.js';
 
-// Apply the extracted configuration immediately after import
+// Step 4: Apply config before calling init
 if (scriptConfig) {
-  console.log('ConsentGuard: Applying extracted configuration before initialization...');
+  console.log('ConsentGuard: Applying configuration before initialization');
   setConfig(scriptConfig);
+} else {
+  console.warn('ConsentGuard: No valid configuration found to apply');
 }
 
-// Export the init function for module importers
-export { init };
-
-// Initialize the consent manager
+// Step 5: Initialize ConsentGuard
 init();
+
+// Export for manual control (if needed)
+export { init };
