@@ -29,7 +29,7 @@ export let config = {
     analytics: [
       { 
         id: 'google-analytics', 
-        src: "https://www.googletagmanager.com/gtag/js?id=REPLACE_WITH_YOUR_GA_ID",
+        src: "https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID",
         async: true
       }
     ],
@@ -59,12 +59,16 @@ export const setConfig = (newConfig) => {
       ...newConfig.scripts
     };
   }
+
+  console.log('ConsentGuard: Configuration updated', config);
 };
 
 /**
  * Initialize the consent manager
  */
 export async function init() {
+  console.log('ConsentGuard: Initializing...');
+  
   // Wait for DOM to be fully loaded
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', async function() {
@@ -103,14 +107,18 @@ function getScriptConfiguration() {
 
 async function initializeConsentManager() {
   try {
+    console.log('ConsentGuard: Starting initialization...');
+    
     // First check for inline script configuration
     const scriptConfig = getScriptConfiguration();
     
     // Then fetch remote config
+    console.log('ConsentGuard: Fetching remote configuration...');
     await fetchConfig();
     
     // Apply any script configuration found in script tag
     if (scriptConfig) {
+      console.log('ConsentGuard: Applying script tag configuration...');
       if (scriptConfig.scripts) {
         config.scripts = {
           ...config.scripts,
@@ -124,11 +132,15 @@ async function initializeConsentManager() {
       }
     }
     
+    console.log('ConsentGuard: Final configuration:', config);
+    
     const savedPreferences = getSavedPreferences();
     
     if (!savedPreferences) {
+      console.log('ConsentGuard: No saved preferences found, showing banner...');
       createBanner();
     } else {
+      console.log('ConsentGuard: Found saved preferences, applying them...', savedPreferences);
       // Reapply saved preferences
       manageCookies(
         savedPreferences.choice, 
@@ -136,6 +148,8 @@ async function initializeConsentManager() {
       );
       addSettingsButton();
     }
+    
+    console.log('ConsentGuard: Initialization complete');
   } catch (error) {
     console.error('ConsentGuard: Failed to initialize', error);
     // Still create the banner with default config

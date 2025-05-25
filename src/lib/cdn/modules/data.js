@@ -28,28 +28,48 @@ export const API_ENDPOINT = 'https://rzmfwwkumniuwenammaj.supabase.co/functions/
  */
 export async function fetchConfig() {
   try {
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 second timeout
+    console.log(`ConsentGuard: Fetching config for script ID: ${scriptId}`);
     
+    if (!scriptId) {
+      console.warn('ConsentGuard: No script ID found, using default configuration');
+      return config;
+    }
+    
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+    
+    // Use GET request for fetching configuration (no auth required)
     const response = await fetch(`${API_ENDPOINT}?scriptId=${scriptId}`, {
-      signal: controller.signal
+      method: 'GET',
+      signal: controller.signal,
+      headers: {
+        'Content-Type': 'application/json'
+      }
     });
     
     clearTimeout(timeoutId);
     
     if (!response.ok) {
-      throw new Error(`Failed to fetch configuration: ${response.status} ${response.statusText}`);
+      console.error(`ConsentGuard: Failed to fetch configuration: ${response.status} ${response.statusText}`);
+      // Don't throw error, just use default config
+      return config;
     }
     
     const data = await response.json();
+    console.log('ConsentGuard: Received configuration:', data);
     
     // Update config with fetched data
-    if (data) {
+    if (data && !data.error) {
       setConfig(data);
+      console.log('ConsentGuard: Configuration updated successfully');
+    } else {
+      console.warn('ConsentGuard: Received error in configuration, using defaults:', data.error);
     }
     
-    // Record the script load for analytics
-    recordAnalytics('view');
+    // Record the script load for analytics (only if not in test mode)
+    if (!testMode) {
+      recordAnalytics('view');
+    }
     
     return config;
   } catch (error) {
