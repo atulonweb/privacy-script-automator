@@ -1,26 +1,24 @@
-
 /**
  * Analytics handling for ConsentGuard
+ * NOTE: All API calls removed to prevent 401 errors
+ * This version only does local logging and data preparation
  */
 
 import { testMode, scriptId } from './data.js';
 
 /**
- * Record analytics data
+ * Record analytics data locally (no API calls)
  * @param {string} action - The user action (view, accept, reject, partial)
  */
 export async function recordAnalytics(action) {
-  // Skip analytics recording if in test mode
+  console.log('ConsentGuard: Recording analytics action locally:', action);
+  
+  // Always skip API calls to prevent 401 errors
   if (testMode) {
-    console.log('ConsentGuard: Test mode - analytics not recorded for action:', action);
-    return;
+    console.log('ConsentGuard: Test mode - analytics logged locally only');
   }
   
-  // For now, just log the action locally without making API calls
-  // This prevents the 401 errors while maintaining the interface
-  console.log('ConsentGuard: Recording analytics action:', action);
-  
-  // Store analytics data locally for debugging
+  // Prepare analytics data locally for debugging and future use
   try {
     const analyticsData = {
       scriptId: scriptId,
@@ -34,25 +32,34 @@ export async function recordAnalytics(action) {
       language: navigator.language || 'en-US'
     };
     
-    console.log('ConsentGuard: Analytics data prepared:', analyticsData);
+    console.log('ConsentGuard: Analytics data prepared locally:', analyticsData);
     
-    // TODO: In future, this could be sent to a proper analytics endpoint
-    // For now, we just prepare the data and log it
+    // Store in sessionStorage for debugging purposes
+    try {
+      const existingData = JSON.parse(sessionStorage.getItem('cg_analytics_log') || '[]');
+      existingData.push(analyticsData);
+      // Keep only last 10 entries to prevent storage overflow
+      const recentData = existingData.slice(-10);
+      sessionStorage.setItem('cg_analytics_log', JSON.stringify(recentData));
+    } catch (storageError) {
+      console.log('ConsentGuard: Could not store analytics data in sessionStorage:', storageError);
+    }
+    
+    // NO API CALLS - prevents 401 errors completely
+    console.log('ConsentGuard: Analytics recorded locally only (no API calls made)');
     
   } catch (error) {
-    console.error('ConsentGuard: Error preparing analytics data', error);
+    console.error('ConsentGuard: Error preparing analytics data locally:', error);
   }
 }
 
 /**
  * Get or create a unique session ID for this browser session
- * This allows identifying unique visitors across multiple consent events
  */
 function getOrCreateSessionId() {
   let sessionId = sessionStorage.getItem('cg_session_id');
   
   if (!sessionId) {
-    // Generate a simple session ID
     sessionId = 'cg_' + Math.random().toString(36).substring(2, 15) + 
                 Math.random().toString(36).substring(2, 15);
     sessionStorage.setItem('cg_session_id', sessionId);
@@ -63,13 +70,11 @@ function getOrCreateSessionId() {
 
 /**
  * Get or create a unique visitor ID that persists across sessions
- * This allows tracking unique visitors more accurately
  */
 function getOrCreateVisitorId() {
   let visitorId = localStorage.getItem('cg_visitor_id');
   
   if (!visitorId) {
-    // Generate a simple visitor ID
     visitorId = 'cgv_' + Math.random().toString(36).substring(2, 15) + 
                 Math.random().toString(36).substring(2, 15);
     localStorage.setItem('cg_visitor_id', visitorId);
@@ -79,20 +84,34 @@ function getOrCreateVisitorId() {
 }
 
 /**
- * Record a domain ping to track when the script was last seen active
+ * Record a domain ping locally (no API calls)
  */
 export async function recordDomainPing() {
-  if (testMode) return;
+  console.log('ConsentGuard: Recording domain ping locally for script:', scriptId);
   
+  // NO API CALLS - just local logging to prevent 401 errors
   try {
-    console.log('ConsentGuard: Recording domain ping for script:', scriptId);
-    // For now, just log the ping locally
-    // This prevents API errors while maintaining the interface
+    const pingData = {
+      scriptId: scriptId,
+      domain: window.location.hostname,
+      timestamp: new Date().toISOString(),
+      type: 'ping'
+    };
+    
+    console.log('ConsentGuard: Domain ping data prepared locally:', pingData);
+    
+    // Store locally for debugging
+    try {
+      sessionStorage.setItem('cg_last_ping', JSON.stringify(pingData));
+    } catch (storageError) {
+      console.log('ConsentGuard: Could not store ping data:', storageError);
+    }
+    
   } catch (error) {
-    // Silent fail for pings - don't disrupt user experience
-    console.error('ConsentGuard: Error recording domain ping', error);
+    console.log('ConsentGuard: Error preparing domain ping data:', error);
   }
 }
 
-// Automatically record a ping when the script loads
-setTimeout(recordDomainPing, 1000);
+// Remove automatic ping to prevent any potential API calls on script load
+// setTimeout(recordDomainPing, 1000); // REMOVED - no automatic pings
+console.log('ConsentGuard: Analytics module loaded - all API calls disabled to prevent 401 errors');

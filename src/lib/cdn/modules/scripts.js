@@ -19,50 +19,60 @@ export function loadGoogleAnalyticsScriptsEarly() {
     social: []
   };
 
-  // Check all categories for Google Analytics scripts with improved detection
+  // Check all categories for Google Analytics scripts with enhanced detection
   const allCategories = ['analytics', 'advertising', 'functional', 'social'];
   let foundGAScripts = 0;
   
   allCategories.forEach(category => {
     const categoryScripts = scripts[category] || [];
+    console.log(`ConsentGuard: Checking ${categoryScripts.length} scripts in ${category} category`);
+    
     categoryScripts.forEach(scriptConfig => {
-      // Enhanced detection: check both ID and src URL for Google Analytics patterns
+      console.log(`ConsentGuard: Examining script:`, scriptConfig);
+      
+      // Enhanced detection specifically for your GA4 configuration
       const isGoogleAnalytics = (
+        // Check for specific IDs you use
         (scriptConfig.id && (
+          scriptConfig.id.includes('google-analytics-4') ||
           scriptConfig.id.includes('google-analytics') ||
           scriptConfig.id.includes('ga') ||
           scriptConfig.id.includes('gtag')
         )) ||
+        // Check for GA4 patterns in src URL
         (scriptConfig.src && (
           scriptConfig.src.includes('gtag') || 
           scriptConfig.src.includes('googletagmanager') ||
           scriptConfig.src.includes('analytics') ||
-          scriptConfig.src.includes('GA_MEASUREMENT_ID') ||
-          scriptConfig.src.includes('G-')
+          scriptConfig.src.includes('G-N075SBHV0F') || // Your specific measurement ID
+          scriptConfig.src.includes('G-') || // Any GA4 measurement ID pattern
+          scriptConfig.src.includes('GA_MEASUREMENT_ID')
         ))
       );
       
       if (isGoogleAnalytics) {
-        console.log('ConsentGuard: Found GA script in', category, ':', scriptConfig);
+        console.log(`ConsentGuard: ✅ FOUND Google Analytics script in ${category}:`, scriptConfig);
         foundGAScripts++;
         loadGoogleAnalyticsScript(scriptConfig);
+      } else {
+        console.log(`ConsentGuard: ❌ Not a GA script:`, scriptConfig);
       }
     });
   });
   
   if (foundGAScripts === 0) {
-    console.log('ConsentGuard: No Google Analytics scripts found in configuration');
-    console.log('ConsentGuard: Checking for any scripts with GA patterns...');
-    
-    // Additional debug logging to help diagnose detection issues
+    console.log('ConsentGuard: ⚠️ NO Google Analytics scripts found in configuration');
+    console.log('ConsentGuard: Debug - All scripts by category:');
     allCategories.forEach(category => {
       const categoryScripts = scripts[category] || [];
       if (categoryScripts.length > 0) {
-        console.log(`ConsentGuard: Scripts in ${category}:`, categoryScripts);
+        console.log(`ConsentGuard: ${category}:`, categoryScripts);
+      } else {
+        console.log(`ConsentGuard: ${category}: (empty)`);
       }
     });
   } else {
-    console.log(`ConsentGuard: Loaded ${foundGAScripts} Google Analytics scripts early`);
+    console.log(`ConsentGuard: ✅ Successfully loaded ${foundGAScripts} Google Analytics scripts early`);
   }
 }
 

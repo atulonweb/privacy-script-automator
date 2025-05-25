@@ -1,3 +1,4 @@
+
 /**
  * Core functionality for ConsentGuard
  */
@@ -9,7 +10,7 @@ import { getSavedPreferences, fetchConfig } from './data.js';
 import { recordAnalytics } from './analytics.js';
 import { loadGoogleAnalyticsScriptsEarly } from './scripts.js';
 
-// Global configuration object
+// Global configuration object - START CLEAN with no placeholder scripts
 export let config = {
   bannerPosition: 'bottom',
   bannerColor: '#2563eb',
@@ -23,23 +24,11 @@ export let config = {
   secureFlags: true,
   webhookUrl: '',
   translations: {},
-  // Script configuration by category - these are PLACEHOLDER examples
-  // and must be replaced with actual script configuration
+  // Start with empty script arrays - NO PLACEHOLDER SCRIPTS
+  // Only scripts provided via data-config will be used
   scripts: {
-    analytics: [
-      { 
-        id: 'google-analytics', 
-        src: "https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID",
-        async: true
-      }
-    ],
-    advertising: [
-      { 
-        id: 'facebook-pixel', 
-        src: "https://connect.facebook.net/en_US/fbevents.js",
-        async: true
-      }
-    ],
+    analytics: [],
+    advertising: [],
     functional: [],
     social: []
   }
@@ -47,6 +36,8 @@ export let config = {
 
 // Export the config so other modules can access it
 export const setConfig = (newConfig) => {
+  console.log('ConsentGuard: setConfig called with:', newConfig);
+  
   config = {
     ...config,
     ...newConfig
@@ -58,9 +49,10 @@ export const setConfig = (newConfig) => {
       ...config.scripts,
       ...newConfig.scripts
     };
+    console.log('ConsentGuard: Scripts configuration updated:', config.scripts);
   }
 
-  console.log('ConsentGuard: Configuration updated', config);
+  console.log('ConsentGuard: Final configuration after setConfig:', config);
 };
 
 /**
@@ -68,6 +60,7 @@ export const setConfig = (newConfig) => {
  */
 export async function init() {
   console.log('ConsentGuard: Initializing...');
+  console.log('ConsentGuard: Current configuration at init:', config);
   
   // Wait for DOM to be fully loaded
   if (document.readyState === 'loading') {
@@ -83,6 +76,8 @@ export async function init() {
  * Initialize Google Analytics with proper consent defaults before other initialization
  */
 function initializeGoogleAnalyticsDefaults() {
+  console.log('ConsentGuard: Checking for Google Analytics scripts in configuration...');
+  
   // Look for Google Analytics scripts in configuration with improved detection
   const allScripts = [
     ...(config.scripts?.analytics || []),
@@ -91,10 +86,29 @@ function initializeGoogleAnalyticsDefaults() {
     ...(config.scripts?.social || [])
   ];
   
-  const hasGoogleAnalytics = allScripts.some(script => 
-    (script.id && script.id.includes('google-analytics')) ||
-    (script.src && (script.src.includes('gtag') || script.src.includes('googletagmanager')))
-  );
+  console.log('ConsentGuard: All scripts to check for GA:', allScripts);
+  
+  const hasGoogleAnalytics = allScripts.some(script => {
+    const hasGA = (
+      (script.id && (
+        script.id.includes('google-analytics') ||
+        script.id.includes('ga') ||
+        script.id.includes('gtag')
+      )) ||
+      (script.src && (
+        script.src.includes('gtag') || 
+        script.src.includes('googletagmanager') ||
+        script.src.includes('G-') ||
+        script.src.includes('analytics')
+      ))
+    );
+    
+    if (hasGA) {
+      console.log('ConsentGuard: Found Google Analytics script:', script);
+    }
+    
+    return hasGA;
+  });
   
   if (hasGoogleAnalytics) {
     console.log('ConsentGuard: Setting up Google Analytics consent defaults');
@@ -118,6 +132,8 @@ function initializeGoogleAnalyticsDefaults() {
     });
     
     console.log('ConsentGuard: Google Analytics consent defaults set');
+  } else {
+    console.log('ConsentGuard: No Google Analytics scripts found in current configuration');
   }
 }
 
@@ -131,6 +147,7 @@ async function initializeConsentManager() {
     
     // Load Google Analytics scripts immediately with current configuration
     // This ensures Google Tag Assistant can detect them
+    console.log('ConsentGuard: Loading Google Analytics scripts early...');
     loadGoogleAnalyticsScriptsEarly();
     
     // Then fetch remote config (this may override some settings but GA is already loaded)
