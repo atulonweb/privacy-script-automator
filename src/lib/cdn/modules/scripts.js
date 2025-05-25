@@ -10,6 +10,8 @@ import { config } from './core.js';
  * @param {object} preferences - User's consent preferences
  */
 export function loadScriptsByConsent(preferences) {
+  console.log('ConsentGuard: Loading scripts based on consent preferences:', preferences);
+  
   // Get script configuration from global config
   const scripts = config.scripts || {
     analytics: [],
@@ -20,18 +22,22 @@ export function loadScriptsByConsent(preferences) {
 
   // Apply consent to each category of scripts
   if (preferences.analytics) {
+    console.log('ConsentGuard: Loading analytics scripts');
     loadScriptsForCategory('analytics', scripts.analytics);
   }
   
   if (preferences.advertising) {
+    console.log('ConsentGuard: Loading advertising scripts');
     loadScriptsForCategory('advertising', scripts.advertising);
   }
   
   if (preferences.functional) {
+    console.log('ConsentGuard: Loading functional scripts');
     loadScriptsForCategory('functional', scripts.functional);
   }
   
   if (preferences.social) {
+    console.log('ConsentGuard: Loading social scripts');
     loadScriptsForCategory('social', scripts.social);
   }
   
@@ -48,9 +54,16 @@ export function loadScriptsByConsent(preferences) {
  * @param {Array} scripts - Array of script objects for this category
  */
 function loadScriptsForCategory(category, scripts = []) {
-  if (!Array.isArray(scripts) || scripts.length === 0) return;
+  if (!Array.isArray(scripts) || scripts.length === 0) {
+    console.log(`ConsentGuard: No scripts to load for category: ${category}`);
+    return;
+  }
+  
+  console.log(`ConsentGuard: Processing ${scripts.length} scripts for category: ${category}`);
   
   scripts.forEach(scriptConfig => {
+    console.log(`ConsentGuard: Processing script:`, scriptConfig);
+    
     // Check if script has placeholder IDs that need to be replaced
     if (scriptConfig.src && (
         scriptConfig.src.includes('REPLACE_WITH_YOUR_') || 
@@ -61,12 +74,64 @@ function loadScriptsForCategory(category, scripts = []) {
       return; // Skip loading scripts with placeholder values
     }
     
-    if (scriptConfig.id && scriptConfig.src) {
+    // Special handling for Google Analytics scripts
+    if (scriptConfig.id && scriptConfig.id.includes('google-analytics')) {
+      loadGoogleAnalyticsScript(scriptConfig);
+    } else if (scriptConfig.id && scriptConfig.src) {
       loadScript(scriptConfig.id, scriptConfig.src, scriptConfig.async !== false, scriptConfig.attributes);
+      
+      // If there's also inline content, execute it after the external script loads
+      if (scriptConfig.content) {
+        setTimeout(() => {
+          injectInlineScript(scriptConfig.id + '-inline', scriptConfig.content);
+        }, 100);
+      }
     } else if (scriptConfig.id && scriptConfig.content) {
       injectInlineScript(scriptConfig.id, scriptConfig.content);
     }
   });
+}
+
+/**
+ * Special handling for Google Analytics scripts to ensure proper detection
+ * @param {object} scriptConfig - Script configuration object
+ */
+function loadGoogleAnalyticsScript(scriptConfig) {
+  console.log('ConsentGuard: Loading Google Analytics with special handling');
+  
+  // First, ensure dataLayer exists
+  if (!window.dataLayer) {
+    window.dataLayer = [];
+  }
+  
+  // Define gtag function if not exists
+  if (!window.gtag) {
+    window.gtag = function() {
+      window.dataLayer.push(arguments);
+    };
+  }
+  
+  // Load the external script first
+  if (scriptConfig.src) {
+    loadScript(scriptConfig.id, scriptConfig.src, scriptConfig.async !== false, scriptConfig.attributes);
+  }
+  
+  // Execute inline content after a short delay to ensure external script loads first
+  if (scriptConfig.content) {
+    setTimeout(() => {
+      console.log('ConsentGuard: Executing GA inline script');
+      try {
+        // Execute the inline script content
+        const scriptElement = document.createElement('script');
+        scriptElement.innerHTML = scriptConfig.content;
+        document.head.appendChild(scriptElement);
+        
+        console.log('ConsentGuard: Google Analytics initialized successfully');
+      } catch (error) {
+        console.error('ConsentGuard: Error executing GA inline script:', error);
+      }
+    }, 200);
+  }
 }
 
 /**
@@ -78,9 +143,12 @@ function loadScriptsForCategory(category, scripts = []) {
  */
 function loadScript(id, src, async = true, attributes = {}) {
   // Check if the script is already loaded
-  if (document.getElementById(id)) return;
+  if (document.getElementById(id)) {
+    console.log(`ConsentGuard: Script ${id} already loaded, skipping`);
+    return;
+  }
   
-  console.log(`ConsentGuard: Loading script ${id}`);
+  console.log(`ConsentGuard: Loading external script ${id} from ${src}`);
   
   const script = document.createElement('script');
   script.id = id;
@@ -94,6 +162,15 @@ function loadScript(id, src, async = true, attributes = {}) {
     });
   }
   
+  // Add load event listener for debugging
+  script.onload = () => {
+    console.log(`ConsentGuard: External script ${id} loaded successfully`);
+  };
+  
+  script.onerror = (error) => {
+    console.error(`ConsentGuard: Failed to load external script ${id}:`, error);
+  };
+  
   document.head.appendChild(script);
 }
 
@@ -104,75 +181,20 @@ function loadScript(id, src, async = true, attributes = {}) {
  */
 function injectInlineScript(id, content) {
   // Check if the script is already loaded
-  if (document.getElementById(id)) return;
+  if (document.getElementById(id)) {
+    console.log(`ConsentGuard: Inline script ${id} already loaded, skipping`);
+    return;
+  }
   
   console.log(`ConsentGuard: Loading inline script ${id}`);
   
-  const script = document.createElement('script');
-  script.id = id;
-  script.innerHTML = content;
-  document.head.appendChild(script);
-}
-
-/**
- * Example function to load Google Analytics
- * Replace with your actual implementation
- */
-function loadGoogleAnalytics() {
-  // Check if GA is already loaded
-  if (window.ga || window.gtag) return;
-  
-  console.log('ConsentGuard: Loading Google Analytics');
-  
-  // Example implementation - replace with your actual GA code
-  const script = document.createElement('script');
-  script.src = "https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID";
-  script.async = true;
-  document.head.appendChild(script);
-  
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){ window.dataLayer.push(arguments); }
-  gtag('js', new Date());
-  gtag('config', 'GA_MEASUREMENT_ID');
-}
-
-/**
- * Example function to load Facebook Pixel
- * Replace with your actual implementation
- */
-function loadFacebookPixel() {
-  // Check if FB Pixel is already loaded
-  if (window.fbq) return;
-  
-  console.log('ConsentGuard: Loading Facebook Pixel');
-  
-  // Example implementation - replace with your actual FB Pixel code
-  !function(f,b,e,v,n,t,s)
-  {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-  n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-  if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-  n.queue=[];t=b.createElement(e);t.async=!0;
-  t.src=v;s=b.getElementsByTagName(e)[0];
-  s.parentNode.insertBefore(t,s)}(window, document,'script',
-  'https://connect.facebook.net/en_US/fbevents.js');
-  fbq('init', 'PIXEL_ID');
-  fbq('track', 'PageView');
-}
-
-/**
- * Example function to load functional scripts
- * Replace with your actual implementation
- */
-function loadFunctionalScripts() {
-  console.log('ConsentGuard: Loading functional scripts');
-  // Implement your actual functional scripts loading logic here
-}
-
-/**
- * Example function to load social media scripts
- * Replace with your actual implementation
- */
-function loadSocialMediaScripts() {
-  console.log('ConsentGuard: Loading social media scripts');
-  // Implement your actual social media scripts loading logic here
+  try {
+    const script = document.createElement('script');
+    script.id = id;
+    script.innerHTML = content;
+    document.head.appendChild(script);
+    console.log(`ConsentGuard: Inline script ${id} executed successfully`);
+  } catch (error) {
+    console.error(`ConsentGuard: Error executing inline script ${id}:`, error);
+  }
 }

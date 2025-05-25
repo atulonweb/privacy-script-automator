@@ -105,6 +105,47 @@ function getScriptConfiguration() {
   }
 }
 
+/**
+ * Initialize Google Analytics with proper consent defaults before other initialization
+ */
+function initializeGoogleAnalyticsDefaults() {
+  // Look for Google Analytics scripts in configuration
+  const allScripts = [
+    ...(config.scripts?.analytics || []),
+    ...(config.scripts?.advertising || []),
+    ...(config.scripts?.functional || []),
+    ...(config.scripts?.social || [])
+  ];
+  
+  const hasGoogleAnalytics = allScripts.some(script => 
+    script.id && script.id.includes('google-analytics') && script.src && script.src.includes('gtag')
+  );
+  
+  if (hasGoogleAnalytics) {
+    console.log('ConsentGuard: Setting up Google Analytics consent defaults');
+    
+    // Ensure dataLayer exists
+    window.dataLayer = window.dataLayer || [];
+    
+    // Define gtag function if not exists
+    if (!window.gtag) {
+      window.gtag = function() {
+        window.dataLayer.push(arguments);
+      };
+    }
+    
+    // Set consent defaults before any other GA initialization
+    window.gtag('consent', 'default', {
+      ad_storage: 'denied',
+      analytics_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied'
+    });
+    
+    console.log('ConsentGuard: Google Analytics consent defaults set');
+  }
+}
+
 async function initializeConsentManager() {
   try {
     console.log('ConsentGuard: Starting initialization...');
@@ -133,6 +174,9 @@ async function initializeConsentManager() {
     }
     
     console.log('ConsentGuard: Final configuration:', config);
+    
+    // Initialize Google Analytics consent defaults early
+    initializeGoogleAnalyticsDefaults();
     
     const savedPreferences = getSavedPreferences();
     

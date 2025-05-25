@@ -23,11 +23,35 @@ export function getCookie(name) {
 }
 
 /**
+ * Update Google Analytics consent based on user preferences
+ * @param {object} preferences - User's consent preferences
+ */
+function updateGoogleAnalyticsConsent(preferences) {
+  // Only update if gtag is available
+  if (typeof window.gtag === 'function') {
+    console.log('ConsentGuard: Updating Google Analytics consent', preferences);
+    
+    window.gtag('consent', 'update', {
+      ad_storage: preferences.advertising ? 'granted' : 'denied',
+      analytics_storage: preferences.analytics ? 'granted' : 'denied',
+      ad_user_data: preferences.advertising ? 'granted' : 'denied',
+      ad_personalization: preferences.advertising ? 'granted' : 'denied'
+    });
+    
+    console.log('ConsentGuard: Google Analytics consent updated');
+  } else {
+    console.log('ConsentGuard: gtag not available, skipping consent update');
+  }
+}
+
+/**
  * Manage cookies based on consent choice
  * @param {string} choice - User's consent choice (accept, reject, partial)
  * @param {object} preferences - Optional preferences for partial consent
  */
 export function manageCookies(choice, preferences = null) {
+  console.log('ConsentGuard: Managing cookies with choice:', choice, 'preferences:', preferences);
+  
   // Clear any existing consent cookies first
   document.cookie = "consentguard_consent=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
   document.cookie = "consentguard_preferences=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
@@ -66,8 +90,13 @@ export function manageCookies(choice, preferences = null) {
     finalPreferences = cookieCategories.reduce((acc, cat) => ({...acc, [cat.id]: cat.required}), {});
   }
   
+  console.log('ConsentGuard: Final preferences for script loading:', finalPreferences);
+  
   // Store preferences in a global variable for other scripts to access
   window.ConsentGuardPreferences = finalPreferences;
+  
+  // Update Google Analytics consent immediately
+  updateGoogleAnalyticsConsent(finalPreferences);
   
   // Load scripts based on preferences
   loadScriptsByConsent(finalPreferences);
