@@ -1,4 +1,3 @@
-
 /**
  * Core functionality for ConsentGuard
  */
@@ -8,6 +7,7 @@ import { manageCookies } from './cookies.js';
 import { addSettingsButton } from './ui/settings-button.js';
 import { getSavedPreferences, fetchConfig } from './data.js';
 import { recordAnalytics } from './analytics.js';
+import { loadGoogleAnalyticsScriptsEarly } from './scripts.js';
 
 // Global configuration object
 export let config = {
@@ -177,6 +177,10 @@ async function initializeConsentManager() {
     
     // Initialize Google Analytics consent defaults early
     initializeGoogleAnalyticsDefaults();
+    
+    // Load Google Analytics scripts immediately (before consent banner)
+    // This ensures Google Tag Assistant can detect them
+    loadGoogleAnalyticsScriptsEarly();
     
     const savedPreferences = getSavedPreferences();
     

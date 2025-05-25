@@ -1,9 +1,44 @@
-
 /**
  * Third-party script management for ConsentGuard
  */
 
 import { config } from './core.js';
+
+/**
+ * Load Google Analytics scripts early (before consent interaction)
+ * This ensures Google Tag Assistant can detect them
+ */
+export function loadGoogleAnalyticsScriptsEarly() {
+  console.log('ConsentGuard: Loading Google Analytics scripts early for detection');
+  
+  const scripts = config.scripts || {
+    analytics: [],
+    advertising: [],
+    functional: [],
+    social: []
+  };
+
+  // Load Google Analytics scripts from analytics category
+  const analyticsScripts = scripts.analytics || [];
+  analyticsScripts.forEach(scriptConfig => {
+    if (scriptConfig.id && scriptConfig.id.includes('google-analytics')) {
+      console.log('ConsentGuard: Loading GA script early:', scriptConfig.id);
+      loadGoogleAnalyticsScript(scriptConfig);
+    }
+  });
+  
+  // Also check other categories for GA scripts
+  const allCategories = ['advertising', 'functional', 'social'];
+  allCategories.forEach(category => {
+    const categoryScripts = scripts[category] || [];
+    categoryScripts.forEach(scriptConfig => {
+      if (scriptConfig.id && scriptConfig.id.includes('google-analytics')) {
+        console.log('ConsentGuard: Loading GA script early from', category, ':', scriptConfig.id);
+        loadGoogleAnalyticsScript(scriptConfig);
+      }
+    });
+  });
+}
 
 /**
  * Load third-party scripts based on consent preferences
@@ -23,22 +58,22 @@ export function loadScriptsByConsent(preferences) {
   // Apply consent to each category of scripts
   if (preferences.analytics) {
     console.log('ConsentGuard: Loading analytics scripts');
-    loadScriptsForCategory('analytics', scripts.analytics);
+    loadScriptsForCategory('analytics', scripts.analytics, preferences);
   }
   
   if (preferences.advertising) {
     console.log('ConsentGuard: Loading advertising scripts');
-    loadScriptsForCategory('advertising', scripts.advertising);
+    loadScriptsForCategory('advertising', scripts.advertising, preferences);
   }
   
   if (preferences.functional) {
     console.log('ConsentGuard: Loading functional scripts');
-    loadScriptsForCategory('functional', scripts.functional);
+    loadScriptsForCategory('functional', scripts.functional, preferences);
   }
   
   if (preferences.social) {
     console.log('ConsentGuard: Loading social scripts');
-    loadScriptsForCategory('social', scripts.social);
+    loadScriptsForCategory('social', scripts.social, preferences);
   }
   
   // Dispatch a custom event that other scripts can listen for
@@ -52,8 +87,9 @@ export function loadScriptsByConsent(preferences) {
  * Load scripts for a specific consent category
  * @param {string} category - The consent category
  * @param {Array} scripts - Array of script objects for this category
+ * @param {object} preferences - User's consent preferences
  */
-function loadScriptsForCategory(category, scripts = []) {
+function loadScriptsForCategory(category, scripts = [], preferences = {}) {
   if (!Array.isArray(scripts) || scripts.length === 0) {
     console.log(`ConsentGuard: No scripts to load for category: ${category}`);
     return;
@@ -76,7 +112,8 @@ function loadScriptsForCategory(category, scripts = []) {
     
     // Special handling for Google Analytics scripts
     if (scriptConfig.id && scriptConfig.id.includes('google-analytics')) {
-      loadGoogleAnalyticsScript(scriptConfig);
+      // GA scripts are already loaded early, just update consent
+      updateGoogleAnalyticsConsent(preferences);
     } else if (scriptConfig.id && scriptConfig.src) {
       loadScript(scriptConfig.id, scriptConfig.src, scriptConfig.async !== false, scriptConfig.attributes);
       
@@ -90,6 +127,28 @@ function loadScriptsForCategory(category, scripts = []) {
       injectInlineScript(scriptConfig.id, scriptConfig.content);
     }
   });
+}
+
+/**
+ * Update Google Analytics consent based on user preferences
+ * @param {object} preferences - User's consent preferences
+ */
+function updateGoogleAnalyticsConsent(preferences) {
+  // Only update if gtag is available
+  if (typeof window.gtag === 'function') {
+    console.log('ConsentGuard: Updating Google Analytics consent', preferences);
+    
+    window.gtag('consent', 'update', {
+      ad_storage: preferences.advertising ? 'granted' : 'denied',
+      analytics_storage: preferences.analytics ? 'granted' : 'denied',
+      ad_user_data: preferences.advertising ? 'granted' : 'denied',
+      ad_personalization: preferences.advertising ? 'granted' : 'denied'
+    });
+    
+    console.log('ConsentGuard: Google Analytics consent updated');
+  } else {
+    console.log('ConsentGuard: gtag not available, skipping consent update');
+  }
 }
 
 /**
@@ -121,7 +180,7 @@ function loadGoogleAnalyticsScript(scriptConfig) {
     setTimeout(() => {
       console.log('ConsentGuard: Executing GA inline script');
       try {
-        // Execute the inline script content
+        // Execute the inline script content safely
         const scriptElement = document.createElement('script');
         scriptElement.innerHTML = scriptConfig.content;
         document.head.appendChild(scriptElement);
@@ -130,7 +189,7 @@ function loadGoogleAnalyticsScript(scriptConfig) {
       } catch (error) {
         console.error('ConsentGuard: Error executing GA inline script:', error);
       }
-    }, 200);
+    }, 300); // Increased delay to ensure external script loads first
   }
 }
 

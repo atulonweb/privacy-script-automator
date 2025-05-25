@@ -98,7 +98,7 @@ export function manageCookies(choice, preferences = null) {
   // Update Google Analytics consent immediately
   updateGoogleAnalyticsConsent(finalPreferences);
   
-  // Load scripts based on preferences
+  // Load scripts based on preferences (non-GA scripts only, GA is already loaded)
   loadScriptsByConsent(finalPreferences);
   
   // Notify webhook if configured
