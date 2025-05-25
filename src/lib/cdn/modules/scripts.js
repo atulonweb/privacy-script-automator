@@ -9,7 +9,7 @@ import { config } from './core.js';
  * This ensures Google Tag Assistant can detect them
  */
 export function loadGoogleAnalyticsScriptsEarly() {
-  console.log('ConsentGuard: Loading Google Analytics scripts early for detection');
+  console.log('ConsentGuard: 🔍 Loading Google Analytics scripts early for detection');
   console.log('ConsentGuard: Current scripts configuration:', config.scripts);
   
   const scripts = config.scripts || {
@@ -22,31 +22,32 @@ export function loadGoogleAnalyticsScriptsEarly() {
   // Check all categories for Google Analytics scripts with enhanced detection
   const allCategories = ['analytics', 'advertising', 'functional', 'social'];
   let foundGAScripts = 0;
+  let totalScriptsChecked = 0;
   
   allCategories.forEach(category => {
     const categoryScripts = scripts[category] || [];
-    console.log(`ConsentGuard: Checking ${categoryScripts.length} scripts in ${category} category`);
+    totalScriptsChecked += categoryScripts.length;
+    console.log(`ConsentGuard: 📂 Checking ${categoryScripts.length} scripts in ${category} category`);
     
-    categoryScripts.forEach(scriptConfig => {
-      console.log(`ConsentGuard: Examining script:`, scriptConfig);
+    categoryScripts.forEach((scriptConfig, index) => {
+      console.log(`ConsentGuard: 🔎 Script ${index + 1}/${categoryScripts.length} in ${category}:`, scriptConfig);
       
       // Enhanced detection specifically for your GA4 configuration
       const isGoogleAnalytics = (
         // Check for specific IDs you use
         (scriptConfig.id && (
-          scriptConfig.id.includes('google-analytics-4') ||
+          scriptConfig.id === 'google-analytics-4' ||  // Your exact ID
           scriptConfig.id.includes('google-analytics') ||
           scriptConfig.id.includes('ga') ||
           scriptConfig.id.includes('gtag')
         )) ||
         // Check for GA4 patterns in src URL
         (scriptConfig.src && (
+          scriptConfig.src.includes('G-N075SBHV0F') || // Your specific measurement ID
           scriptConfig.src.includes('gtag') || 
           scriptConfig.src.includes('googletagmanager') ||
           scriptConfig.src.includes('analytics') ||
-          scriptConfig.src.includes('G-N075SBHV0F') || // Your specific measurement ID
-          scriptConfig.src.includes('G-') || // Any GA4 measurement ID pattern
-          scriptConfig.src.includes('GA_MEASUREMENT_ID')
+          scriptConfig.src.includes('G-') // Any GA4 measurement ID pattern
         ))
       );
       
@@ -55,24 +56,33 @@ export function loadGoogleAnalyticsScriptsEarly() {
         foundGAScripts++;
         loadGoogleAnalyticsScript(scriptConfig);
       } else {
-        console.log(`ConsentGuard: ❌ Not a GA script:`, scriptConfig);
+        console.log(`ConsentGuard: ❌ Not a GA script in ${category}:`, scriptConfig);
       }
     });
   });
   
+  console.log(`ConsentGuard: 📊 Summary: Checked ${totalScriptsChecked} total scripts, found ${foundGAScripts} GA scripts`);
+  
   if (foundGAScripts === 0) {
-    console.log('ConsentGuard: ⚠️ NO Google Analytics scripts found in configuration');
-    console.log('ConsentGuard: Debug - All scripts by category:');
+    console.log('ConsentGuard: ⚠️ WARNING: NO Google Analytics scripts found in configuration');
+    console.log('ConsentGuard: 🔍 Debug - All scripts by category:');
     allCategories.forEach(category => {
       const categoryScripts = scripts[category] || [];
+      console.log(`ConsentGuard: ${category}: ${categoryScripts.length} scripts`);
       if (categoryScripts.length > 0) {
-        console.log(`ConsentGuard: ${category}:`, categoryScripts);
-      } else {
-        console.log(`ConsentGuard: ${category}: (empty)`);
+        categoryScripts.forEach((script, i) => {
+          console.log(`ConsentGuard:   ${i + 1}. ID: "${script.id}", SRC: "${script.src}"`);
+        });
       }
     });
+    
+    // Check if the configuration itself is empty
+    const totalConfigScripts = Object.values(scripts).reduce((sum, arr) => sum + arr.length, 0);
+    if (totalConfigScripts === 0) {
+      console.log('ConsentGuard: ❌ CRITICAL: Configuration has no scripts at all - check data-config parsing');
+    }
   } else {
-    console.log(`ConsentGuard: ✅ Successfully loaded ${foundGAScripts} Google Analytics scripts early`);
+    console.log(`ConsentGuard: ✅ SUCCESS: Loaded ${foundGAScripts} Google Analytics scripts early`);
   }
 }
 
@@ -205,12 +215,12 @@ function updateGoogleAnalyticsConsent(preferences) {
  * @param {object} scriptConfig - Script configuration object
  */
 function loadGoogleAnalyticsScript(scriptConfig) {
-  console.log('ConsentGuard: Loading Google Analytics with special handling:', scriptConfig);
+  console.log('ConsentGuard: 🚀 Loading Google Analytics with special handling:', scriptConfig);
   
   // First, ensure dataLayer exists
   if (!window.dataLayer) {
     window.dataLayer = [];
-    console.log('ConsentGuard: Created dataLayer array');
+    console.log('ConsentGuard: ✅ Created dataLayer array');
   }
   
   // Define gtag function if not exists
@@ -218,18 +228,18 @@ function loadGoogleAnalyticsScript(scriptConfig) {
     window.gtag = function() {
       window.dataLayer.push(arguments);
     };
-    console.log('ConsentGuard: Created gtag function');
+    console.log('ConsentGuard: ✅ Created gtag function');
   }
   
   // Load the external script first if it exists
   if (scriptConfig.src) {
-    console.log('ConsentGuard: Loading GA external script:', scriptConfig.src);
+    console.log('ConsentGuard: 📦 Loading GA external script:', scriptConfig.src);
     loadScript(scriptConfig.id, scriptConfig.src, scriptConfig.async !== false, scriptConfig.attributes);
   }
   
   // Execute inline content immediately if it exists
   if (scriptConfig.content) {
-    console.log('ConsentGuard: Executing GA inline script immediately');
+    console.log('ConsentGuard: 📝 Executing GA inline script immediately');
     try {
       // Execute the inline script content immediately
       const scriptElement = document.createElement('script');
@@ -237,13 +247,13 @@ function loadGoogleAnalyticsScript(scriptConfig) {
       scriptElement.id = scriptConfig.id + '-inline';
       document.head.appendChild(scriptElement);
       
-      console.log('ConsentGuard: Google Analytics inline script executed successfully');
+      console.log('ConsentGuard: ✅ Google Analytics inline script executed successfully');
     } catch (error) {
-      console.error('ConsentGuard: Error executing GA inline script:', error);
+      console.error('ConsentGuard: ❌ Error executing GA inline script:', error);
     }
   }
   
-  console.log('ConsentGuard: Google Analytics script processing complete');
+  console.log('ConsentGuard: ✅ Google Analytics script processing complete');
 }
 
 /**

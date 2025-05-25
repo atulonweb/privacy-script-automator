@@ -21,6 +21,10 @@ function extractAndApplyConfigImmediately() {
       try {
         scriptConfig = JSON.parse(configAttr);
         console.log('ConsentGuard: Found and parsed data-config:', scriptConfig);
+        
+        // IMMEDIATELY apply config to window for global access
+        window.ConsentGuardConfig = scriptConfig;
+        
         return scriptConfig;
       } catch (error) {
         console.error('ConsentGuard: Failed to parse data-config', error);
@@ -43,6 +47,7 @@ function extractAndApplyConfigImmediately() {
     if (Object.keys(configObject).length > 0) {
       scriptConfig = configObject;
       console.log('ConsentGuard: Found data attributes config:', scriptConfig);
+      window.ConsentGuardConfig = scriptConfig;
       return scriptConfig;
     }
   }
