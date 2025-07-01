@@ -27,15 +27,12 @@ export const useScriptGenerator = () => {
     return 'cg_' + Math.random().toString(36).substring(2, 15);
   };
 
-  const checkExistingScript = () => {
-    if (!websiteId) return false;
-    return scripts.some(script => script.website_id === websiteId);
-  };
-
   const handleWebsiteSelect = (id: string) => {
+    console.log("Website selected:", id);
     setWebsiteId(id);
     const hasExistingScript = scripts.some(script => script.website_id === id);
     if (hasExistingScript) {
+      console.log("Existing script found for website, showing dialog");
       setExistingScriptDialogOpen(true);
     }
   };
@@ -91,7 +88,7 @@ export const useScriptGenerator = () => {
       if (newScript) {
         setGeneratedScriptId(scriptId);
         setCurrentStep(4); // Move to final step
-        toast.success({
+        toast({
           title: "Success",
           description: "Script successfully created! You can find all your scripts in the Scripts page."
         });
@@ -100,9 +97,10 @@ export const useScriptGenerator = () => {
       }
     } catch (error: any) {
       console.error('Error creating script:', error);
-      toast.error({
+      toast({
         title: "Error",
-        description: error.message || "Failed to create script. Please try again."
+        description: error.message || "Failed to create script. Please try again.",
+        variant: "destructive"
       });
     } finally {
       setLoading(false);

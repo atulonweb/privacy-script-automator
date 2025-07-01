@@ -26,7 +26,7 @@ const WebsiteSelection: React.FC<WebsiteSelectionProps> = ({
   onNext,
 }) => {
   const navigate = useNavigate();
-  const { planDetails, userPlan, websiteCount, enforcePlanLimits } = usePlanLimits();
+  const { planDetails, userPlan, websiteCount } = usePlanLimits();
 
   const handleNext = () => {
     if (!websiteId) {
@@ -34,12 +34,7 @@ const WebsiteSelection: React.FC<WebsiteSelectionProps> = ({
       return;
     }
 
-    // Check if webhooks are enabled for the plan
-    if (!enforcePlanLimits.canUseWebhooks()) {
-      // The hook already shows the appropriate error message
-      return;
-    }
-
+    console.log("Next button clicked, proceeding to next step");
     onNext();
   };
 
@@ -170,6 +165,7 @@ const WebsiteSelection: React.FC<WebsiteSelectionProps> = ({
         <Button 
           className="bg-brand-600 hover:bg-brand-700" 
           onClick={handleNext}
+          disabled={loadingWebsites}
         >
           Next
         </Button>

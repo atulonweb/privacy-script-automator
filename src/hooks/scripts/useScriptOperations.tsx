@@ -48,6 +48,9 @@ export function useScriptOperations(fetchScripts: () => Promise<void>) {
         throw new Error('Failed to create script: No data returned');
       }
       
+      // Refresh the scripts list
+      await fetchScripts();
+      
       toast({
         title: "Success",
         description: "Script created successfully"
@@ -78,17 +81,21 @@ export function useScriptOperations(fetchScripts: () => Promise<void>) {
       
       const { error } = await supabase
         .from('consent_scripts')
-        .update(scriptData)
+        .update({
+          ...scriptData,
+          updated_at: new Date().toISOString()
+        })
         .eq('id', id)
         .eq('user_id', user.id);
       
       if (error) throw error;
       
+      await fetchScripts();
+      
       toast({
         title: "Success",
         description: "Script updated successfully"
       });
-      await fetchScripts();
       return true;
     } catch (err: any) {
       console.error('Error updating script:', err);
@@ -120,6 +127,8 @@ export function useScriptOperations(fetchScripts: () => Promise<void>) {
         .eq('user_id', user.id);
       
       if (error) throw error;
+      
+      await fetchScripts();
       
       toast({
         title: "Success",
