@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 
@@ -29,15 +29,23 @@ export function useAnalytics() {
   const [chartData, setChartData] = useState<AnalyticsChartData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
+  const fetchingRef = useRef(false);
+  const isMountedRef = useRef(true);
 
   const fetchAnalytics = async () => {
+    // Prevent multiple simultaneous fetches
+    if (fetchingRef.current) return;
+    
+    if (!user) {
+      setError('User not authenticated');
+      setLoading(false);
+      return;
+    }
+
+    fetchingRef.current = true;
+    
     try {
       setLoading(true);
-      
-      if (!user) {
-        setError('User not authenticated');
-        return;
-      }
       
       // Get all scripts for the current user
       const { data: scripts, error: scriptsError } = await supabase
@@ -48,14 +56,15 @@ export function useAnalytics() {
       if (scriptsError) throw scriptsError;
       
       if (!scripts || scripts.length === 0) {
-        setAnalyticsData([]);
-        setChartData([]);
-        setLoading(false);
+        if (isMountedRef.current) {
+          setAnalyticsData([]);
+          setChartData([]);
+        }
         return;
       }
       
       // Get script IDs
-      const scriptIds = scripts.map(script => script.id); // Use the UUID id field instead of script_id
+      const scriptIds = scripts.map(script => script.id);
       
       console.log('Fetching analytics for script IDs:', scriptIds);
       
@@ -70,31 +79,45 @@ export function useAnalytics() {
       
       console.log('Retrieved analytics data:', analytics);
       
-      setAnalyticsData(analytics || []);
-      
-      // Transform data for charts
-      const transformedData = (analytics || []).map(item => ({
-        date: new Date(item.date).toLocaleDateString(),
-        visitors: item.visitor_count || 0,
-        accepts: item.accept_count || 0,
-        rejects: item.reject_count || 0,
-        partials: item.partial_count || 0,
-      }));
-      
-      setChartData(transformedData);
+      if (isMountedRef.current) {
+        setAnalyticsData(analytics || []);
+        
+        // Transform data for charts
+        const transformedData = (analytics || []).map(item => ({
+          date: new Date(item.date).toLocaleDateString(),
+          visitors: item.visitor_count || 0,
+          accepts: item.accept_count || 0,
+          rejects: item.reject_count || 0,
+          partials: item.partial_count || 0,
+        }));
+        
+        setChartData(transformedData);
+      }
       
     } catch (err: any) {
       console.error('Error fetching analytics:', err);
-      setError(err.message || 'Failed to fetch analytics data');
+      if (isMountedRef.current) {
+        setError(err.message || 'Failed to fetch analytics data');
+      }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
+      fetchingRef.current = false;
     }
   };
 
   useEffect(() => {
-    if (user) {
+    isMountedRef.current = true;
+    
+    if (user && !fetchingRef.current) {
       fetchAnalytics();
     }
+
+    return () => {
+      isMountedRef.current = false;
+      fetchingRef.current = false;
+    };
   }, [user]);
 
   return {

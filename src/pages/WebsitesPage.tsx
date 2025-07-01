@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import DashboardLayout from '@/components/DashboardLayout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -16,9 +16,10 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 
 const WebsitesPage: React.FC = () => {
   const { websites, loading, error, fetchWebsites, addWebsite, updateWebsite, updateWebsiteStatus, deleteWebsite } = useWebsites();
-  const { scripts, fetchScripts, loading: scriptsLoading } = useScripts();
+  const { scripts, loading: scriptsLoading } = useScripts();
   const { enforcePlanLimits, planDetails, userPlan, websiteCount, refreshUserPlan } = usePlanLimits();
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const initializedRef = useRef(false);
   const navigate = useNavigate();
 
   // State for website form
@@ -30,19 +31,29 @@ const WebsitesPage: React.FC = () => {
   const [currentWebsiteId, setCurrentWebsiteId] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log("WebsitesPage mounted, fetching websites");
+    // Only run initialization once
+    if (initializedRef.current) return;
+    
+    console.log("WebsitesPage mounted, initializing...");
+    initializedRef.current = true;
+    
     const loadData = async () => {
       try {
-        await Promise.all([fetchWebsites(), fetchScripts(), refreshUserPlan()]);
+        await refreshUserPlan();
       } catch (error) {
-        console.error("Error loading websites or scripts:", error);
+        console.error("Error loading plan data:", error);
       } finally {
         setIsInitialLoad(false);
       }
     };
     
     loadData();
-  }, [fetchWebsites, fetchScripts, refreshUserPlan]);
+    
+    return () => {
+      // Cleanup if component unmounts
+      initializedRef.current = false;
+    };
+  }, []); // Empty dependency array - only run once
 
   const handleAddWebsite = async () => {
     if (!newWebsiteName || !newWebsiteDomain) {
@@ -119,11 +130,6 @@ const WebsitesPage: React.FC = () => {
         state: { selectedWebsiteId: websiteId }
       });
     }
-  };
-
-  // Handle retry fetch button click
-  const handleRetryFetch = () => {
-    fetchWebsites(0); // Reset attempt counter when manually retrying
   };
 
   // Show loading only during initial load
@@ -365,15 +371,7 @@ const WebsitesPage: React.FC = () => {
                       <Button 
                         variant="outline" 
                         className="flex-1 text-sm"
-                        onClick={() => {
-                          const website_to_edit = websites.find(site => site.id === website.id);
-                          if (website_to_edit) {
-                            setCurrentWebsiteId(website.id);
-                            setNewWebsiteName(website_to_edit.name);
-                            setNewWebsiteDomain(website_to_edit.domain);
-                            setIsEditDialogOpen(true);
-                          }
-                        }}
+                        onClick={() => handleEditWebsite(website.id)}
                         disabled={isOverLimit && index >= planDetails.websiteLimit}
                       >
                         Edit
@@ -382,17 +380,7 @@ const WebsitesPage: React.FC = () => {
                         variant="outline" 
                         className="flex-1 text-sm" 
                         disabled={!website.active || (isOverLimit && index >= planDetails.websiteLimit)}
-                        onClick={() => {
-                          const websiteScript = scripts.find(script => script.website_id === website.id);
-                          
-                          if (websiteScript) {
-                            navigate(`/dashboard/scripts/test/${websiteScript.script_id}`);
-                          } else {
-                            navigate('/dashboard/scripts/create', { 
-                              state: { selectedWebsiteId: website.id }
-                            });
-                          }
-                        }}
+                        onClick={() => handleViewScript(website.id)}
                       >
                         Manage Script
                       </Button>

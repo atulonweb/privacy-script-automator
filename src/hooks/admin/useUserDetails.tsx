@@ -20,26 +20,27 @@ export function useUserDetails(userId: string | undefined) {
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
-  const isMounted = useRef(true);
+  const isMountedRef = useRef(true);
   const fetchingRef = useRef(false);
-  const initialFetchDone = useRef(false);
-  const lastFetchedUserId = useRef<string | undefined>(undefined);
+  const lastFetchedUserIdRef = useRef<string | undefined>(undefined);
 
-  const { setUserProfile, fetchUserProfile } = useFetchUserProfile();
+  const { fetchUserProfile } = useFetchUserProfile();
   const { websites, setWebsites, fetchUserWebsites } = useFetchUserWebsites();
   const { scripts, setScripts, fetchUserScripts } = useFetchUserScripts();
 
   const fetchUserDetails = useCallback(async (manualRefresh = false) => {
-    // Don't fetch if we're already fetching or if the userId is the same as the last fetched
+    // Prevent multiple simultaneous fetches
     if (!userId || fetchingRef.current) return;
-    if (lastFetchedUserId.current === userId && initialFetchDone.current && !manualRefresh) return;
+    
+    // Avoid unnecessary refetches unless manually triggered
+    if (lastFetchedUserIdRef.current === userId && !manualRefresh) return;
     
     fetchingRef.current = true;
-    lastFetchedUserId.current = userId;
+    lastFetchedUserIdRef.current = userId;
     
     if (manualRefresh) {
       setIsRefreshing(true);
-    } else if (!initialFetchDone.current) {
+    } else {
       setLoading(true);
     }
     
@@ -48,25 +49,24 @@ export function useUserDetails(userId: string | undefined) {
     try {
       // Fetch user profile
       const profileData = await fetchUserProfile(userId);
-      if (isMounted.current) {
+      if (isMountedRef.current) {
         setUserDetails(profileData);
       }
       
-      // Fetch user's websites
-      await fetchUserWebsites(userId);
+      // Fetch user's websites and scripts in parallel
+      await Promise.all([
+        fetchUserWebsites(userId),
+        fetchUserScripts(userId)
+      ]);
       
-      // Fetch user's scripts
-      await fetchUserScripts(userId);
-      
-      initialFetchDone.current = true;
     } catch (error: any) {
       console.error('Error fetching user details:', error);
-      if (isMounted.current) {
+      if (isMountedRef.current) {
         setFetchError(error.message);
         toast.error(`Failed to load user details: ${error.message}`);
       }
     } finally {
-      if (isMounted.current) {
+      if (isMountedRef.current) {
         setLoading(false);
         setIsRefreshing(false);
       }
@@ -74,24 +74,24 @@ export function useUserDetails(userId: string | undefined) {
     }
   }, [userId, fetchUserProfile, fetchUserWebsites, fetchUserScripts]);
 
-  useEffect(() => {
-    isMounted.current = true;
-    
-    // Only fetch if the userId changes or this is the first render
-    if (userId && (lastFetchedUserId.current !== userId || !initialFetchDone.current)) {
-      fetchUserDetails();
-    }
-    
-    return () => {
-      isMounted.current = false;
-    };
-  }, [userId, fetchUserDetails]); // Include fetchUserDetails here to ensure it runs when userId changes
-
   const manualRefresh = useCallback(() => {
     if (userId && !isRefreshing && !fetchingRef.current) {
       fetchUserDetails(true);
     }
   }, [userId, isRefreshing, fetchUserDetails]);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    
+    if (userId && lastFetchedUserIdRef.current !== userId) {
+      fetchUserDetails();
+    }
+    
+    return () => {
+      isMountedRef.current = false;
+      fetchingRef.current = false;
+    };
+  }, [userId, fetchUserDetails]);
 
   return {
     userDetails,

@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from 'sonner';
@@ -20,30 +20,41 @@ export function useWebsites() {
   const [websites, setWebsites] = useState<Website[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [toastShown, setToastShown] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  const maxRetries = 5;
+  const maxRetries = 3; // Reduced from 5
+  const fetchingRef = useRef(false);
+  const isMountedRef = useRef(true);
 
   const fetchWebsites = useCallback(async (attempt = 0) => {
+    // Prevent multiple simultaneous fetches
+    if (fetchingRef.current) return;
+    
+    // Don't fetch if no user
+    if (!user) {
+      setWebsites([]);
+      setLoading(false);
+      return;
+    }
+
+    fetchingRef.current = true;
+    
     try {
-      setLoading(true);
       setError(null);
       
-      if (!user) {
-        setWebsites([]);
-        return;
+      // Only show loading on first attempt
+      if (attempt === 0) {
+        setLoading(true);
       }
 
-      // Exponential backoff delay calculation (100ms, 200ms, 400ms, etc.)
+      // Exponential backoff delay for retries
       if (attempt > 0) {
-        const backoffTime = Math.min(100 * Math.pow(2, attempt), 10000);
+        const backoffTime = Math.min(1000 * Math.pow(2, attempt), 5000);
         await new Promise(resolve => setTimeout(resolve, backoffTime));
       }
       
       let query = supabase.from('websites').select('*');
       
       if (!isAdmin) {
-        // If not admin, only show user's websites
         query = query.eq('user_id', user.id);
       }
       
@@ -51,36 +62,41 @@ export function useWebsites() {
       
       if (error) throw error;
       
-      console.log("Fetched websites:", data);
-      setWebsites(data || []);
-      setRetryCount(0); // Reset retry count on success
+      if (isMountedRef.current) {
+        setWebsites(data || []);
+        setRetryCount(0);
+      }
     } catch (err: any) {
       console.error('Error fetching websites:', err);
-      setError(err.message);
       
-      // Only show toast once to prevent infinite popups
-      if (!toastShown) {
-        toast.error('Failed to load websites');
-        setToastShown(true);
-      }
-      
-      // Retry logic with exponential backoff
-      if (attempt < maxRetries) {
-        console.log(`Retrying fetch websites (attempt ${attempt + 1} of ${maxRetries})...`);
-        setRetryCount(attempt + 1);
-        return fetchWebsites(attempt + 1);
+      if (isMountedRef.current) {
+        setError(err.message);
+        
+        // Only retry if not at max retries and error suggests retry might work
+        if (attempt < maxRetries && !err.message.includes('not authenticated')) {
+          setRetryCount(attempt + 1);
+          setTimeout(() => {
+            if (isMountedRef.current && fetchingRef.current) {
+              fetchingRef.current = false;
+              fetchWebsites(attempt + 1);
+            }
+          }, 1000 * Math.pow(2, attempt));
+          return;
+        } else if (attempt === 0) {
+          // Only show toast on first attempt failure
+          toast.error('Failed to load websites');
+        }
       }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
+      fetchingRef.current = false;
     }
-  }, [user, isAdmin, toastShown, maxRetries]);
+  }, [user, isAdmin, maxRetries]);
 
-  // Reset toast shown state when user changes
-  useEffect(() => {
-    setToastShown(false);
-  }, [user]);
-
-  const addWebsite = async (name: string, domain: string) => {
+  // Stable functions that don't cause re-renders
+  const addWebsite = useCallback(async (name: string, domain: string) => {
     try {
       if (!user) {
         toast.error('You must be logged in to add a website');
@@ -103,9 +119,9 @@ export function useWebsites() {
       toast.error(err.message || 'Failed to add website');
       throw err;
     }
-  };
+  }, [user, fetchWebsites]);
 
-  const updateWebsite = async (id: string, updates: {name?: string, domain?: string}) => {
+  const updateWebsite = useCallback(async (id: string, updates: {name?: string, domain?: string}) => {
     try {
       if (!user) {
         toast.error('You must be logged in to update a website');
@@ -128,9 +144,9 @@ export function useWebsites() {
       toast.error(err.message || 'Failed to update website');
       throw err;
     }
-  };
+  }, [user, fetchWebsites]);
 
-  const updateWebsiteStatus = async (id: string, active: boolean) => {
+  const updateWebsiteStatus = useCallback(async (id: string, active: boolean) => {
     try {
       if (!user) {
         toast.error('You must be logged in to update website status');
@@ -152,9 +168,9 @@ export function useWebsites() {
       toast.error(err.message || 'Failed to update website status');
       throw err;
     }
-  };
+  }, [user, fetchWebsites]);
 
-  const deleteWebsite = async (id: string) => {
+  const deleteWebsite = useCallback(async (id: string) => {
     try {
       if (!user) {
         toast.error('You must be logged in to delete a website');
@@ -176,15 +192,24 @@ export function useWebsites() {
       toast.error(err.message || 'Failed to delete website');
       throw err;
     }
-  };
+  }, [user, fetchWebsites]);
 
+  // Cleanup and fetch logic
   useEffect(() => {
-    if (user) {
+    isMountedRef.current = true;
+    
+    // Only fetch if we have a user and haven't started fetching
+    if (user && !fetchingRef.current) {
       fetchWebsites();
-    } else {
+    } else if (!user) {
       setWebsites([]);
       setLoading(false);
     }
+
+    return () => {
+      isMountedRef.current = false;
+      fetchingRef.current = false;
+    };
   }, [user, fetchWebsites]);
 
   return {

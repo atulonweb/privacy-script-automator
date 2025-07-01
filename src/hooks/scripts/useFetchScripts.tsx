@@ -1,5 +1,5 @@
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
 import { toast } from '@/components/ui/use-toast';
@@ -10,23 +10,35 @@ export function useFetchScripts() {
   const [scripts, setScripts] = useState<ConsentScript[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [toastShown, setToastShown] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  const maxRetries = 5;
+  const maxRetries = 3; // Reduced from 5
+  const fetchingRef = useRef(false);
+  const isMountedRef = useRef(true);
+  const toastShownRef = useRef(false);
 
   const fetchScripts = useCallback(async (attempt = 0) => {
+    // Prevent multiple simultaneous fetches
+    if (fetchingRef.current) return;
+    
+    if (!user) {
+      setScripts([]);
+      setLoading(false);
+      return;
+    }
+
+    fetchingRef.current = true;
+    
     try {
-      setLoading(true);
       setError(null);
       
-      if (!user) {
-        setScripts([]);
-        return;
+      // Only show loading on first attempt
+      if (attempt === 0) {
+        setLoading(true);
       }
       
-      // Exponential backoff delay calculation
+      // Exponential backoff delay for retries
       if (attempt > 0) {
-        const backoffTime = Math.min(100 * Math.pow(2, attempt), 10000);
+        const backoffTime = Math.min(1000 * Math.pow(2, attempt), 5000);
         await new Promise(resolve => setTimeout(resolve, backoffTime));
       }
       
@@ -37,37 +49,62 @@ export function useFetchScripts() {
       
       if (error) throw error;
       
-      console.log("Fetched scripts:", data);
-      setScripts(data || []);
-      setRetryCount(0); // Reset retry count on success
+      if (isMountedRef.current) {
+        console.log("Fetched scripts:", data);
+        setScripts(data || []);
+        setRetryCount(0);
+        toastShownRef.current = false; // Reset toast flag on success
+      }
     } catch (err: any) {
       console.error('Error fetching scripts:', err);
-      setError(err.message);
       
-      // Only show toast once to prevent infinite popups
-      if (!toastShown) {
-        toast({
-          title: "Error",
-          description: "Failed to load scripts"
-        });
-        setToastShown(true);
-      }
-      
-      // Retry logic with exponential backoff
-      if (attempt < maxRetries) {
-        console.log(`Retrying fetch scripts (attempt ${attempt + 1} of ${maxRetries})...`);
-        setRetryCount(attempt + 1);
-        return fetchScripts(attempt + 1);
+      if (isMountedRef.current) {
+        setError(err.message);
+        
+        // Only show toast once and only on first attempt
+        if (!toastShownRef.current && attempt === 0) {
+          toast({
+            title: "Error",
+            description: "Failed to load scripts"
+          });
+          toastShownRef.current = true;
+        }
+        
+        // Only retry if not at max retries and error suggests retry might work
+        if (attempt < maxRetries && !err.message.includes('not authenticated')) {
+          setRetryCount(attempt + 1);
+          setTimeout(() => {
+            if (isMountedRef.current && fetchingRef.current) {
+              fetchingRef.current = false;
+              fetchScripts(attempt + 1);
+            }
+          }, 1000 * Math.pow(2, attempt));
+          return;
+        }
       }
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
+      fetchingRef.current = false;
     }
-  }, [user, toastShown, maxRetries]);
+  }, [user, maxRetries]);
 
-  // Reset toast shown state when user changes
+  // Cleanup and fetch logic
   useEffect(() => {
-    setToastShown(false);
-  }, [user]);
+    isMountedRef.current = true;
+    toastShownRef.current = false;
+    
+    // Only fetch if we have a user and haven't started fetching
+    if (user && !fetchingRef.current) {
+      fetchScripts();
+    }
+
+    return () => {
+      isMountedRef.current = false;
+      fetchingRef.current = false;
+    };
+  }, [user, fetchScripts]);
 
   return {
     scripts,
