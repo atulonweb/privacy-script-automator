@@ -1,27 +1,10 @@
-
 /**
  * ConsentGuard - Cookie Consent Management System
- * Refactored modular version
+ * Standalone version with all functionality integrated
  */
 
 (function() {
   'use strict';
-
-  // Import all modules
-  const modules = {};
-  
-  // Load modules dynamically
-  const moduleFiles = [
-    'modules/config.js',
-    'modules/cookie-manager.js',
-    'modules/script-blocker.js',
-    'modules/google-analytics.js',
-    'modules/script-loader.js',
-    'modules/ui-components.js'
-  ];
-
-  // Since we can't use ES6 imports in this context, we'll inline the necessary functionality
-  // This is a simplified version that maintains all the original functionality
 
   // Global configuration object
   let config = {
