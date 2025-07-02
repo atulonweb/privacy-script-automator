@@ -13,17 +13,16 @@
 <!-- Basic ConsentGuard script -->
 <script src="https://consentguard-aea4bfcrf8aagkc5.z01.azurefd.net/cg.js?id=cg_wvj4ooc1puj" async></script>
 
-<!-- Deferred GTM script managed by ConsentGuard -->
+<!-- Google Analytics script blocked until consent -->
 <script
   data-category="analytics"
   data-src="https://www.googletagmanager.com/gtag/js?id=G-N075SBHV0F"
-  data-scan-dom="true"
-  data-async
+  async
 ></script>
 
 <script data-category="analytics">
   window.dataLayer = window.dataLayer || [];
-  function gtag() { dataLayer.push(arguments); }
+  function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
   gtag('config', 'G-N075SBHV0F');
 </script>
