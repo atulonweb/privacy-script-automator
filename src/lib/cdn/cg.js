@@ -123,6 +123,58 @@
     return null;
   }
 
+  // Add settings button for changing preferences after initial choice
+  function addSettingsButton() {
+    // Remove any existing settings button first
+    const existingButton = document.getElementById('consentguard-settings-button');
+    if (existingButton) {
+      existingButton.remove();
+    }
+    
+    // Create the button
+    const settingsButton = document.createElement('button');
+    settingsButton.id = 'consentguard-settings-button';
+    settingsButton.textContent = 'Cookie Settings';
+    settingsButton.setAttribute('aria-label', 'Cookie Settings');
+    settingsButton.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background-color: ${config.bannerColor};
+      color: ${config.textColor};
+      border: none;
+      border-radius: 4px;
+      padding: 6px 12px;
+      font-family: Arial, sans-serif;
+      font-size: 12px;
+      cursor: pointer;
+      z-index: 99998;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+      opacity: 0.7;
+      transition: opacity 0.3s;
+    `;
+    
+    // Add hover effect
+    settingsButton.addEventListener('mouseover', function() {
+      this.style.opacity = '1';
+    });
+    
+    settingsButton.addEventListener('mouseout', function() {
+      this.style.opacity = '0.7';
+    });
+    
+    // Open customize panel on click
+    settingsButton.addEventListener('click', function() {
+      showCustomizePanel();
+    });
+    
+    // Ensure keyboard navigation works
+    settingsButton.tabIndex = 0;
+    
+    // Add to page
+    document.body.appendChild(settingsButton);
+  }
+
   // Create banner
   function createBanner() {
     const banner = document.createElement('div');
@@ -188,6 +240,9 @@
     const panel = document.getElementById('consentguard-customize');
     if (panel) panel.remove();
 
+    // Add settings button after handling consent
+    addSettingsButton();
+
     // Load scripts based on consent
     loadScriptsByConsent(finalPreferences);
 
@@ -211,6 +266,15 @@
       justify-content: center;
     `;
 
+    // Get current preferences to pre-fill the form
+    const savedPrefs = getSavedPreferences();
+    const currentPrefs = savedPrefs ? savedPrefs.preferences : {
+      functional: true,
+      analytics: false,
+      advertising: false,
+      social: false
+    };
+
     panel.innerHTML = `
       <div style="background: white; padding: 30px; border-radius: 8px; max-width: 500px; width: 90%; max-height: 80vh; overflow-y: auto;">
         <h3 style="margin: 0 0 20px 0; color: #333;">Cookie Preferences</h3>
@@ -222,17 +286,17 @@
           </label>
           
           <label style="display: flex; align-items: center; margin-bottom: 10px; color: #333;">
-            <input type="checkbox" id="cg-analytics" style="margin-right: 10px;">
+            <input type="checkbox" id="cg-analytics" ${currentPrefs.analytics ? 'checked' : ''} style="margin-right: 10px;">
             <span><strong>Analytics Cookies</strong><br><small>Help us understand how visitors interact with our website.</small></span>
           </label>
           
           <label style="display: flex; align-items: center; margin-bottom: 10px; color: #333;">
-            <input type="checkbox" id="cg-advertising" style="margin-right: 10px;">
+            <input type="checkbox" id="cg-advertising" ${currentPrefs.advertising ? 'checked' : ''} style="margin-right: 10px;">
             <span><strong>Advertising Cookies</strong><br><small>Used to deliver personalized advertisements.</small></span>
           </label>
           
           <label style="display: flex; align-items: center; margin-bottom: 10px; color: #333;">
-            <input type="checkbox" id="cg-social" style="margin-right: 10px;">
+            <input type="checkbox" id="cg-social" ${currentPrefs.social ? 'checked' : ''} style="margin-right: 10px;">
             <span><strong>Social Media Cookies</strong><br><small>Enable social media features and personalized content.</small></span>
           </label>
         </div>
@@ -364,6 +428,8 @@
     } else {
       console.log('ConsentGuard: Found saved preferences:', savedPreferences);
       loadScriptsByConsent(savedPreferences.preferences);
+      // Add settings button if user has already made a choice
+      addSettingsButton();
     }
     
     console.log('ConsentGuard: Initialization complete');
@@ -380,7 +446,8 @@
   window.ConsentGuard = {
     init: init,
     showBanner: createBanner,
-    showCustomize: showCustomizePanel
+    showCustomize: showCustomizePanel,
+    showSettings: addSettingsButton
   };
 
 })();
