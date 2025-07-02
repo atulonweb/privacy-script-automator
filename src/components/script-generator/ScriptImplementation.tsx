@@ -17,8 +17,36 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
   const [copiedAdvancedScript, setCopiedAdvancedScript] = useState(false);
   const { toast } = useToast();
 
+  const basicScriptConfig = {
+    scripts: {
+      analytics: [],
+      advertising: [],
+      functional: [],
+      social: []
+    }
+  };
+
+  const advancedScriptConfig = {
+    scripts: {
+      analytics: [
+        {
+          id: "google-analytics-4",
+          src: "https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX",
+          async: true
+        }
+      ],
+      advertising: [],
+      functional: [],
+      social: []
+    }
+  };
+
   const handleCopyScript = () => {
-    const scriptCode = `<script src="${generateCdnUrl(scriptId)}" async></script>`;
+    const scriptCode = `<script 
+  src="${generateCdnUrl(scriptId)}" 
+  data-config='${JSON.stringify(basicScriptConfig)}'
+  async
+></script>`;
     navigator.clipboard.writeText(scriptCode);
     setCopiedScript(true);
     toast({
@@ -35,7 +63,7 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
   const handleCopyAdvancedScript = () => {
     const scriptCode = `<script 
   src="${generateCdnUrl(scriptId)}" 
-  data-config='{"scripts": {"analytics": [{"id": "google-analytics", "src": "https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX", "async": true}]}}'
+  data-config='${JSON.stringify(advancedScriptConfig)}'
   data-user-id="YOUR_USER_ID"
   data-session-id="YOUR_SESSION_ID"
   async
@@ -74,14 +102,17 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
                 </Button>
               </TooltipTrigger>
               <TooltipContent className="max-w-sm">
-                <p>This basic implementation handles all consent management functionality. The script automatically loads your configuration from our servers using the script ID.</p>
-                <p className="mt-1 font-semibold">Note: Any scripts with placeholder IDs (like GA_MEASUREMENT_ID) will not be loaded until properly configured.</p>
+                <p>This basic implementation includes the data-config attribute with empty script arrays. The script will load your banner configuration from our servers and display the consent banner.</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
         </div>
         <div className="bg-gray-50 p-4 rounded-md font-mono text-sm overflow-x-auto">
-          {`<script src="${generateCdnUrl(scriptId)}" async></script>`}
+          {`<script 
+  src="${generateCdnUrl(scriptId)}" 
+  data-config='${JSON.stringify(basicScriptConfig)}'
+  async
+></script>`}
         </div>
 
         <Button 
@@ -105,7 +136,7 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
 
       <div>
         <div className="flex items-center gap-2 mb-2">
-          <h4 className="font-medium">Advanced Implementation (with Inline Config)</h4>
+          <h4 className="font-medium">Advanced Implementation (with Analytics)</h4>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -115,8 +146,7 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
                 </Button>
               </TooltipTrigger>
               <TooltipContent className="max-w-sm">
-                <p>This implementation adds user tracking capabilities and inline script configuration. The data-config attribute allows you to define scripts directly in your HTML, overriding the default placeholders.</p>
-                <p className="mt-1">Replace G-XXXXXXXXXX with your actual Google Analytics ID.</p>
+                <p>This implementation includes Google Analytics configuration and user tracking. Replace G-XXXXXXXXXX with your actual Google Analytics ID.</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -124,14 +154,14 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
         <div className="bg-gray-50 p-4 rounded-md font-mono text-sm overflow-x-auto">
           {`<script 
   src="${generateCdnUrl(scriptId)}" 
-  data-config='{"scripts": {"analytics": [{"id": "google-analytics", "src": "https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX", "async": true}]}}'
+  data-config='${JSON.stringify(advancedScriptConfig)}'
   data-user-id="YOUR_USER_ID"
   data-session-id="YOUR_SESSION_ID"
   async
 ></script>`}
         </div>
         <p className="text-xs text-muted-foreground mt-2">
-          Using data-config allows you to provide actual script URLs and IDs directly in your HTML.
+          Replace G-XXXXXXXXXX with your actual Google Analytics measurement ID.
           The data-user-id and data-session-id values will be included in analytics and webhook payloads.
         </p>
 

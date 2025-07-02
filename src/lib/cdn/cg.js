@@ -51,13 +51,13 @@
       }
     }
 
-    console.warn('ConsentGuard: No configuration found on script element');
-    return null;
+    console.log('ConsentGuard: No data-config found, using default configuration');
+    return {};
   }
 
   // Apply configuration
   function setConfig(newConfig) {
-    if (newConfig) {
+    if (newConfig && typeof newConfig === 'object') {
       config = Object.assign(config, newConfig);
       
       if (newConfig.scripts) {
@@ -70,6 +70,8 @@
       }
       
       console.log('ConsentGuard: Configuration applied:', config);
+    } else {
+      console.log('ConsentGuard: Using default configuration');
     }
   }
 
@@ -294,6 +296,7 @@
   // Load scripts for category
   function loadScriptsForCategory(category) {
     const scripts = config.scripts[category] || [];
+    console.log(`ConsentGuard: Loading ${scripts.length} scripts for category: ${category}`);
     scripts.forEach(scriptConfig => {
       if (scriptConfig.src) {
         loadScript(scriptConfig.id, scriptConfig.src);
@@ -308,6 +311,7 @@
   function loadScript(id, src) {
     if (document.getElementById(id)) return;
     
+    console.log(`ConsentGuard: Loading script: ${id} from ${src}`);
     const script = document.createElement('script');
     script.id = id;
     script.src = src;
@@ -319,6 +323,7 @@
   function executeInlineScript(id, content) {
     if (document.getElementById(id)) return;
     
+    console.log(`ConsentGuard: Executing inline script: ${id}`);
     const script = document.createElement('script');
     script.id = id;
     script.innerHTML = content;
@@ -331,9 +336,7 @@
     
     // Extract and apply configuration
     const scriptConfig = extractConfig();
-    if (scriptConfig) {
-      setConfig(scriptConfig);
-    }
+    setConfig(scriptConfig);
 
     // Initialize Google Analytics consent defaults
     const hasGoogleAnalytics = config.scripts.analytics.some(script => 
@@ -341,6 +344,7 @@
     );
     
     if (hasGoogleAnalytics) {
+      console.log('ConsentGuard: Setting up Google Analytics consent defaults');
       window.dataLayer = window.dataLayer || [];
       window.gtag = window.gtag || function() { window.dataLayer.push(arguments); };
       window.gtag('consent', 'default', {
@@ -355,10 +359,14 @@
     const savedPreferences = getSavedPreferences();
     
     if (!savedPreferences) {
+      console.log('ConsentGuard: No saved preferences, showing banner');
       createBanner();
     } else {
+      console.log('ConsentGuard: Found saved preferences:', savedPreferences);
       loadScriptsByConsent(savedPreferences.preferences);
     }
+    
+    console.log('ConsentGuard: Initialization complete');
   }
 
   // Auto-initialize when DOM is ready
