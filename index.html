@@ -10,26 +10,23 @@
     <title>VeroNorm - Simplify Compliance. Secure Your Business.</title>
     <meta name="description" content="VeroNorm is an all-in-one platform for compliance, privacy, vulnerability, and security posture management." />
 
-<!-- ConsentGuard with proper data-config for your GA4 setup -->
-<script 
-  src="https://consentguard-aea4bfcrf8aagkc5.z01.azurefd.net/cg.js?id=cg_wvj4ooc1puj" 
-  data-config='{
-    "scripts": {
-      "analytics": [
-        {
-          "id": "google-analytics-4",
-          "src": "https://www.googletagmanager.com/gtag/js?id=G-N075SBHV0F",
-          "async": true
-        },
-        {
-          "id": "google-analytics-config",
-          "content": "window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag(\"js\", new Date()); gtag(\"config\", \"G-N075SBHV0F\");"
-        }
-      ]
-    }
-  }'
-  async
+<!-- Basic ConsentGuard script -->
+<script src="https://consentguard-aea4bfcrf8aagkc5.z01.azurefd.net/cg.js?id=cg_wvj4ooc1puj" async></script>
+
+<!-- Deferred GTM script managed by ConsentGuard -->
+<script
+  data-category="analytics"
+  data-src="https://www.googletagmanager.com/gtag/js?id=G-N075SBHV0F"
+  data-scan-dom="true"
+  data-async
 ></script>
+
+<script data-category="analytics">
+  window.dataLayer = window.dataLayer || [];
+  function gtag() { dataLayer.push(arguments); }
+  gtag('js', new Date());
+  gtag('config', 'G-N075SBHV0F');
+</script>
 
   </head>
   <body>
