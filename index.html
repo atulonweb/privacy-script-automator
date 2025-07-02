@@ -1,37 +1,41 @@
 
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>privacy-script-automator</title>
-    <meta name="description" content="Lovable Generated Project" />
-    <meta name="author" content="Lovable" />
+    <title>VeroNorm - Simplify Compliance. Secure Your Business.</title>
+    <meta name="description" content="VeroNorm is an all-in-one platform for compliance, privacy, vulnerability, and security posture management." />
 
-    <meta property="og:title" content="privacy-script-automator" />
-    <meta property="og:description" content="Lovable Generated Project" />
-    <meta property="og:type" content="website" />
-    <meta property="og:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+<!-- ConsentGuard with proper data-config for your GA4 setup -->
+<script 
+  src="https://consentguard-aea4bfcrf8aagkc5.z01.azurefd.net/cg.js?id=cg_wvj4ooc1puj" 
+  data-config='{
+    "scripts": {
+      "analytics": [
+        {
+          "id": "google-analytics-4",
+          "src": "https://www.googletagmanager.com/gtag/js?id=G-N075SBHV0F",
+          "async": true
+        },
+        {
+          "id": "google-analytics-config",
+          "content": "window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag(\"js\", new Date()); gtag(\"config\", \"G-N075SBHV0F\");"
+        }
+      ]
+    }
+  }'
+  async
+></script>
 
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:site" content="@lovable_dev" />
-    <meta name="twitter:image" content="https://lovable.dev/opengraph-image-p98pqg.png" />
+    <script type="module" crossorigin src="/assets/index-DZndDuIN.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-BzWeSpBO.css">
   </head>
-
   <body>
     <div id="root"></div>
-    <!-- Only load the Lovable script in development mode -->
-    <script type="module">
-      // Check if we're on localhost or a lovable.app domain
-      if (window.location.hostname === 'localhost' || 
-          window.location.hostname.includes('lovableproject.com') ||
-          window.location.hostname.includes('lovable.app')) {
-        const script = document.createElement('script');
-        script.src = "https://cdn.gpteng.co/gptengineer.js";
-        script.type = "module";
-        document.body.appendChild(script);
-      }
-    </script>
-    <script type="module" src="/src/main.tsx"></script>
+    <script src="https://cdn.gpteng.co/gptengineer.js" type="module"></script>
   </body>
 </html>
