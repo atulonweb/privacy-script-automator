@@ -81,6 +81,22 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
     }, 3000);
   };
 
+  // Generate the basic script with data-config
+  const basicScript = `<script 
+  src="${generateCdnUrl(scriptId)}" 
+  data-config='${JSON.stringify(basicScriptConfig)}'
+  async
+></script>`;
+
+  // Generate the advanced script with data-config
+  const advancedScript = `<script 
+  src="${generateCdnUrl(scriptId)}" 
+  data-config='${JSON.stringify(advancedScriptConfig)}'
+  data-user-id="YOUR_USER_ID"
+  data-session-id="YOUR_SESSION_ID"
+  async
+></script>`;
+
   return (
     <div className="space-y-4">
       {website && (
@@ -108,11 +124,7 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
           </TooltipProvider>
         </div>
         <div className="bg-gray-50 p-4 rounded-md font-mono text-sm overflow-x-auto">
-          {`<script 
-  src="${generateCdnUrl(scriptId)}" 
-  data-config='${JSON.stringify(basicScriptConfig)}'
-  async
-></script>`}
+          {basicScript}
         </div>
 
         <Button 
@@ -152,13 +164,7 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
           </TooltipProvider>
         </div>
         <div className="bg-gray-50 p-4 rounded-md font-mono text-sm overflow-x-auto">
-          {`<script 
-  src="${generateCdnUrl(scriptId)}" 
-  data-config='${JSON.stringify(advancedScriptConfig)}'
-  data-user-id="YOUR_USER_ID"
-  data-session-id="YOUR_SESSION_ID"
-  async
-></script>`}
+          {advancedScript}
         </div>
         <p className="text-xs text-muted-foreground mt-2">
           Replace G-XXXXXXXXXX with your actual Google Analytics measurement ID.
