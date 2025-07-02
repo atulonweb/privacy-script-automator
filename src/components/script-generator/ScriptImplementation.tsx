@@ -33,11 +33,44 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
           id: "google-analytics-4",
           src: "https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX",
           async: true
+        },
+        {
+          id: "google-analytics-config",
+          content: `
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-XXXXXXXXXX', {
+              cookie_flags: 'SameSite=None;Secure'
+            });
+          `
         }
       ],
-      advertising: [],
+      advertising: [
+        {
+          id: "google-ads",
+          src: "https://www.googletagmanager.com/gtag/js?id=AW-XXXXXXXXXX",
+          async: true
+        }
+      ],
       functional: [],
-      social: []
+      social: [
+        {
+          id: "facebook-pixel",
+          content: `
+            !function(f,b,e,v,n,t,s)
+            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+            n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t,s)}(window, document,'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
+            fbq('init', 'YOUR_PIXEL_ID');
+            fbq('track', 'PageView');
+          `
+        }
+      ]
     }
   };
 
@@ -64,8 +97,6 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
     const scriptCode = `<script 
   src="${generateCdnUrl(scriptId)}" 
   data-config='${JSON.stringify(advancedScriptConfig)}'
-  data-user-id="YOUR_USER_ID"
-  data-session-id="YOUR_SESSION_ID"
   async
 ></script>`;
     navigator.clipboard.writeText(scriptCode);
@@ -92,8 +123,6 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
   const advancedScript = `<script 
   src="${generateCdnUrl(scriptId)}" 
   data-config='${JSON.stringify(advancedScriptConfig)}'
-  data-user-id="YOUR_USER_ID"
-  data-session-id="YOUR_SESSION_ID"
   async
 ></script>`;
 
@@ -118,7 +147,7 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
                 </Button>
               </TooltipTrigger>
               <TooltipContent className="max-w-sm">
-                <p>This basic implementation includes the data-config attribute with empty script arrays. The script will load your banner configuration from our servers and display the consent banner.</p>
+                <p>This basic implementation includes script blocking functionality. It will automatically block known tracking scripts until user consent is given, and includes Google Analytics Consent Mode v2 support.</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -148,7 +177,7 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
 
       <div>
         <div className="flex items-center gap-2 mb-2">
-          <h4 className="font-medium">Advanced Implementation (with Analytics)</h4>
+          <h4 className="font-medium">Advanced Implementation (with Real Analytics)</h4>
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
@@ -158,7 +187,7 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
                 </Button>
               </TooltipTrigger>
               <TooltipContent className="max-w-sm">
-                <p>This implementation includes Google Analytics configuration and user tracking. Replace G-XXXXXXXXXX with your actual Google Analytics ID.</p>
+                <p>This implementation includes Google Analytics 4, Google Ads, and Facebook Pixel with proper consent management. Scripts will only load after user consent is given for their respective categories.</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -166,10 +195,20 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
         <div className="bg-gray-50 p-4 rounded-md font-mono text-sm overflow-x-auto">
           {advancedScript}
         </div>
-        <p className="text-xs text-muted-foreground mt-2">
-          Replace G-XXXXXXXXXX with your actual Google Analytics measurement ID.
-          The data-user-id and data-session-id values will be included in analytics and webhook payloads.
-        </p>
+        <div className="mt-2 space-y-1">
+          <p className="text-xs text-muted-foreground">
+            <strong>Replace these placeholders:</strong>
+          </p>
+          <p className="text-xs text-muted-foreground">
+            • G-XXXXXXXXXX with your Google Analytics 4 measurement ID
+          </p>
+          <p className="text-xs text-muted-foreground">
+            • AW-XXXXXXXXXX with your Google Ads conversion ID
+          </p>
+          <p className="text-xs text-muted-foreground">
+            • YOUR_PIXEL_ID with your Facebook Pixel ID
+          </p>
+        </div>
 
         <Button 
           onClick={handleCopyAdvancedScript} 
@@ -188,6 +227,17 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
             </>
           )}
         </Button>
+      </div>
+
+      <div className="mt-6 p-4 bg-blue-50 border border-blue-200 rounded-md">
+        <h4 className="font-medium text-blue-900 mb-2">🛡️ Privacy Protection Features</h4>
+        <ul className="text-sm text-blue-800 space-y-1">
+          <li>• <strong>Script Blocking:</strong> Automatically blocks tracking scripts until consent</li>
+          <li>• <strong>Google Analytics Consent Mode v2:</strong> Compliant with latest privacy requirements</li>
+          <li>• <strong>Third-party Prevention:</strong> Stops data collection from blocked providers</li>
+          <li>• <strong>Consent Persistence:</strong> Remembers user choices across sessions</li>
+          <li>• <strong>Settings Management:</strong> Persistent cookie settings button for easy updates</li>
+        </ul>
       </div>
     </div>
   );

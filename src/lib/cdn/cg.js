@@ -29,6 +29,94 @@
     }
   };
 
+  // Store original document.createElement to intercept script creation
+  const originalCreateElement = document.createElement;
+  let consentGiven = false;
+  let blockedScripts = [];
+
+  // Override document.createElement to block scripts until consent
+  document.createElement = function(tagName) {
+    const element = originalCreateElement.call(document, tagName);
+    
+    if (tagName.toLowerCase() === 'script' && !consentGiven) {
+      // Store original setAttribute to intercept src setting
+      const originalSetAttribute = element.setAttribute;
+      element.setAttribute = function(name, value) {
+        if (name.toLowerCase() === 'src' && shouldBlockScript(value)) {
+          console.log('ConsentGuard: Blocking script until consent:', value);
+          blockedScripts.push({ element, src: value });
+          return; // Don't set the src, effectively blocking the script
+        }
+        return originalSetAttribute.call(this, name, value);
+      };
+      
+      // Also override the src property
+      Object.defineProperty(element, 'src', {
+        set: function(value) {
+          if (shouldBlockScript(value) && !consentGiven) {
+            console.log('ConsentGuard: Blocking script via src property:', value);
+            blockedScripts.push({ element, src: value });
+            return;
+          }
+          Object.defineProperty(this, 'src', {
+            value: value,
+            writable: true,
+            configurable: true
+          });
+        },
+        get: function() {
+          return this.getAttribute('src');
+        },
+        configurable: true
+      });
+    }
+    
+    return element;
+  };
+
+  // Check if a script should be blocked
+  function shouldBlockScript(src) {
+    if (!src) return false;
+    
+    const trackingDomains = [
+      'google-analytics.com',
+      'googletagmanager.com',
+      'facebook.net',
+      'facebook.com',
+      'doubleclick.net',
+      'googlesyndication.com',
+      'amazon-adsystem.com',
+      'twitter.com',
+      'linkedin.com',
+      'pinterest.com',
+      'hotjar.com',
+      'mixpanel.com',
+      'segment.com',
+      'intercom.io'
+    ];
+    
+    return trackingDomains.some(domain => src.includes(domain));
+  }
+
+  // Initialize Google Analytics consent mode early
+  function initializeGoogleAnalyticsConsentMode() {
+    // Set up Google Analytics Consent Mode v2
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    window.gtag = gtag;
+    
+    // Set default consent to denied
+    gtag('consent', 'default', {
+      ad_storage: 'denied',
+      analytics_storage: 'denied',
+      ad_user_data: 'denied',
+      ad_personalization: 'denied',
+      wait_for_update: 2000
+    });
+
+    console.log('ConsentGuard: Google Analytics Consent Mode initialized with denied defaults');
+  }
+
   // Extract configuration from script element
   function extractConfig() {
     console.log('ConsentGuard: Extracting configuration...');
@@ -240,13 +328,58 @@
     const panel = document.getElementById('consentguard-customize');
     if (panel) panel.remove();
 
+    // Set consent given flag
+    consentGiven = true;
+
+    // Update Google Analytics consent
+    updateGoogleAnalyticsConsent(finalPreferences);
+
     // Add settings button after handling consent
     addSettingsButton();
 
     // Load scripts based on consent
     loadScriptsByConsent(finalPreferences);
 
+    // Unblock and load previously blocked scripts if consent allows
+    unblockScripts(finalPreferences);
+
     console.log('ConsentGuard: Consent saved:', choice, finalPreferences);
+  }
+
+  // Update Google Analytics consent
+  function updateGoogleAnalyticsConsent(preferences) {
+    if (typeof window.gtag === 'function') {
+      console.log('ConsentGuard: Updating Google Analytics consent', preferences);
+      
+      window.gtag('consent', 'update', {
+        ad_storage: preferences.advertising ? 'granted' : 'denied',
+        analytics_storage: preferences.analytics ? 'granted' : 'denied',
+        ad_user_data: preferences.advertising ? 'granted' : 'denied',
+        ad_personalization: preferences.advertising ? 'granted' : 'denied'
+      });
+    }
+  }
+
+  // Unblock previously blocked scripts based on consent
+  function unblockScripts(preferences) {
+    console.log('ConsentGuard: Unblocking scripts based on consent:', preferences);
+    
+    blockedScripts.forEach(({ element, src }) => {
+      const shouldUnblock = 
+        (src.includes('google-analytics') || src.includes('gtag')) && preferences.analytics ||
+        (src.includes('facebook') || src.includes('doubleclick')) && preferences.advertising ||
+        (src.includes('twitter') || src.includes('linkedin')) && preferences.social;
+        
+      if (shouldUnblock) {
+        console.log('ConsentGuard: Unblocking script:', src);
+        element.src = src;
+      } else {
+        console.log('ConsentGuard: Keeping script blocked:', src);
+      }
+    });
+    
+    // Clear the blocked scripts array
+    blockedScripts = [];
   }
 
   // Show customize panel
@@ -332,16 +465,6 @@
   function loadScriptsByConsent(preferences) {
     console.log('ConsentGuard: Loading scripts based on preferences:', preferences);
     
-    // Update Google Analytics consent if available
-    if (typeof window.gtag === 'function') {
-      window.gtag('consent', 'update', {
-        ad_storage: preferences.advertising ? 'granted' : 'denied',
-        analytics_storage: preferences.analytics ? 'granted' : 'denied',
-        ad_user_data: preferences.advertising ? 'granted' : 'denied',
-        ad_personalization: preferences.advertising ? 'granted' : 'denied'
-      });
-    }
-
     // Load scripts for each category
     if (preferences.analytics) {
       loadScriptsForCategory('analytics');
@@ -376,7 +499,7 @@
     if (document.getElementById(id)) return;
     
     console.log(`ConsentGuard: Loading script: ${id} from ${src}`);
-    const script = document.createElement('script');
+    const script = originalCreateElement.call(document, 'script');
     script.id = id;
     script.src = src;
     script.async = true;
@@ -388,7 +511,7 @@
     if (document.getElementById(id)) return;
     
     console.log(`ConsentGuard: Executing inline script: ${id}`);
-    const script = document.createElement('script');
+    const script = originalCreateElement.call(document, 'script');
     script.id = id;
     script.innerHTML = content;
     document.head.appendChild(script);
@@ -398,26 +521,12 @@
   function init() {
     console.log('ConsentGuard: Initializing...');
     
+    // Initialize Google Analytics consent mode first
+    initializeGoogleAnalyticsConsentMode();
+    
     // Extract and apply configuration
     const scriptConfig = extractConfig();
     setConfig(scriptConfig);
-
-    // Initialize Google Analytics consent defaults
-    const hasGoogleAnalytics = config.scripts.analytics.some(script => 
-      script.src && script.src.includes('gtag')
-    );
-    
-    if (hasGoogleAnalytics) {
-      console.log('ConsentGuard: Setting up Google Analytics consent defaults');
-      window.dataLayer = window.dataLayer || [];
-      window.gtag = window.gtag || function() { window.dataLayer.push(arguments); };
-      window.gtag('consent', 'default', {
-        ad_storage: 'denied',
-        analytics_storage: 'denied',
-        ad_user_data: 'denied',
-        ad_personalization: 'denied'
-      });
-    }
 
     // Check for saved preferences
     const savedPreferences = getSavedPreferences();
@@ -427,6 +536,8 @@
       createBanner();
     } else {
       console.log('ConsentGuard: Found saved preferences:', savedPreferences);
+      consentGiven = true;
+      updateGoogleAnalyticsConsent(savedPreferences.preferences);
       loadScriptsByConsent(savedPreferences.preferences);
       // Add settings button if user has already made a choice
       addSettingsButton();
