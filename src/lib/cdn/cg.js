@@ -20,8 +20,26 @@
     secureFlags: true,
     webhookUrl: '',
     translations: {},
+    // Default scripts for basic implementation
     scripts: {
-      analytics: [],
+      analytics: [
+        {
+          id: "google-analytics-4",
+          src: "https://www.googletagmanager.com/gtag/js?id=G-N075SBHV0F",
+          async: true
+        },
+        {
+          id: "google-analytics-config",
+          content: `
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-N075SBHV0F', {
+              cookie_flags: 'SameSite=None;Secure'
+            });
+          `
+        }
+      ],
       advertising: [],
       functional: [],
       social: []
@@ -131,15 +149,40 @@
     if (configAttr) {
       try {
         const parsed = JSON.parse(configAttr);
-        console.log('ConsentGuard: Found and parsed data-config:', parsed);
+        console.log('ConsentGuard: Found and parsed data-config (ADVANCED):', parsed);
         return parsed;
       } catch (e) {
         console.error('ConsentGuard: Failed to parse data-config:', e);
       }
     }
 
-    console.log('ConsentGuard: No data-config found, using default configuration');
-    return {};
+    console.log('ConsentGuard: No data-config found, using BASIC configuration with default GA');
+    // Return default configuration for basic script (includes GA)
+    return {
+      scripts: {
+        analytics: [
+          {
+            id: "google-analytics-4",
+            src: "https://www.googletagmanager.com/gtag/js?id=G-N075SBHV0F",
+            async: true
+          },
+          {
+            id: "google-analytics-config",
+            content: `
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-N075SBHV0F', {
+                cookie_flags: 'SameSite=None;Secure'
+              });
+            `
+          }
+        ],
+        advertising: [],
+        functional: [],
+        social: []
+      }
+    };
   }
 
   // Apply configuration
@@ -149,7 +192,7 @@
       
       if (newConfig.scripts) {
         config.scripts = {
-          analytics: newConfig.scripts.analytics || [],
+          analytics: newConfig.scripts.analytics || config.scripts.analytics, // Keep defaults if not provided
           advertising: newConfig.scripts.advertising || [],
           functional: newConfig.scripts.functional || [],
           social: newConfig.scripts.social || []
@@ -158,7 +201,7 @@
       
       console.log('ConsentGuard: Configuration applied:', config);
     } else {
-      console.log('ConsentGuard: Using default configuration');
+      console.log('ConsentGuard: Using default configuration with GA');
     }
   }
 
