@@ -20,26 +20,9 @@
     secureFlags: true,
     webhookUrl: '',
     translations: {},
-    // Default scripts for basic implementation
+    // BASIC SCRIPT: NO DEFAULT SCRIPTS - pure consent management only
     scripts: {
-      analytics: [
-        {
-          id: "google-analytics-4",
-          src: "https://www.googletagmanager.com/gtag/js?id=G-N075SBHV0F",
-          async: true
-        },
-        {
-          id: "google-analytics-config",
-          content: `
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'G-N075SBHV0F', {
-              cookie_flags: 'SameSite=None;Secure'
-            });
-          `
-        }
-      ],
+      analytics: [],
       advertising: [],
       functional: [],
       social: []
@@ -115,23 +98,40 @@
     return trackingDomains.some(domain => src.includes(domain));
   }
 
-  // Initialize Google Analytics consent mode early
+  // Initialize Google Analytics consent mode early (only if GA scripts are configured)
   function initializeGoogleAnalyticsConsentMode() {
-    // Set up Google Analytics Consent Mode v2
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    window.gtag = gtag;
+    // Check if there are any GA scripts in the configuration
+    const allScripts = [
+      ...(config.scripts.analytics || []),
+      ...(config.scripts.advertising || []),
+      ...(config.scripts.functional || []),
+      ...(config.scripts.social || [])
+    ];
     
-    // Set default consent to denied
-    gtag('consent', 'default', {
-      ad_storage: 'denied',
-      analytics_storage: 'denied',
-      ad_user_data: 'denied',
-      ad_personalization: 'denied',
-      wait_for_update: 2000
-    });
+    const hasGoogleAnalytics = allScripts.some(script => 
+      (script.src && (script.src.includes('gtag') || script.src.includes('googletagmanager'))) ||
+      (script.id && script.id.includes('google-analytics'))
+    );
+    
+    if (hasGoogleAnalytics) {
+      // Set up Google Analytics Consent Mode v2
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      window.gtag = gtag;
+      
+      // Set default consent to denied
+      gtag('consent', 'default', {
+        ad_storage: 'denied',
+        analytics_storage: 'denied',
+        ad_user_data: 'denied',
+        ad_personalization: 'denied',
+        wait_for_update: 2000
+      });
 
-    console.log('ConsentGuard: Google Analytics Consent Mode initialized with denied defaults');
+      console.log('ConsentGuard: Google Analytics Consent Mode initialized with denied defaults');
+    } else {
+      console.log('ConsentGuard: No Google Analytics scripts found, skipping consent mode initialization');
+    }
   }
 
   // Extract configuration from script element
@@ -156,33 +156,9 @@
       }
     }
 
-    console.log('ConsentGuard: No data-config found, using BASIC configuration with default GA');
-    // Return default configuration for basic script (includes GA)
-    return {
-      scripts: {
-        analytics: [
-          {
-            id: "google-analytics-4",
-            src: "https://www.googletagmanager.com/gtag/js?id=G-N075SBHV0F",
-            async: true
-          },
-          {
-            id: "google-analytics-config",
-            content: `
-              window.dataLayer = window.dataLayer || [];
-              function gtag(){dataLayer.push(arguments);}
-              gtag('js', new Date());
-              gtag('config', 'G-N075SBHV0F', {
-                cookie_flags: 'SameSite=None;Secure'
-              });
-            `
-          }
-        ],
-        advertising: [],
-        functional: [],
-        social: []
-      }
-    };
+    console.log('ConsentGuard: No data-config found, using BASIC configuration (pure consent management)');
+    // Return null for basic script - no default scripts
+    return null;
   }
 
   // Apply configuration
@@ -192,16 +168,16 @@
       
       if (newConfig.scripts) {
         config.scripts = {
-          analytics: newConfig.scripts.analytics || config.scripts.analytics, // Keep defaults if not provided
+          analytics: newConfig.scripts.analytics || [],
           advertising: newConfig.scripts.advertising || [],
           functional: newConfig.scripts.functional || [],
           social: newConfig.scripts.social || []
         };
       }
       
-      console.log('ConsentGuard: Configuration applied:', config);
+      console.log('ConsentGuard: ADVANCED configuration applied with scripts:', config);
     } else {
-      console.log('ConsentGuard: Using default configuration with GA');
+      console.log('ConsentGuard: Using BASIC configuration - pure consent management, no tracking scripts');
     }
   }
 
@@ -373,13 +349,13 @@
     // Set consent given flag
     consentGiven = true;
 
-    // Update Google Analytics consent
+    // Update Google Analytics consent (only if GA is configured)
     updateGoogleAnalyticsConsent(finalPreferences);
 
     // Add settings button after handling consent
     addSettingsButton();
 
-    // Load scripts based on consent
+    // Load scripts based on consent (will be empty for basic script)
     loadScriptsByConsent(finalPreferences);
 
     // Unblock and load previously blocked scripts if consent allows
@@ -507,7 +483,7 @@
   function loadScriptsByConsent(preferences) {
     console.log('ConsentGuard: Loading scripts based on preferences:', preferences);
     
-    // Load scripts for each category
+    // Load scripts for each category (will be empty arrays for basic script)
     if (preferences.analytics) {
       loadScriptsForCategory('analytics');
     }
@@ -563,7 +539,7 @@
   function init() {
     console.log('ConsentGuard: Initializing...');
     
-    // Initialize Google Analytics consent mode first
+    // Initialize Google Analytics consent mode only if GA scripts are configured
     initializeGoogleAnalyticsConsentMode();
     
     // Extract and apply configuration

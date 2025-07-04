@@ -50,7 +50,7 @@ const BasicScriptSection: React.FC<BasicScriptSectionProps> = ({ scriptId }) => 
               </Button>
             </TooltipTrigger>
             <TooltipContent className="max-w-sm">
-              <p>This basic implementation provides consent banner and script blocking functionality with default Google Analytics. The GA script will load only after user consent is given.</p>
+              <p>This basic implementation provides pure consent management - it shows the consent banner and blocks external tracking scripts until user consent is given. It does NOT include any tracking scripts by default. Use the Advanced implementation if you want to load your own tracking scripts after consent.</p>
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
