@@ -13,18 +13,9 @@ interface ScriptImplementationProps {
 }
 
 const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, website }) => {
-  const [copiedScript, setCopiedScript] = useState(false);
+  const [copiedBasicScript, setCopiedBasicScript] = useState(false);
   const [copiedAdvancedScript, setCopiedAdvancedScript] = useState(false);
   const { toast } = useToast();
-
-  const basicScriptConfig = {
-    scripts: {
-      analytics: [],
-      advertising: [],
-      functional: [],
-      social: []
-    }
-  };
 
   const advancedScriptConfig = {
     scripts: {
@@ -74,32 +65,31 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
     }
   };
 
-  const handleCopyScript = () => {
-    const scriptCode = `<script 
+  const handleCopyBasicScript = () => {
+    const basicScript = `<script 
   src="${generateCdnUrl(scriptId)}" 
-  data-config='${JSON.stringify(basicScriptConfig)}'
   async
 ></script>`;
-    navigator.clipboard.writeText(scriptCode);
-    setCopiedScript(true);
+    navigator.clipboard.writeText(basicScript);
+    setCopiedBasicScript(true);
     toast({
       title: "Success",
-      description: "Script code copied to clipboard",
+      description: "Basic script code copied to clipboard",
       duration: 2000,
     });
     
     setTimeout(() => {
-      setCopiedScript(false);
+      setCopiedBasicScript(false);
     }, 3000);
   };
 
   const handleCopyAdvancedScript = () => {
-    const scriptCode = `<script 
+    const advancedScript = `<script 
   src="${generateCdnUrl(scriptId)}" 
   data-config='${JSON.stringify(advancedScriptConfig)}'
   async
 ></script>`;
-    navigator.clipboard.writeText(scriptCode);
+    navigator.clipboard.writeText(advancedScript);
     setCopiedAdvancedScript(true);
     toast({
       title: "Success",
@@ -112,14 +102,13 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
     }, 3000);
   };
 
-  // Generate the basic script with data-config
+  // Generate the basic script (NO data-config)
   const basicScript = `<script 
   src="${generateCdnUrl(scriptId)}" 
-  data-config='${JSON.stringify(basicScriptConfig)}'
   async
 ></script>`;
 
-  // Generate the advanced script with data-config
+  // Generate the advanced script (WITH data-config)
   const advancedScript = `<script 
   src="${generateCdnUrl(scriptId)}" 
   data-config='${JSON.stringify(advancedScriptConfig)}'
@@ -127,7 +116,7 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
 ></script>`;
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {website && (
         <div className="mb-4 p-4 bg-gray-50 rounded-md">
           <p className="font-medium">{website.name}</p>
@@ -147,7 +136,7 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
                 </Button>
               </TooltipTrigger>
               <TooltipContent className="max-w-sm">
-                <p>This basic implementation includes script blocking functionality. It will automatically block known tracking scripts until user consent is given, and includes Google Analytics Consent Mode v2 support.</p>
+                <p>This basic implementation provides consent banner and script blocking functionality only. No actual tracking scripts are loaded - just the consent management system.</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>
@@ -157,11 +146,11 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
         </div>
 
         <Button 
-          onClick={handleCopyScript} 
+          onClick={handleCopyBasicScript} 
           variant="outline" 
           className="mt-2"
         >
-          {copiedScript ? (
+          {copiedBasicScript ? (
             <>
               <CheckIcon className="mr-2 h-4 w-4" />
               Copied!
@@ -169,7 +158,7 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
           ) : (
             <>
               <CopyIcon className="mr-2 h-4 w-4" />
-              Copy Script
+              Copy Basic Script
             </>
           )}
         </Button>
