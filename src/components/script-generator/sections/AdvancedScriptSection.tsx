@@ -24,7 +24,7 @@ const AdvancedScriptSection: React.FC<AdvancedScriptSectionProps> = ({ scriptId 
         },
         {
           id: "google-analytics-config",
-          content: "window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag('js', new Date()); gtag('config', 'G-XXXXXXXXXX', {cookie_flags: 'SameSite=None;Secure'});"
+          content: "window.dataLayer = window.dataLayer || []; function gtag(){dataLayer.push(arguments);} gtag(\"js\", new Date()); gtag(\"config\", \"G-XXXXXXXXXX\", {cookie_flags: \"SameSite=None;Secure\"});"
         }
       ],
       advertising: [
