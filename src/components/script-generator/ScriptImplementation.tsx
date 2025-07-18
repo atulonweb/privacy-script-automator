@@ -5,6 +5,7 @@ import { Website } from '@/hooks/useWebsites';
 // Import refactored sections
 import WebsiteInfo from './sections/WebsiteInfo';
 import BasicScriptSection from './sections/BasicScriptSection';
+import AdvancedScriptSection from './sections/AdvancedScriptSection';
 import PrivacyFeaturesSection from './sections/PrivacyFeaturesSection';
 
 interface ScriptImplementationProps {
@@ -18,6 +19,8 @@ const ScriptImplementation: React.FC<ScriptImplementationProps> = ({ scriptId, w
       <WebsiteInfo website={website} />
       
       <BasicScriptSection scriptId={scriptId} />
+      
+      <AdvancedScriptSection scriptId={scriptId} />
       
       <PrivacyFeaturesSection />
     </div>

@@ -76,9 +76,9 @@ const fetchUserSubscription = async (userId: string): Promise<PlanType> => {
     .from('user_subscriptions')
     .select('plan')
     .eq('user_id', userId)
-    .maybeSingle();
+    .single();
 
-  if (error) {
+  if (error && error.code !== 'PGRST116') {
     console.error('Error fetching user subscription:', error);
   }
 
