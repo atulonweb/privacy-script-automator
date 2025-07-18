@@ -69,6 +69,8 @@ const AdvancedScriptSection: React.FC<AdvancedScriptSectionProps> = ({ scriptId 
   async
 ></script>`;
 
+  console.log('Generated Advanced Script:', advancedScript);
+
   return (
     <div>
       <div className="flex items-center gap-2 mb-2">
