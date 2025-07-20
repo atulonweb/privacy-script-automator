@@ -112,7 +112,7 @@ serve(async (req) => {
         .from("consent_scripts")
         .select("id")
         .eq("script_id", scriptId)
-        .single();
+        .maybeSingle();
 
       if (scriptError || !scriptData) {
         console.error("Error finding script:", scriptError);
