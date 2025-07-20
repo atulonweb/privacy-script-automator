@@ -1,3 +1,4 @@
+
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/context/AuthContext';
@@ -73,8 +74,9 @@ const fetchPlanSettings = async (): Promise<Record<PlanType, PlanDetails>> => {
 
 const fetchUserSubscription = async (userId: string): Promise<PlanType> => {
   try {
+    console.log('Calling user-plans edge function for user:', userId);
     const { data, error } = await supabase.functions.invoke('user-plans', {
-      body: { action: 'get' }
+      body: { action: 'get_user_plan', userId: userId }
     });
 
     if (error) {
@@ -82,7 +84,10 @@ const fetchUserSubscription = async (userId: string): Promise<PlanType> => {
       return 'free';
     }
 
-    return (data?.plan as PlanType) || 'free';
+    console.log('Edge function response:', data);
+    const plan = (data?.plan as PlanType) || 'free';
+    console.log('Resolved user plan:', plan);
+    return plan;
   } catch (error) {
     console.error('Error calling user-plans edge function:', error);
     return 'free';
@@ -110,6 +115,18 @@ const usePlanLimits = () => {
   const queryClient = useQueryClient();
   const { showOneTimeNotification } = usePlanLimitNotifications();
 
+  // Clear any stale cached data when component mounts or user changes
+  useEffect(() => {
+    if (user?.id) {
+      console.log('Clearing stale plan cache for user:', user.id);
+      // Clear all plan-related queries
+      queryClient.removeQueries({ queryKey: ['userSubscription'] });
+      queryClient.removeQueries({ queryKey: ['userPlan'] });
+      queryClient.removeQueries({ queryKey: ['user_subscription'] });
+      queryClient.removeQueries({ queryKey: ['planData'] });
+    }
+  }, [user?.id, queryClient]);
+
   const { data: planSettings, isLoading: planSettingsLoading } = useQuery({
     queryKey: ['planSettings'],
     queryFn: fetchPlanSettings,
@@ -119,13 +136,15 @@ const usePlanLimits = () => {
   });
 
   const { data: userPlan, isLoading: userPlanLoading, refetch: refetchUserPlan } = useQuery({
-    queryKey: ['userSubscription', user?.id],
+    queryKey: ['userPlanData', user?.id], // Changed key to avoid conflicts
     queryFn: () => fetchUserSubscription(user!.id),
     enabled: !!user?.id,
-    staleTime: 1000 * 30, // Reduced from 2 minutes to 30 seconds 
+    staleTime: 0, // Always fetch fresh data
     gcTime: 1000 * 60 * 5,
     refetchOnWindowFocus: true,
-    refetchInterval: 1000 * 60, // Refetch every minute to ensure plan changes are picked up
+    refetchInterval: 1000 * 60, // Refetch every minute
+    retry: 3,
+    retryDelay: 1000,
   });
 
   const { data: websiteCount, refetch: refetchWebsiteCount } = useQuery({
@@ -141,6 +160,7 @@ const usePlanLimits = () => {
 
   useEffect(() => {
     if (planSettings && currentPlan) {
+      console.log('Setting plan details for plan:', currentPlan);
       setPlanDetails(planSettings[currentPlan]);
       setError(null);
     }
@@ -148,11 +168,18 @@ const usePlanLimits = () => {
 
   const refreshUserPlan = async () => {
     try {
+      console.log('Refreshing user plan - clearing cache first');
+      // Clear cache before refetch
+      queryClient.removeQueries({ queryKey: ['userPlanData', user?.id] });
+      queryClient.removeQueries({ queryKey: ['userWebsiteCount', user?.id] });
+      
       await Promise.all([
         refetchUserPlan(),
         refetchWebsiteCount(),
         queryClient.invalidateQueries({ queryKey: ['planSettings'] })
       ]);
+      
+      console.log('Plan refresh complete');
     } catch (err: any) {
       console.error('Error refreshing user plan:', err);
       setError(err.message);
