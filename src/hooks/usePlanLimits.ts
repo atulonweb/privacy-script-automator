@@ -76,10 +76,11 @@ const fetchUserSubscription = async (userId: string): Promise<PlanType> => {
     .from('user_subscriptions')
     .select('plan')
     .eq('user_id', userId)
-    .single();
+    .maybeSingle();
 
-  if (error && error.code !== 'PGRST116') {
+  if (error) {
     console.error('Error fetching user subscription:', error);
+    return 'free';
   }
 
   return (data?.plan as PlanType) || 'free';
@@ -118,9 +119,10 @@ const usePlanLimits = () => {
     queryKey: ['userSubscription', user?.id],
     queryFn: () => fetchUserSubscription(user!.id),
     enabled: !!user?.id,
-    staleTime: 1000 * 60 * 2,
+    staleTime: 1000 * 30, // Reduced from 2 minutes to 30 seconds 
     gcTime: 1000 * 60 * 5,
     refetchOnWindowFocus: true,
+    refetchInterval: 1000 * 60, // Refetch every minute to ensure plan changes are picked up
   });
 
   const { data: websiteCount, refetch: refetchWebsiteCount } = useQuery({

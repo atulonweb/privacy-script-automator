@@ -11,10 +11,12 @@ import { supabase } from '@/integrations/supabase/client';
 import WebhookSettings from '@/components/script-generator/WebhookSettings';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useWebsites, Website } from '@/hooks/useWebsites';
+import usePlanLimits from '@/hooks/usePlanLimits';
 
 const SettingsPage: React.FC = () => {
   const { user } = useAuth();
   const { websites } = useWebsites();
+  const { planDetails, userPlan } = usePlanLimits();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [saving, setSaving] = useState(false);
@@ -96,7 +98,9 @@ const SettingsPage: React.FC = () => {
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid w-full grid-cols-2 max-w-md">
             <TabsTrigger value="profile">Profile</TabsTrigger>
-            <TabsTrigger value="webhooks">Webhooks</TabsTrigger>
+            <TabsTrigger value="webhooks" disabled={!planDetails.webhooksEnabled}>
+              Webhooks {!planDetails.webhooksEnabled && '(Upgrade Required)'}
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="profile" className="space-y-4">

@@ -16,6 +16,7 @@ import { Website } from '@/hooks/useWebsites';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import usePlanLimits from '@/hooks/usePlanLimits';
 
 interface WebhookSettingsProps {
   website: Website;
@@ -34,6 +35,8 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ website }) => {
     fetchWebhookLogs,
     fetchWebhooks
   } = useWebhooks(website.id);
+  
+  const { planDetails, enforcePlanLimits, userPlan } = usePlanLimits();
 
   const [url, setUrl] = useState('');
   const [secret, setSecret] = useState('');
@@ -60,6 +63,11 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ website }) => {
   }, [webhook]);
 
   const handleSave = async () => {
+    // Check plan limits first
+    if (!enforcePlanLimits.canUseWebhooks()) {
+      return;
+    }
+
     if (!url) {
       toast({
         title: "Error",
@@ -200,13 +208,29 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ website }) => {
 
         <CardContent className="pt-6">
           <TabsContent value="settings" className="space-y-4">
+            {/* Plan limit warning */}
+            {!planDetails.webhooksEnabled && (
+              <Alert className="border-amber-500 bg-amber-50">
+                <AlertDescription className="text-amber-800">
+                  <strong>Webhooks Not Available:</strong> Webhooks are not available on your {userPlan} plan. 
+                  <br />Please upgrade to a plan that includes webhook functionality to configure webhooks for this website.
+                  <div className="mt-2">
+                    <Button variant="outline" size="sm" onClick={() => window.location.href = '/dashboard/plans'}>
+                      View Plans
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            )}
+            
             <div className="space-y-2">
               <Label htmlFor="webhookUrl">Webhook URL</Label>
-              <Input 
+                <Input 
                 id="webhookUrl" 
                 placeholder="https://example.com/webhook"
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
+                disabled={!planDetails.webhooksEnabled}
               />
               <p className="text-sm text-muted-foreground">
                 Your server endpoint that will receive consent update notifications
@@ -221,6 +245,7 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ website }) => {
                 placeholder="Enter a secret key to sign payloads"
                 value={secret}
                 onChange={(e) => setSecret(e.target.value)}
+                disabled={!planDetails.webhooksEnabled}
               />
               <p className="text-sm text-muted-foreground">
                 If provided, all webhook payloads will be signed with an HMAC signature
@@ -236,6 +261,7 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ website }) => {
                 max={10}
                 value={retryCount}
                 onChange={(e) => setRetryCount(Number(e.target.value))}
+                disabled={!planDetails.webhooksEnabled}
               />
               <p className="text-sm text-muted-foreground">
                 Number of times to retry if the webhook fails (0 for no retries)
@@ -247,6 +273,7 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ website }) => {
                 id="webhookEnabled" 
                 checked={enabled}
                 onCheckedChange={setEnabled}
+                disabled={!planDetails.webhooksEnabled}
               />
               <Label htmlFor="webhookEnabled">Enable webhook</Label>
             </div>
@@ -271,7 +298,7 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ website }) => {
                 </Button>
                 <Button 
                   onClick={handleSave}
-                  disabled={isSaving}
+                  disabled={isSaving || !planDetails.webhooksEnabled}
                   className="flex gap-2"
                 >
                   <SendIcon className="h-4 w-4" />
