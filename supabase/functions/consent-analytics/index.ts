@@ -258,9 +258,32 @@ serve(async (req) => {
         );
       }
 
+      // First, get the actual UUID id from consent_scripts table using the script_id
+      const { data: scriptData, error: scriptError } = await supabase
+        .from("consent_scripts")
+        .select("id")
+        .eq("script_id", scriptId)
+        .maybeSingle();
+
+      if (scriptError || !scriptData) {
+        console.error("Error finding script for ping:", scriptError);
+        return new Response(
+          JSON.stringify({
+            error: "Script not found",
+            details: scriptError?.message || "No script found with this ID",
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 404,
+          }
+        );
+      }
+
+      const actualScriptId = scriptData.id;
+
       // Record ping as domain activity
-      await supabase.from("domain_activity").insert({
-        script_id: scriptId,
+      const { error: insertError } = await supabase.from("domain_activity").insert({
+        script_id: actualScriptId,
         event_type: 'ping',
         domain,
         visitor_id: visitorId || null,
@@ -269,6 +292,20 @@ serve(async (req) => {
         region: region || 'other',
         language: language || null,
       });
+
+      if (insertError) {
+        console.error("Error inserting domain ping:", insertError);
+        return new Response(
+          JSON.stringify({
+            error: "Failed to record domain ping",
+            details: insertError.message,
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 500,
+          }
+        );
+      }
 
       return new Response(
         JSON.stringify({
