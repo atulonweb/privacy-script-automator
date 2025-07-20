@@ -35,11 +35,14 @@ const WebsitesPage: React.FC = () => {
     if (initializedRef.current) return;
     
     console.log("WebsitesPage mounted, initializing...");
+    console.log("Current plan data:", { userPlan, planDetails, websiteCount });
     initializedRef.current = true;
     
     const loadData = async () => {
       try {
+        console.log("Refreshing user plan...");
         await refreshUserPlan();
+        console.log("Plan refreshed, new data:", { userPlan, planDetails, websiteCount });
       } catch (error) {
         console.error("Error loading plan data:", error);
       } finally {
@@ -54,6 +57,11 @@ const WebsitesPage: React.FC = () => {
       initializedRef.current = false;
     };
   }, []); // Empty dependency array - only run once
+
+  // Add an effect to log plan changes
+  useEffect(() => {
+    console.log("Plan data updated:", { userPlan, planDetails, websiteCount });
+  }, [userPlan, planDetails, websiteCount]);
 
   const handleAddWebsite = async () => {
     if (!newWebsiteName || !newWebsiteDomain) {
