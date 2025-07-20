@@ -198,9 +198,43 @@ const SettingsPage: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="webhooks" className="space-y-4">
+            {websites.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Website Selection</CardTitle>
+                  <CardDescription>
+                    {websites.length === 1 
+                      ? "Webhook configuration for your website" 
+                      : "Choose which website you want to configure webhooks for"}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {websites.map((website) => (
+                      <Button
+                        key={website.id}
+                        variant={selectedWebsite?.id === website.id ? "default" : "outline"}
+                        className="w-full justify-start"
+                        onClick={() => setSelectedWebsite(website)}
+                      >
+                        {website.name}
+                      </Button>
+                    ))}
+                  </div>
+                  {selectedWebsite && (
+                    <div className="mt-4 p-3 bg-muted rounded-lg">
+                      <p className="text-sm text-muted-foreground">
+                        Currently configuring webhooks for: <span className="font-medium text-foreground">{selectedWebsite.name}</span>
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+            
             {selectedWebsite ? (
               <WebhookSettings website={selectedWebsite} />
-            ) : (
+            ) : websites.length === 0 ? (
               <Card>
                 <CardContent className="py-8">
                   <div className="text-center">
@@ -219,27 +253,14 @@ const SettingsPage: React.FC = () => {
                   </div>
                 </CardContent>
               </Card>
-            )}
-            {websites.length > 1 && (
+            ) : (
               <Card>
-                <CardHeader>
-                  <CardTitle>Select Website for Webhooks</CardTitle>
-                  <CardDescription>
-                    Choose which website you want to configure webhooks for
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {websites.map((website) => (
-                      <Button
-                        key={website.id}
-                        variant={selectedWebsite?.id === website.id ? "default" : "outline"}
-                        className="w-full justify-start"
-                        onClick={() => setSelectedWebsite(website)}
-                      >
-                        {website.name}
-                      </Button>
-                    ))}
+                <CardContent className="py-8">
+                  <div className="text-center">
+                    <h3 className="text-lg font-medium">Select a Website</h3>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      Please select a website above to configure its webhooks.
+                    </p>
                   </div>
                 </CardContent>
               </Card>
