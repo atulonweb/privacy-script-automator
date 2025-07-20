@@ -39,3 +39,6 @@ verify_jwt = false
 
 [functions.consent-analytics]
 verify_jwt = false
+
+[functions.user-plans]
+verify_jwt = true

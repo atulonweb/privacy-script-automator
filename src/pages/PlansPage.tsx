@@ -98,29 +98,32 @@ const PlansPage = () => {
       if (!user) return;
       
       try {
-        // Use maybeSingle() to handle cases where no subscription exists
-        const { data, error } = await supabase
-          .from('user_subscriptions')
-          .select('plan')
-          .eq('user_id', user.id)
-          .maybeSingle();
-          
-        if (error) {
-          console.error('Error fetching user plan:', error);
-          // Default to free plan if there's an error
-          setCurrentPlan('free');
-          return;
+        const response = await fetch('https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/user-plans', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+          },
+          body: JSON.stringify({ 
+            action: 'get_user_plan',
+            userId: user.id 
+          }),
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to fetch user plan');
         }
         
-        if (data && data.plan) {
+        if (data.plan) {
           setCurrentPlan(data.plan as SubscriptionPlan);
         } else {
-          // No subscription found, default to free
           setCurrentPlan('free');
         }
       } catch (error) {
         console.error('Error fetching user plan:', error);
-        // Default to free plan if no subscription is found
+        // Default to free plan if there's an error
         setCurrentPlan('free');
       }
     };
@@ -155,16 +158,25 @@ const PlansPage = () => {
         await new Promise(resolve => setTimeout(resolve, 1000));
       }
       
-      // Update user's plan in the database using raw SQL query
-      const { error } = await supabase
-        .from('user_subscriptions')
-        .upsert({
-          user_id: user.id,
-          plan: plan,
-          updated_at: new Date().toISOString()
-        });
-        
-      if (error) throw error;
+      // Update user's plan using edge function
+      const response = await fetch('https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/user-plans', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+        },
+        body: JSON.stringify({ 
+          action: 'update_user_plan',
+          userId: user.id,
+          plan: plan 
+        }),
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to update plan');
+      }
       
       setCurrentPlan(plan);
       toast.success(`Plan Updated`, { 
