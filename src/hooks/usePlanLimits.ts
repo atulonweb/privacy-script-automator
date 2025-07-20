@@ -74,22 +74,35 @@ const fetchPlanSettings = async (): Promise<Record<PlanType, PlanDetails>> => {
 
 const fetchUserSubscription = async (userId: string): Promise<PlanType> => {
   try {
-    console.log('Calling user-plans edge function for user:', userId);
+    console.log('=== FETCHING USER SUBSCRIPTION ===');
+    console.log('User ID:', userId);
+    console.log('Calling user-plans edge function...');
+    
     const { data, error } = await supabase.functions.invoke('user-plans', {
       body: { action: 'get_user_plan', userId: userId }
     });
 
+    console.log('Raw edge function response:', { data, error });
+
     if (error) {
-      console.error('Error fetching user subscription via edge function:', error);
+      console.error('Edge function returned error:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
       return 'free';
     }
 
-    console.log('Edge function response:', data);
+    if (!data) {
+      console.error('Edge function returned no data');
+      return 'free';
+    }
+
+    console.log('Edge function data:', data);
     const plan = (data?.plan as PlanType) || 'free';
     console.log('Resolved user plan:', plan);
+    console.log('=== END FETCH USER SUBSCRIPTION ===');
     return plan;
   } catch (error) {
-    console.error('Error calling user-plans edge function:', error);
+    console.error('Exception in fetchUserSubscription:', error);
+    console.error('Exception details:', JSON.stringify(error, null, 2));
     return 'free';
   }
 };
