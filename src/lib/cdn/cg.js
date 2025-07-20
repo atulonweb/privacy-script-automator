@@ -499,21 +499,16 @@
 
   // Record analytics to database
   async function recordAnalytics(action) {
-    if (!scriptId || testMode) {
-      console.log('ConsentGuard: Skipping analytics - no scriptId or in test mode');
+    if (!scriptId) {
+      console.log('ConsentGuard: Skipping analytics - no scriptId');
       return;
     }
 
     const analyticsData = {
-      script_id: scriptId,
+      scriptId: scriptId,  // Match edge function parameter name
       action: action,
       domain: window.location.hostname,
-      url: window.location.href,
-      timestamp: new Date().toISOString(),
-      visitor_id: getOrCreateVisitorId(),
-      session_id: getOrCreateSessionId(),
-      user_agent: navigator.userAgent,
-      language: navigator.language
+      visitorId: getOrCreateVisitorId()  // Match edge function parameter name
     };
 
     console.log('ConsentGuard: Recording analytics:', analyticsData);
@@ -528,7 +523,8 @@
       });
 
       if (!response.ok) {
-        throw new Error(`Analytics request failed: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`Analytics request failed: ${response.status} - ${errorText}`);
       }
 
       console.log('ConsentGuard: Analytics recorded successfully');
@@ -537,21 +533,19 @@
     }
   }
 
-  // Record domain ping
+  // Record domain ping  
   async function recordDomainPing() {
-    if (!scriptId || testMode) {
-      console.log('ConsentGuard: Skipping ping - no scriptId or in test mode');
+    if (!scriptId) {
+      console.log('ConsentGuard: Skipping ping - no scriptId');
       return;
     }
 
     const pingData = {
-      script_id: scriptId,
+      scriptId: scriptId,  // Match edge function parameter name
       domain: window.location.hostname,
-      url: window.location.href,
-      visitor_id: getOrCreateVisitorId(),
-      session_id: getOrCreateSessionId(),
-      user_agent: navigator.userAgent,
-      timestamp: new Date().toISOString()
+      visitorId: getOrCreateVisitorId(),
+      sessionId: getOrCreateSessionId(),
+      userAgent: navigator.userAgent
     };
 
     console.log('ConsentGuard: Recording domain ping:', pingData);
@@ -566,7 +560,8 @@
       });
 
       if (!response.ok) {
-        throw new Error(`Ping request failed: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`Ping request failed: ${response.status} - ${errorText}`);
       }
 
       console.log('ConsentGuard: Domain ping recorded successfully');
