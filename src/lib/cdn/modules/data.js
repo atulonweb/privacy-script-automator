@@ -86,12 +86,49 @@ export function getSavedPreferences() {
 }
 
 /**
+ * Get custom userId set by website owner
+ */
+function getCustomUserId() {
+  // Check for global variable first
+  if (window.ConsentGuard && window.ConsentGuard.userId) {
+    return window.ConsentGuard.userId;
+  }
+  
+  // Check for data attribute on script tag
+  if (scriptElement && scriptElement.dataset.userId) {
+    return scriptElement.dataset.userId;
+  }
+  
+  return null;
+}
+
+/**
+ * Get custom websiteId set by website owner
+ */
+function getCustomWebsiteId() {
+  // Check for global variable first
+  if (window.ConsentGuard && window.ConsentGuard.websiteId) {
+    return window.ConsentGuard.websiteId;
+  }
+  
+  // Check for data attribute on script tag
+  if (scriptElement && scriptElement.dataset.websiteId) {
+    return scriptElement.dataset.websiteId;
+  }
+  
+  return null;
+}
+
+/**
  * Notify webhook about consent changes if configured
  * @param {string} choice - User's consent choice
  * @param {object} preferences - Consent preferences
  */
 export async function notifyConsentWebhook(choice, preferences) {
   if (!config.webhookUrl) return;
+  
+  const customUserId = getCustomUserId();
+  const customWebsiteId = getCustomWebsiteId();
   
   try {
     await fetch(config.webhookUrl, {
@@ -104,7 +141,9 @@ export async function notifyConsentWebhook(choice, preferences) {
         choice: choice,
         preferences: preferences,
         timestamp: new Date().toISOString(),
-        visitorId: getOrCreateVisitorId() // Get the visitor ID for tracking
+        visitorId: getOrCreateVisitorId(),
+        userId: customUserId, // Custom userId from website owner
+        websiteId: customWebsiteId // Custom websiteId from website owner
       })
     });
   } catch (error) {
