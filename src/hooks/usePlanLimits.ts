@@ -72,18 +72,21 @@ const fetchPlanSettings = async (): Promise<Record<PlanType, PlanDetails>> => {
 };
 
 const fetchUserSubscription = async (userId: string): Promise<PlanType> => {
-  const { data, error } = await supabase
-    .from('user_subscriptions')
-    .select('plan')
-    .eq('user_id', userId)
-    .maybeSingle();
+  try {
+    const { data, error } = await supabase.functions.invoke('user-plans', {
+      body: { action: 'get' }
+    });
 
-  if (error) {
-    console.error('Error fetching user subscription:', error);
+    if (error) {
+      console.error('Error fetching user subscription via edge function:', error);
+      return 'free';
+    }
+
+    return (data?.plan as PlanType) || 'free';
+  } catch (error) {
+    console.error('Error calling user-plans edge function:', error);
     return 'free';
   }
-
-  return (data?.plan as PlanType) || 'free';
 };
 
 const fetchUserWebsiteCount = async (userId: string): Promise<number> => {
