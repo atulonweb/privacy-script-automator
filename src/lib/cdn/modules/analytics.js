@@ -1,24 +1,22 @@
 /**
  * Analytics handling for ConsentGuard
- * NOTE: All API calls removed to prevent 401 errors
- * This version only does local logging and data preparation
+ * Records analytics data to the database via edge function
  */
 
 import { testMode, scriptId } from './data.js';
 
 /**
- * Record analytics data locally (no API calls)
+ * Record analytics data to the database
  * @param {string} action - The user action (view, accept, reject, partial)
  */
 export async function recordAnalytics(action) {
-  console.log('ConsentGuard: Recording analytics action locally:', action);
+  console.log('ConsentGuard: Recording analytics action:', action);
   
-  // Always skip API calls to prevent 401 errors
   if (testMode) {
     console.log('ConsentGuard: Test mode - analytics logged locally only');
+    return;
   }
   
-  // Prepare analytics data locally for debugging and future use
   try {
     const analyticsData = {
       scriptId: scriptId,
@@ -32,7 +30,7 @@ export async function recordAnalytics(action) {
       language: navigator.language || 'en-US'
     };
     
-    console.log('ConsentGuard: Analytics data prepared locally:', analyticsData);
+    console.log('ConsentGuard: Sending analytics data:', analyticsData);
     
     // Store in sessionStorage for debugging purposes
     try {
@@ -45,11 +43,73 @@ export async function recordAnalytics(action) {
       console.log('ConsentGuard: Could not store analytics data in sessionStorage:', storageError);
     }
     
-    // NO API CALLS - prevents 401 errors completely
-    console.log('ConsentGuard: Analytics recorded locally only (no API calls made)');
+    // Send analytics data to the edge function
+    try {
+      const response = await fetch('https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/consent-analytics/analytics', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(analyticsData)
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('ConsentGuard: Analytics API error:', response.status, errorText);
+      } else {
+        const result = await response.json();
+        console.log('ConsentGuard: Analytics recorded successfully:', result);
+      }
+    } catch (apiError) {
+      console.error('ConsentGuard: Error sending analytics data:', apiError);
+    }
+    
+    // Also record domain activity
+    try {
+      await recordDomainActivity(action, analyticsData);
+    } catch (activityError) {
+      console.error('ConsentGuard: Error recording domain activity:', activityError);
+    }
     
   } catch (error) {
-    console.error('ConsentGuard: Error preparing analytics data locally:', error);
+    console.error('ConsentGuard: Error in recordAnalytics:', error);
+  }
+}
+
+/**
+ * Record domain activity to track detailed user interactions
+ */
+async function recordDomainActivity(eventType, analyticsData) {
+  const activityData = {
+    scriptId: analyticsData.scriptId,
+    eventType: eventType,
+    domain: analyticsData.domain,
+    url: analyticsData.url,
+    visitorId: analyticsData.visitorId,
+    sessionId: analyticsData.sessionId,
+    userAgent: analyticsData.userAgent,
+    region: 'other', // Default region - could be enhanced with IP geolocation
+    language: analyticsData.language
+  };
+  
+  try {
+    const response = await fetch('https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/consent-analytics/domain-activity', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(activityData)
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('ConsentGuard: Domain activity API error:', response.status, errorText);
+    } else {
+      const result = await response.json();
+      console.log('ConsentGuard: Domain activity recorded successfully:', result);
+    }
+  } catch (error) {
+    console.error('ConsentGuard: Error sending domain activity:', error);
   }
 }
 
@@ -84,21 +144,28 @@ function getOrCreateVisitorId() {
 }
 
 /**
- * Record a domain ping locally (no API calls)
+ * Record a domain ping to track website activity
  */
 export async function recordDomainPing() {
-  console.log('ConsentGuard: Recording domain ping locally for script:', scriptId);
+  console.log('ConsentGuard: Recording domain ping for script:', scriptId);
   
-  // NO API CALLS - just local logging to prevent 401 errors
+  if (testMode) {
+    console.log('ConsentGuard: Test mode - ping logged locally only');
+    return;
+  }
+  
   try {
     const pingData = {
       scriptId: scriptId,
       domain: window.location.hostname,
-      timestamp: new Date().toISOString(),
-      type: 'ping'
+      visitorId: getOrCreateVisitorId(),
+      sessionId: getOrCreateSessionId(),
+      userAgent: navigator.userAgent,
+      region: 'other',
+      language: navigator.language || 'en-US'
     };
     
-    console.log('ConsentGuard: Domain ping data prepared locally:', pingData);
+    console.log('ConsentGuard: Sending ping data:', pingData);
     
     // Store locally for debugging
     try {
@@ -107,11 +174,36 @@ export async function recordDomainPing() {
       console.log('ConsentGuard: Could not store ping data:', storageError);
     }
     
+    // Send ping to edge function
+    try {
+      const response = await fetch('https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/consent-analytics/ping', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(pingData)
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('ConsentGuard: Ping API error:', response.status, errorText);
+      } else {
+        const result = await response.json();
+        console.log('ConsentGuard: Ping recorded successfully:', result);
+      }
+    } catch (apiError) {
+      console.error('ConsentGuard: Error sending ping:', apiError);
+    }
+    
   } catch (error) {
-    console.log('ConsentGuard: Error preparing domain ping data:', error);
+    console.log('ConsentGuard: Error in recordDomainPing:', error);
   }
 }
 
-// Remove automatic ping to prevent any potential API calls on script load
-// setTimeout(recordDomainPing, 1000); // REMOVED - no automatic pings
-console.log('ConsentGuard: Analytics module loaded - all API calls disabled to prevent 401 errors');
+// Set up automatic ping every 30 seconds to track activity
+setTimeout(() => {
+  recordDomainPing();
+  setInterval(recordDomainPing, 30000);
+}, 1000);
+
+console.log('ConsentGuard: Analytics module loaded - API calls enabled');
