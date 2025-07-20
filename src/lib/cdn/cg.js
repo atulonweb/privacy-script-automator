@@ -362,6 +362,9 @@
     unblockScripts(finalPreferences);
 
     console.log('ConsentGuard: Consent saved:', choice, finalPreferences);
+    
+    // Record analytics for consent action
+    recordAnalytics(choice);
   }
 
   // Update Google Analytics consent
@@ -479,6 +482,118 @@
     });
   }
 
+  // Analytics functions - imported inline to avoid external dependencies
+  let scriptId = null;
+  let testMode = false;
+
+  // Extract script ID from current script URL
+  function initializeAnalytics() {
+    const scriptElement = document.currentScript || document.querySelector('script[src*="cg.js"]');
+    if (scriptElement && scriptElement.src) {
+      const urlParams = new URLSearchParams(scriptElement.src.split('?')[1]);
+      scriptId = urlParams.get('id');
+      testMode = urlParams.get('test') === 'true';
+      console.log('ConsentGuard: Analytics initialized - scriptId:', scriptId, 'testMode:', testMode);
+    }
+  }
+
+  // Record analytics to database
+  async function recordAnalytics(action) {
+    if (!scriptId || testMode) {
+      console.log('ConsentGuard: Skipping analytics - no scriptId or in test mode');
+      return;
+    }
+
+    const analyticsData = {
+      script_id: scriptId,
+      action: action,
+      domain: window.location.hostname,
+      url: window.location.href,
+      timestamp: new Date().toISOString(),
+      visitor_id: getOrCreateVisitorId(),
+      session_id: getOrCreateSessionId(),
+      user_agent: navigator.userAgent,
+      language: navigator.language
+    };
+
+    console.log('ConsentGuard: Recording analytics:', analyticsData);
+
+    try {
+      const response = await fetch('https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/consent-analytics/analytics', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(analyticsData)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Analytics request failed: ${response.status}`);
+      }
+
+      console.log('ConsentGuard: Analytics recorded successfully');
+    } catch (error) {
+      console.error('ConsentGuard: Error recording analytics:', error);
+    }
+  }
+
+  // Record domain ping
+  async function recordDomainPing() {
+    if (!scriptId || testMode) {
+      console.log('ConsentGuard: Skipping ping - no scriptId or in test mode');
+      return;
+    }
+
+    const pingData = {
+      script_id: scriptId,
+      domain: window.location.hostname,
+      url: window.location.href,
+      visitor_id: getOrCreateVisitorId(),
+      session_id: getOrCreateSessionId(),
+      user_agent: navigator.userAgent,
+      timestamp: new Date().toISOString()
+    };
+
+    console.log('ConsentGuard: Recording domain ping:', pingData);
+
+    try {
+      const response = await fetch('https://rzmfwwkumniuwenammaj.supabase.co/functions/v1/consent-analytics/ping', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(pingData)
+      });
+
+      if (!response.ok) {
+        throw new Error(`Ping request failed: ${response.status}`);
+      }
+
+      console.log('ConsentGuard: Domain ping recorded successfully');
+    } catch (error) {
+      console.error('ConsentGuard: Error recording ping:', error);
+    }
+  }
+
+  // Visitor and session ID management
+  function getOrCreateVisitorId() {
+    let visitorId = localStorage.getItem('consentguard_visitor_id');
+    if (!visitorId) {
+      visitorId = 'visitor_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+      localStorage.setItem('consentguard_visitor_id', visitorId);
+    }
+    return visitorId;
+  }
+
+  function getOrCreateSessionId() {
+    let sessionId = sessionStorage.getItem('consentguard_session_id');
+    if (!sessionId) {
+      sessionId = 'session_' + Math.random().toString(36).substr(2, 9) + '_' + Date.now();
+      sessionStorage.setItem('consentguard_session_id', sessionId);
+    }
+    return sessionId;
+  }
+
   // Load scripts based on consent
   function loadScriptsByConsent(preferences) {
     console.log('ConsentGuard: Loading scripts based on preferences:', preferences);
@@ -539,6 +654,9 @@
   function init() {
     console.log('ConsentGuard: Initializing...');
     
+    // Initialize analytics
+    initializeAnalytics();
+    
     // Initialize Google Analytics consent mode only if GA scripts are configured
     initializeGoogleAnalyticsConsentMode();
     
@@ -562,6 +680,12 @@
     }
     
     console.log('ConsentGuard: Initialization complete');
+    
+    // Record initial view analytics
+    recordAnalytics('view');
+    
+    // Set up periodic domain pings every 30 seconds
+    setInterval(recordDomainPing, 30000);
   }
 
   // Auto-initialize when DOM is ready
