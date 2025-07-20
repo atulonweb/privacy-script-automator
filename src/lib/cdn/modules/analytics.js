@@ -209,3 +209,7 @@ setTimeout(() => {
 }, 1000);
 
 console.log('ConsentGuard: Analytics module loaded - API calls enabled');
+console.log('ConsentGuard: Setting up ping timer in 1 second...');
+
+// Add debugging to see if ping setup actually happens
+console.log('ConsentGuard: Analytics module - testMode:', testMode, 'scriptId:', scriptId);
