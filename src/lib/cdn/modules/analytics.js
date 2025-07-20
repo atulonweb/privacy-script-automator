@@ -11,6 +11,8 @@ import { testMode, scriptId } from './data.js';
  */
 export async function recordAnalytics(action) {
   console.log('ConsentGuard: Recording analytics action:', action);
+  console.log('ConsentGuard: testMode is:', testMode);
+  console.log('ConsentGuard: scriptId is:', scriptId);
   
   if (testMode) {
     console.log('ConsentGuard: Test mode - analytics logged locally only');
