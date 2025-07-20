@@ -107,6 +107,29 @@ serve(async (req) => {
         );
       }
 
+      // First, get the actual UUID id from consent_scripts table using the script_id
+      const { data: scriptData, error: scriptError } = await supabase
+        .from("consent_scripts")
+        .select("id")
+        .eq("script_id", scriptId)
+        .single();
+
+      if (scriptError || !scriptData) {
+        console.error("Error finding script:", scriptError);
+        return new Response(
+          JSON.stringify({
+            error: "Script not found",
+            details: scriptError?.message || "No script found with this ID",
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 404,
+          }
+        );
+      }
+
+      const actualScriptId = scriptData.id;
+
       // Get today's date in ISO format (YYYY-MM-DD)
       const today = new Date().toISOString().split("T")[0];
 
@@ -114,7 +137,7 @@ serve(async (req) => {
       const { data: existingEntries, error: queryError } = await supabase
         .from("analytics")
         .select("*")
-        .eq("script_id", scriptId)
+        .eq("script_id", actualScriptId)
         .eq("date", today);
 
       if (queryError) {
@@ -181,7 +204,7 @@ serve(async (req) => {
       } else {
         // Create new entry for today
         const newEntry = {
-          script_id: scriptId,
+          script_id: actualScriptId,
           date: today,
           accept_count: action === "accept" ? 1 : 0,
           reject_count: action === "reject" ? 1 : 0,
@@ -220,7 +243,8 @@ serve(async (req) => {
     
     // Handle ping requests (update last seen)
     else if (req.url.includes("/ping")) {
-      const { scriptId, domain } = await req.json();
+      const requestBody = await req.json();
+      const { scriptId, domain, visitorId, sessionId, userAgent, region, language } = requestBody;
 
       if (!scriptId || !domain) {
         return new Response(
@@ -239,11 +263,11 @@ serve(async (req) => {
         script_id: scriptId,
         event_type: 'ping',
         domain,
-        visitor_id: req.json().visitorId || null,
-        session_id: req.json().sessionId || null,
-        user_agent: req.json().userAgent || null,
-        region: req.json().region || 'other',
-        language: req.json().language || null,
+        visitor_id: visitorId || null,
+        session_id: sessionId || null,
+        user_agent: userAgent || null,
+        region: region || 'other',
+        language: language || null,
       });
 
       return new Response(
