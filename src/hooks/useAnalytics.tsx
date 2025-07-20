@@ -23,7 +23,7 @@ export type AnalyticsChartData = {
   partials: number;
 };
 
-export function useAnalytics() {
+export function useAnalytics(websiteId?: string) {
   const { user } = useAuth();
   const [analyticsData, setAnalyticsData] = useState<Analytics[]>([]);
   const [chartData, setChartData] = useState<AnalyticsChartData[]>([]);
@@ -47,11 +47,17 @@ export function useAnalytics() {
     try {
       setLoading(true);
       
-      // Get all scripts for the current user
-      const { data: scripts, error: scriptsError } = await supabase
+      // Get scripts for the current user, optionally filtered by website
+      let scriptsQuery = supabase
         .from('consent_scripts')
         .select('id, script_id')
         .eq('user_id', user.id);
+      
+      if (websiteId) {
+        scriptsQuery = scriptsQuery.eq('website_id', websiteId);
+      }
+      
+      const { data: scripts, error: scriptsError } = await scriptsQuery;
       
       if (scriptsError) throw scriptsError;
       
@@ -118,7 +124,7 @@ export function useAnalytics() {
       isMountedRef.current = false;
       fetchingRef.current = false;
     };
-  }, [user]);
+  }, [user, websiteId]);
 
   return {
     analyticsData,

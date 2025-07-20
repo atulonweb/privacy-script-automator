@@ -4,12 +4,16 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader } from 'lucide-react';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { useWebsites } from '@/hooks/useWebsites';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 const AnalyticsPage: React.FC = () => {
-  const { analyticsData, chartData, loading, error } = useAnalytics();
+  const [selectedWebsite, setSelectedWebsite] = React.useState<string>('all');
   const [timeRange, setTimeRange] = React.useState('7');
+  
+  const { websites, loading: websitesLoading } = useWebsites();
+  const { analyticsData, loading, error } = useAnalytics(selectedWebsite === 'all' ? undefined : selectedWebsite);
   
   // Format data for charts
   const formattedChartData = React.useMemo(() => {
@@ -33,17 +37,33 @@ const AnalyticsPage: React.FC = () => {
         <div className="flex items-center justify-between">
           <h2 className="text-3xl font-bold tracking-tight">Analytics</h2>
           
-          <Select value={timeRange} onValueChange={setTimeRange}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select time range" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="7">Last 7 days</SelectItem>
-              <SelectItem value="14">Last 14 days</SelectItem>
-              <SelectItem value="30">Last 30 days</SelectItem>
-              <SelectItem value="90">Last 90 days</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex gap-4">
+            <Select value={selectedWebsite} onValueChange={setSelectedWebsite}>
+              <SelectTrigger className="w-[200px]">
+                <SelectValue placeholder="Select website" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Websites</SelectItem>
+                {websites.map((website) => (
+                  <SelectItem key={website.id} value={website.id}>
+                    {website.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            
+            <Select value={timeRange} onValueChange={setTimeRange}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select time range" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="7">Last 7 days</SelectItem>
+                <SelectItem value="14">Last 14 days</SelectItem>
+                <SelectItem value="30">Last 30 days</SelectItem>
+                <SelectItem value="90">Last 90 days</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
         </div>
 
         {loading ? (
