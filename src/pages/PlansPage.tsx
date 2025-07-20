@@ -98,21 +98,30 @@ const PlansPage = () => {
       if (!user) return;
       
       try {
-        // Use raw SQL query to fetch the user's plan
+        // Use maybeSingle() to handle cases where no subscription exists
         const { data, error } = await supabase
           .from('user_subscriptions')
-          .select('*')
+          .select('plan')
           .eq('user_id', user.id)
-          .single();
+          .maybeSingle();
           
-        if (error) throw error;
+        if (error) {
+          console.error('Error fetching user plan:', error);
+          // Default to free plan if there's an error
+          setCurrentPlan('free');
+          return;
+        }
         
         if (data && data.plan) {
           setCurrentPlan(data.plan as SubscriptionPlan);
+        } else {
+          // No subscription found, default to free
+          setCurrentPlan('free');
         }
       } catch (error) {
         console.error('Error fetching user plan:', error);
         // Default to free plan if no subscription is found
+        setCurrentPlan('free');
       }
     };
     
