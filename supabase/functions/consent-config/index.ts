@@ -257,6 +257,8 @@ const handler = async (req: Request): Promise<Response> => {
         event,
         timestamp: new Date().toISOString(),
         script_id: postScriptId,
+        userId: script.websites.user_id,
+        websiteId: script.website_id,
         website: {
           id: script.website_id,
           name: script.websites.name,

@@ -212,13 +212,13 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
-    // Create a test payload with the original comprehensive structure
+    // Create a test payload with userId and websiteId from the webhook
     const payload = {
       event: "consent.test",
       timestamp: new Date().toISOString(),
       ip: "192.0.2.1",
-      siteId: webhook.website_id || "test_site_id",
-      userId: "test_user_id",
+      userId: webhook.user_id,
+      websiteId: webhook.website_id,
       sessionId: "test_session_id",
       userAgent: "ConsentGuard Test Webhook",
       webhook_id: webhookId,
