@@ -202,11 +202,12 @@ export async function recordDomainPing() {
   }
 }
 
-// Set up automatic ping every 30 seconds to track activity
+// Set up automatic ping every 10 minutes to track activity (much more reasonable than 30 seconds)
+// Also record initial ping after 30 seconds, then every 10 minutes
 setTimeout(() => {
   recordDomainPing();
-  setInterval(recordDomainPing, 30000);
-}, 1000);
+  setInterval(recordDomainPing, 600000); // 10 minutes instead of 30 seconds
+}, 30000); // Initial delay of 30 seconds
 
 console.log('ConsentGuard: Analytics module loaded - API calls enabled');
 console.log('ConsentGuard: Setting up ping timer in 1 second...');
