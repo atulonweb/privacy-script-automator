@@ -4,6 +4,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader } from 'lucide-react';
 import { useAnalytics } from '@/hooks/useAnalytics';
+import { useDetailedAnalytics } from '@/hooks/useDetailedAnalytics';
 import { useWebsites } from '@/hooks/useWebsites';
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, BarChart, Bar } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -14,6 +15,7 @@ const AnalyticsPage: React.FC = () => {
   
   const { websites, loading: websitesLoading } = useWebsites();
   const { analyticsData, loading, error } = useAnalytics(selectedWebsite === 'all' ? undefined : selectedWebsite);
+  const { geographicData, deviceData, sessionData, loading: detailedLoading } = useDetailedAnalytics(selectedWebsite === 'all' ? undefined : selectedWebsite, parseInt(timeRange));
   
   // Format data for charts
   const formattedChartData = React.useMemo(() => {
@@ -177,6 +179,61 @@ const AnalyticsPage: React.FC = () => {
                       <Bar dataKey="partials" stackId="a" fill="#f59e0b" />
                     </BarChart>
                   </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Enhanced Analytics Section */}
+            <div className="grid gap-4 md:grid-cols-3">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Session Analytics</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Active Visitors</p>
+                    <p className="text-2xl font-bold">{sessionData.activeVisitors}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Avg Session Duration</p>
+                    <p className="text-2xl font-bold">{sessionData.avgSessionDuration}m</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Bounce Rate</p>
+                    <p className="text-2xl font-bold">{sessionData.bounceRate}%</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Geographic Distribution</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {geographicData.slice(0, 5).map((item, index) => (
+                      <div key={index} className="flex justify-between items-center">
+                        <span className="text-sm">{item.region}</span>
+                        <span className="text-sm font-medium">{item.percentage}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Top Browsers</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {deviceData.slice(0, 5).map((item, index) => (
+                      <div key={index} className="flex justify-between items-center">
+                        <span className="text-sm">{item.browser}</span>
+                        <span className="text-sm font-medium">{item.percentage}%</span>
+                      </div>
+                    ))}
+                  </div>
                 </CardContent>
               </Card>
             </div>
