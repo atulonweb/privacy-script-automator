@@ -445,26 +445,66 @@ const WebhookSettings: React.FC<WebhookSettingsProps> = ({ website }) => {
                 When a consent event occurs, we'll send a JSON payload to your webhook URL with the following structure:
               </p>
 
-              <ScrollArea className="h-[300px] rounded-md border p-4">
+              <ScrollArea className="h-[400px] rounded-md border p-4">
                 <pre className="text-xs font-mono">
 {`{
   "event": "consent.updated",
   "timestamp": "2025-05-14T10:22:00Z",
-  "siteId": "site_001",
-  "userId": "abc123",
-  "sessionId": "session_789",
-  "consent": {
+  "scriptId": "script_12345",
+  "visitorId": "visitor_abc123",
+  "userId": "custom_user_456",
+  "websiteId": "custom_website_789",
+  "sessionId": "session_xyz890",
+  "choice": "partial",
+  "preferences": {
     "necessary": true,
     "analytics": false,
     "functional": true,
     "ads": false,
     "social": false
-  },
-  "ip": "103.29.123.45",
-  "userAgent": "Mozilla/5.0..."
+  }
 }`}
                 </pre>
               </ScrollArea>
+
+              <div className="space-y-2 pt-4">
+                <h4 className="font-medium">Custom User & Website IDs</h4>
+                <p className="text-sm text-muted-foreground">
+                  You can specify custom <code className="bg-muted px-1 py-0.5 rounded">userId</code> and <code className="bg-muted px-1 py-0.5 rounded">websiteId</code> values that will be included in webhook payloads. 
+                  This allows you to map consent events to your own user and website identifiers.
+                </p>
+                
+                <div className="mt-3">
+                  <h5 className="font-medium text-sm">Method 1: Global JavaScript Variables</h5>
+                  <div className="bg-gray-100 p-3 rounded-md mt-2">
+                    <pre className="text-xs font-mono">
+{`<script>
+window.ConsentGuard = {
+  userId: 'your-custom-user-id',
+  websiteId: 'your-custom-website-id'
+};
+</script>`}
+                    </pre>
+                  </div>
+                </div>
+
+                <div className="mt-3">
+                  <h5 className="font-medium text-sm">Method 2: Data Attributes on Script Tag</h5>
+                  <div className="bg-gray-100 p-3 rounded-md mt-2">
+                    <pre className="text-xs font-mono">
+{`<script 
+  src="your-script-url"
+  data-user-id="your-custom-user-id"
+  data-website-id="your-custom-website-id">
+</script>`}
+                    </pre>
+                  </div>
+                </div>
+
+                <p className="text-sm text-muted-foreground mt-2">
+                  <strong>Note:</strong> Global variables take priority over data attributes. If neither is provided, these fields will be <code className="bg-muted px-1 py-0.5 rounded">null</code> in the webhook payload.
+                </p>
+              </div>
 
               <div className="space-y-2 pt-4">
                 <h4 className="font-medium">Event Types</h4>
